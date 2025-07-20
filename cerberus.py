@@ -69,6 +69,7 @@ if __name__ == "__main__":
         print("Plugin not found.")
 
     if test:
+        test.Initialise()
         test.run()
         result = test.getResult()
-        logging.info(f"Test result: {result.name} - {result.status}")
+        print(f"Test result: {result.name} - {result.status}")
