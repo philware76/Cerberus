@@ -1,25 +1,26 @@
 # cerberus/testmanager.py
 import pluggy
-import hookspecs
-from testDiscovery import TestDiscovery
+from pluginDiscovery import PluginDiscovery
 
 class TestManager:
     def __init__(self):
         self.pm = pluggy.PluginManager("cerberus")
-        self.pm.add_hookspecs(hookspecs.TestSpec)
-        self.testDiscovery = TestDiscovery(self.pm)
-        self.load_all_plugins()
-
-    def load_all_plugins(self):
-        testFolders = self.testDiscovery.getTestFolders()
-        self.testDiscovery.loadTestPlugins(testFolders)
-
+        
+        # Test Plugins
+        self.testDiscovery = PluginDiscovery(self.pm, "Test", "tests")
+        self.testDiscovery.loadPlugins()
+ 
+    def get_plugin(self, plugin_name):
+        return self.pm.get_plugin(plugin_name)
 
 if __name__ == "__main__":
     manager = TestManager()
-    stuff = manager.pm.hook.register_test()
-    other = manager.pm.hook.other_test()
-    print(stuff)
-    print(other)
-    print("[Cerberus] All test plugins loaded.")
 
+    plugin = manager.get_plugin("OCXOCalibrationTest")
+    if plugin:
+        print(f"Found plugin: {plugin.__name__}")
+    else:
+        print("Plugin not found.")
+
+    test = plugin.createTestPlugin()
+    print(f"Created test plugin: {test}")

@@ -3,8 +3,8 @@ from plugins.tests.baseTest import BaseTest
 
 @hookimpl
 def createTestPlugin():
-    return TxLevelTest()
+    return DynamicRangeTest()
 
-class TxLevelTest(BaseTest):
+class DynamicRangeTest(BaseTest):
     def __init__(self):
-        super().__init__("TxLevelTest")
+        super().__init__("DynamicRangeTest")
