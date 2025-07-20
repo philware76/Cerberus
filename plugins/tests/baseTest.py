@@ -1,10 +1,11 @@
 from PySide6.QtWidgets import QWidget
 
 from .baseTestResult import BaseTestResult
+from plugins.basePlugin import BasePlugin
 
-class BaseTest:
+class BaseTest(BasePlugin):
     def __init__(self, name):
-        self.name = name
+        super().__init__(name)
         self.result: BaseTestResult = None
         self.widget: QWidget = None
         self.RequiredEquipment = []
