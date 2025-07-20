@@ -1,3 +1,4 @@
+import logging
 from PySide6.QtWidgets import QWidget
 
 from .baseTestResult import BaseTestResult
@@ -11,7 +12,7 @@ class BaseTest(BasePlugin):
         self.RequiredEquipment = []
 
     def Initialise(self) -> bool:
-        print(f"Initialising test: {self.name}")
+        logging.debug(f"Initialising")
         self.widget = QWidget()
         self.widget.setWindowTitle(self.name)
         return True
@@ -20,10 +21,10 @@ class BaseTest(BasePlugin):
         return self.widget
 
     def run(self):
-        print(f"Running test: {self.name}")
+        logging.info(f"Running test: {self.name}")
 
     def stop(self):
-        print(f"Stopping test: {self.name}")
+        logging.info(f"Stopping test: {self.name}")
 
     def getResult(self) -> BaseTestResult:
         return self.result
