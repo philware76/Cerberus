@@ -2,6 +2,9 @@ import importlib.util
 import logging
 import os
 from pathlib import Path
+from typing import List
+
+from plugins.basePlugin import BasePlugin
 
 class PluginDiscovery:
     def __init__(self, pluginManager, pluginType, folder):
@@ -9,6 +12,7 @@ class PluginDiscovery:
         self.pluginType = pluginType
         self.folder = Path("plugins") / Path(f"{folder.lower()}")
         self.registeredPlugins = 0
+        self._createPlugins = {}
 
         # Dynamically import hookspec class based on pluginType
         # Replace os.sep with "." to convert a filesystem path to a Python module import path.
@@ -41,9 +45,24 @@ class PluginDiscovery:
         
         if hasattr(module, self.createMethodName):
             self.pm.register(module, name=pluginName)
+            self._createPlugins[pluginName] = getattr(module, self.createMethodName)
             logging.info(f" - Plugin registered: {pluginName}")
         else:
             logging.debug(f"Skipped {plugin_file_path}: no '{self.createMethodName}' specification found")
+
+    def listPlugins(self) -> List[BasePlugin]:
+       return list(self._createPlugins.keys())
+    
+    def createPlugin(self, pluginName) -> BasePlugin:
+        for name in self._createPlugins:
+            if name.lower() == pluginName.lower():
+                return self._createPlugins[name]()
+
+        logging.error(f"Plugin {pluginName} not found.")
+        return None
+
+    def createPlugins(self) -> List[BasePlugin]:
+        return [func() for func in self._createPlugins.values()]
 
     def _checkForMissingImplementations(self):
         hookCaller = getattr(self.pm.hook, self.createMethodName, None)        
