@@ -9,7 +9,7 @@ def createTestPlugin():
 class TxLevelTestResult(BaseTestResult):
     def __init__(self, name, status):
         super().__init__(name, status)
-
+ 
 class TxLevelTest(BaseTest):
     def __init__(self):
         super().__init__("TxLevelTest")
