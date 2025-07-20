@@ -1,4 +1,5 @@
 import importlib.util
+import logging
 import os
 from pathlib import Path
 
@@ -7,6 +8,7 @@ class PluginDiscovery:
         self.pm = pluginManager
         self.pluginType = pluginType
         self.folder = Path("plugins") / Path(f"{folder.lower()}")
+        self.registeredPlugins = 0
 
         # Dynamically import hookspec class based on pluginType
         # Replace os.sep with "." to convert a filesystem path to a Python module import path.
@@ -16,15 +18,14 @@ class PluginDiscovery:
         hookspec_class = getattr(hookspec_module, hookspec_class_name)
         self.pm.add_hookspecs(hookspec_class)
 
+        self.createMethodName = f"create{self.pluginType}Plugin"
+
     def _getPluginFolders(self):
-        print(f"[Cerberus] Looking for {self.pluginType} Plugins in:", self.folder)
-        pluginFolders = [
-            entry.name
-            for entry in os.scandir(self.folder)
-                if entry.is_dir() and not entry.name.startswith("__")
-        ]
-        for pluginFolder in pluginFolders:
-            yield os.path.join(self.folder, pluginFolder)
+        for root, dirs, files in os.walk(self.folder):
+            dirs[:] = [d for d in dirs if not d.startswith("__") and not d.startswith(".")]
+
+            if not dirs:  # This is a leaf folder
+                yield root
 
     def _registerPlugin(self, pluginName, plugin_file_path):
         spec = importlib.util.spec_from_file_location(pluginName, plugin_file_path)
@@ -33,21 +34,40 @@ class PluginDiscovery:
         try:
             spec.loader.exec_module(module)
         except Exception as e:
-            print(f"[Cerberus] Failed to load plugin {plugin_file_path}: {e}")
+            logging.error(f"Failed to load plugin {plugin_file_path}: {e}")
             return
         
-        if hasattr(module, createMethodName := f"create{self.pluginType}Plugin"):
+        if hasattr(module, self.createMethodName):
             self.pm.register(module, name=pluginName)
-            print(f"[Cerberus] Plugin registered: {pluginName}")
+            logging.info(f"Plugin registered: {pluginName}")
         else:
-            print(f"[Cerberus] Skipped {plugin_file_path}: no '{createMethodName}' method found")
+            logging.debug(f"Skipped {plugin_file_path}: no '{self.createMethodName}' specification found")
+
+    def _checkForMissingImplementations(self):
+        hookCaller = getattr(self.pm.hook, self.createMethodName, None)        
+        implementations = hookCaller.get_hookimpls()
+        if not implementations:
+            logging.error(f"No {self.createMethodName} implementations found for {self.pluginType} plugins. Ensure plugins are correctly implemented.")
+
+        elif len(implementations) != self.registeredPlugins:
+            logging.warning(f"Only {len(implementations)} implementations found for {self.registeredPlugins} {self.pluginType} plugins. Ensure plugins are correctly implemented.")
 
     def loadPlugins(self, pluginFolders=None):
         if pluginFolders is None:
             pluginFolders = self._getPluginFolders()
         
         for pluginFolder in pluginFolders:
-            print(f"[Cerberus] Loading {self.pluginType} plugin from: {pluginFolder}")
+            logging.info(f"Loading {self.pluginType} plugin from: {pluginFolder}")
             for entry in os.scandir(pluginFolder):
                 if entry.is_file() and entry.name.endswith(f"{self.pluginType}.py") and not entry.name.startswith("__"):
                     self._registerPlugin(entry.name[:-3], entry.path)
+                    self.registeredPlugins += 1 
+                else:
+                    logging.debug(f"[Cerberus] Skipped {entry.name}: not a valid {self.pluginType} plugin file")
+
+        if self.registeredPlugins > 0:
+            self._checkForMissingImplementations()
+        else:   
+            logging.warning(f"No {self.pluginType} plugins found in {self.folder}. Ensure plugins are correctly implemented and named.")
+
+        logging.info(f"Finished registering {self.pluginType} plugins.")
