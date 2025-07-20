@@ -1,8 +1,10 @@
-import pluggy
-
-hookimpl = pluggy.HookimplMarker("cerberus")
+from plugins import hookimpl
+from plugins.tests.baseTest import BaseTest
 
 @hookimpl
-def register_test():
-    print("[OCXOCalibration] register_test() called")
-    return "ocxoCal"
+def createTestPlugin():
+    return OCXOCalibrationTest()
+
+class OCXOCalibrationTest(BaseTest):
+    def __init__(self):
+        super().__init__("OCXOCalibrationTest")
