@@ -29,7 +29,12 @@ if __name__ == "__main__":
     else:
         print("Plugin not found.")
 
-    if test:
+    equipment = manager.checkRequirements(test)
+    if not equipment:
+        logging.error(f"Curent equipment does not meet the requirements for {test.name}")
+    else:
+        logging.info(f"All required equipment for {test.name} is available.")
+
         test.Initialise()
         test.run()
         result = test.getResult()
