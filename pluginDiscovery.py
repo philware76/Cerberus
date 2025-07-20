@@ -20,6 +20,8 @@ class PluginDiscovery:
 
         self.createMethodName = f"create{self.pluginType}Plugin"
 
+        logging.info(f"Discovering {self.pluginType} plugins in {self.folder}")
+
     def _getPluginFolders(self):
         for root, dirs, files in os.walk(self.folder):
             dirs[:] = [d for d in dirs if not d.startswith("__") and not d.startswith(".")]
@@ -39,7 +41,7 @@ class PluginDiscovery:
         
         if hasattr(module, self.createMethodName):
             self.pm.register(module, name=pluginName)
-            logging.info(f"Plugin registered: {pluginName}")
+            logging.info(f" - Plugin registered: {pluginName}")
         else:
             logging.debug(f"Skipped {plugin_file_path}: no '{self.createMethodName}' specification found")
 
@@ -58,16 +60,22 @@ class PluginDiscovery:
         
         for pluginFolder in pluginFolders:
             logging.info(f"Loading {self.pluginType} plugin from: {pluginFolder}")
+            pluginCount = 0
             for entry in os.scandir(pluginFolder):
                 if entry.is_file() and entry.name.endswith(f"{self.pluginType}.py") and not entry.name.startswith("__"):
                     self._registerPlugin(entry.name[:-3], entry.path)
-                    self.registeredPlugins += 1 
+                    self.registeredPlugins += 1
+                    pluginCount += 1
                 else:
-                    logging.debug(f"[Cerberus] Skipped {entry.name}: not a valid {self.pluginType} plugin file")
+                    logging.trace(f"Skipped {entry.name}")
+            
+            if pluginCount == 0:
+                logging.warning(f"No {self.pluginType} plugins found in {pluginFolder}. Ensure plugins are correctly implemented and named.")
+
 
         if self.registeredPlugins > 0:
             self._checkForMissingImplementations()
         else:   
             logging.warning(f"No {self.pluginType} plugins found in {self.folder}. Ensure plugins are correctly implemented and named.")
 
-        logging.info(f"Finished registering {self.pluginType} plugins.")
+        logging.debug(f"Finished registering {self.pluginType} plugins.")

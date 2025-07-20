@@ -1,10 +1,12 @@
+import logging
+
 class BaseEquipment:
     def __init__(self, name):
         self.name = name
         self.initialised = False
 
     def Initialise(self) -> bool:
-        print(f"Initialising equipment: {self.name}")
+        logging.debug(f"Initialising")
         self.initialised = True
         return True
 
