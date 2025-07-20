@@ -1,5 +1,5 @@
 from plugins import hookimpl
-from plugins.equipment.baseChamber import BaseChamber
+from plugins.equipment.chambers.baseChamber import BaseChamber
 
 @hookimpl
 def createEquipmentPlugin():
