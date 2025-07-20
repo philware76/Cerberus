@@ -1,7 +1,8 @@
-from plugins import hookimpl
+from plugins import hookimpl, singleton
 from plugins.tests.baseTest import BaseTest
 
 @hookimpl
+@singleton
 def createTestPlugin():
     return OCXOCalibrationTest()
 

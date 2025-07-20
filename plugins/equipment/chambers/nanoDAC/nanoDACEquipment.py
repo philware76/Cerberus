@@ -1,7 +1,8 @@
-from plugins import hookimpl
+from plugins import hookimpl, singleton
 from plugins.equipment.chambers.baseChamber import BaseChamber
 
 @hookimpl
+@singleton
 def createEquipmentPlugin():
     return NanoDacEquipment()
 

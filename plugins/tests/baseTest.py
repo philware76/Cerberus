@@ -10,12 +10,16 @@ class BaseTest(BasePlugin):
         self.result: BaseTestResult = None
         self.widget: QWidget = None
         self.RequiredEquipment = []
+        logging.debug(f"__init__ {name}")
 
     def Initialise(self) -> bool:
         logging.debug(f"Initialising")
         self.widget = QWidget()
         self.widget.setWindowTitle(self.name)
         return True
+
+    def _addRequirements(self, typeNames):
+        self.RequiredEquipment.extend(typeNames)
 
     def getWidget(self) -> QWidget:
         return self.widget
