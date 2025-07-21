@@ -10,9 +10,9 @@ from testManager import TestManager
 
 
 def displayPlugins():
-    displayPluginCategory("Equipment", manager._equipPlugins)
-    displayPluginCategory("Product", manager._productsPlugins)
-    displayPluginCategory("Test", manager._testPlugins)
+    displayPluginCategory("Equipment", manager.equipPlugins)
+    displayPluginCategory("Product", manager.productsPlugins)
+    displayPluginCategory("Test", manager.testPlugins)
 
 
 def displayPluginCategory(category_name, plugins):
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     displayPlugins()
 
-    test: BaseTest = manager._testPlugins["TxLevelTest"]
+    test: BaseTest = manager.testPlugins["TxLevelTest"]
     if test:
         print(f"Created test plugin: {test.name}")
     else:
