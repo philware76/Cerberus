@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     displayPlugins()
 
-    test: BaseTest = manager._testPlugins.getPlugin("TxLevelTest")
+    test: BaseTest = manager._testPlugins["TxLevelTest"]
     if test:
         print(f"Created test plugin: {test.name}")
     else:
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     if not valid:
         logging.error(f"Missing {[equip.__name__ for equip in missing]} equipment requirements for {test.name} test")
     else:
-        logging.info(f"All required equipment for {test.name} test are available.")
+        logging.info(f"All required equipment for {test.name} test is available.")
 
         test.Initialise()
         # await test.run()
