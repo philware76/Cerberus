@@ -8,4 +8,4 @@ def createTestPlugin():
 
 class OCXOCalibrationTest(BaseTest):
     def __init__(self):
-        super().__init__("OCXOCalibrationTest")
+        super().__init__("OCXO Calibration")

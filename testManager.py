@@ -14,11 +14,17 @@ class TestManager:
 
         self.discoverTestPlugins()
         self.discoverEquipmentPlugins()
+        self.discoverProductPlugins()
 
     def discoverEquipmentPlugins(self):
         self.EquipPlugins = PluginDiscovery(self.pm, "Equipment", "equipment")
         self.EquipPlugins.loadPlugins()
         self.Equipment = list(self.EquipPlugins.createPlugins())
+
+    def discoverProductPlugins(self):
+        self.ProductPlugins = PluginDiscovery(self.pm, "Product", "products")
+        self.ProductPlugins.loadPlugins()
+        self.Products = list(self.ProductPlugins.createPlugins())
 
     def discoverTestPlugins(self):
         self.TestPlugins = PluginDiscovery(self.pm, "Test", "tests")
