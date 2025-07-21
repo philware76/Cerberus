@@ -2,14 +2,11 @@ from abc import ABC, abstractmethod
 from plugins.equipment.baseEquipment import BaseEquipment, Identity
 
 
-class BaseSpecAnalyser(BaseEquipment):
+class BaseSpecAnalyser(BaseEquipment, ABC):
     """
     Base class for all spectrum analyser equipment plugins.
     This class should be extended by specific spectrum analyser equipment plugins.
     """
-
-    def __init__(self, name: str):
-        super().__init__(name)
 
     @abstractmethod
     def getIdentity(self) -> Identity:
