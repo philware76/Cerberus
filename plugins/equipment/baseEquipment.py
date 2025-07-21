@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict
 from plugins.basePlugin import BasePlugin
 
 
@@ -16,14 +17,22 @@ class Identity():
             self.serial = "Unknown"
             self.version = "Unknown"
 
+    def __str__(self) -> str:
+        return f"{self.manufacturer} {self.model} [SN#{self.serial}, Version: {self.version.strip()}]"
+
+    def __repr__(self) -> str:
+        return str(self)
+
 
 class BaseEquipment(BasePlugin):
     def __init__(self, name):
         super().__init__(name)
         self.identity = Identity("")
+        self.init: Dict[str, Any] = {}
 
-    def initialise(self) -> bool:
+    def initialise(self, init: Dict[str, Any]) -> bool:
         logging.debug("Initialise")
+        self.init = init
         self.initialised = True
         return True
 
@@ -34,5 +43,7 @@ class BaseEquipment(BasePlugin):
 
     def finalise(self) -> bool:
         logging.debug("Finalise")
+        self.initialised = False
+        self.configured = False
         self.finalised = True
         return True

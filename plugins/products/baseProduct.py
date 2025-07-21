@@ -6,7 +6,7 @@ class BaseProduct(BasePlugin):
     def __init__(self, name):
         super().__init__(name)
 
-    def initialise(self) -> bool:
+    def initialise(self, init) -> bool:
         logging.debug("Initialise")
         self.initialised = True
         return True

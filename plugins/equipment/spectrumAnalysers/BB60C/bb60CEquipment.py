@@ -14,18 +14,33 @@ def createEquipmentPlugin():
 class BB60CEquipment(BaseSpecAnalyser):
     def __init__(self):
         super().__init__("BB60C Spectrum Analyser")
-        self.identity: Identity = None
+        self.identity: Identity
+        self.visa: VISADevice
 
-    def Initialise(self) -> bool:
-        if super().Initialise():
-            if self.visa.open() is None:
-                logging.error("Failed to open the BB60C Spectrum Analyser")
-                return False
+        self.init = {"Port": 5025, "IPAddress": "127.0.0.1"}
 
-            self.identity = self.getIdentity()
+    def initialise(self, init=None) -> bool:
+        if self.initialised:
+            return True
+
+        if init is not None:
+            super().initialise(init)
+
+        self.visa = VISADevice(self.init["Port"], self.init["IPAddress"])
+        if self.visa.open() is None:
+            logging.error("Failed to open the BB60C Spectrum Analyser")
+            return False
+
+        self.identity = self.getIdentity()
 
         self.initialised = True
         return True
+
+    def finalise(self) -> bool:
+        if self.visa.close():
+            return super().finalise()
+        else:
+            return False
 
     def getIdentity(self) -> Identity:
         cmd = "*IDN?"

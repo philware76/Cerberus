@@ -1,4 +1,6 @@
 # cerberus/testmanager.py
+import argparse
+import shlex
 from PySide6.QtWidgets import QApplication
 
 import logging
@@ -41,10 +43,17 @@ class EquipShell(cmd.Cmd):
     def do_load(self, equipName):
         """Loads equipment"""
         try:
-            test = manager.equipPlugins[equipName]
-            EquipmentShell(test).cmdloop()
+            equip = manager.equipPlugins[equipName]
+            EquipmentShell(equip).cmdloop()
         except KeyError:
             print(f"Unknown equipment: {equipName}")
+
+
+class CommsParser():
+    def __init__(self) -> None:
+        self.parser = argparse.ArgumentParser(prog="setIPComms", add_help=False)
+        self.parser.add_argument("ip", help='IP Address of the device')
+        self.parser.add_argument("port", type=int, help='Port number')
 
 
 class EquipmentShell(cmd.Cmd):
@@ -54,6 +63,9 @@ class EquipmentShell(cmd.Cmd):
 
         super().__init__()
         self.equip: BaseEquipment = equip
+        self.config = None
+
+        self.comms = CommsParser()
 
     def do_exit(self, arg):
         """Exit the Cerberus Equipment shell"""
@@ -61,8 +73,22 @@ class EquipmentShell(cmd.Cmd):
 
     def do_init(self, arg):
         """Initialises the Equipment"""
-        if self.equip.Initialise():
+        if self.equip.initialise(self.config):
             print(f"Equipment Identity: {self.equip.identity}")
+
+    def do_setIPComms(self, args):
+        """Sets the IP Communication to the device"""
+        try:
+            args = self.comms.parser.parse_args(shlex.split(args))
+            self.config["IPAddress"] = args.ip
+            self.config["Port"] = args.port
+
+        except SystemExit:
+            logging.warning("Failed to parse your Set IP Comms command")
+            pass
+
+    def do_finalise(self, arg):
+        self.equip.finalise()
 
 
 class ProductShell(cmd.Cmd):

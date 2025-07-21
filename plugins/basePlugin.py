@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Any, Dict, Optional
 import logging
 import pluggy
 
@@ -30,8 +30,8 @@ class BasePlugin(ABC):
         logging.debug(f"__init__ {name}")
 
     @abstractmethod
-    def initialise(self) -> bool:
-        '''Intialises a plugin'''
+    def initialise(self, init: Dict[str, Any]) -> bool:
+        '''Intialises a plugin with some initlisation meta data'''
 
     @abstractmethod
     def configure(self, config) -> bool:

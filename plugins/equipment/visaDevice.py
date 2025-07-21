@@ -29,6 +29,19 @@ class VISADevice():
             logging.error(f"Failed to open resource: {self.resource} - {e}")
             return None
 
+    def close(self) -> bool:
+        if self.device is None:
+            return True
+
+        try:
+            logging.debug(f"Closeing VISA resource: {self.resource}")
+            self.device.close()
+            return True
+
+        except Exception as e:
+            logging.error(f"Failed to close resource: {self.resource} - {e}")
+            return False
+
     def write(self, command) -> bool:
         logging.trace(f"{self.resource} - Query {command}")
         if self.device is None:
