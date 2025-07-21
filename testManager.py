@@ -43,7 +43,7 @@ class TestManager:
                     logging.debug(f"   - Found: {equip.name}")
             else:
                 logging.warning(f"   - Missing: {equipment.__name__}")
-                missingEquipment.append(equipment)
+                missingEquipment.append(equipment.__name__)
                 foundAll = False
 
         return foundAll, missingEquipment

@@ -3,10 +3,12 @@ from PySide6.QtWidgets import QApplication
 
 import logging
 import sys
+import cmd
 
 from logConfig import setupLogging
 from plugins.tests.baseTest import BaseTest
 from testManager import TestManager
+from testRunner import TestRunner
 
 
 def displayPlugins():
@@ -19,31 +21,44 @@ def displayPluginCategory(category_name, plugins):
     logging.info(f"Available {category_name} plugins:")
     for plugin in plugins.values():
         logging.info(f" - {plugin.name}")
+
     logging.info("")
+
+
+class Shell(cmd.Cmd):
+    intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
+    prompt = 'Cerberus> '
+
+    def do_quit(self, arg):
+        """Quit Cerberus shell and exit the application"""
+        print("Goodbye")
+        exit(0)
+
+    def do_exit(self, arg):
+        """Exit Cerberus shell and exit the application"""
+        self.do_quit(arg)
+
+    def do_list(self, arg):
+        """List all of the supported Equipment, Products and Tests"""
+        displayPlugins()
+
+    def do_run(self, testName):
+        """Runs a test, after checking the requirements are valid"""
+        self.runTest(testName)
+
+    def runTest(self, testName):
+        try:
+            test = manager.testPlugins[testName]
+            testRunner.runTest(test)
+        except KeyError as e:
+            print(f"Unknown test: {testName}")
 
 
 if __name__ == "__main__":
     setupLogging(logging.DEBUG)
 
     app = QApplication(sys.argv)
-
     manager = TestManager()
+    testRunner = TestRunner(manager)
 
-    displayPlugins()
-
-    test: BaseTest = manager.testPlugins["TxLevelTest"]
-    if test:
-        print(f"Created test plugin: {test.name}")
-    else:
-        print("Plugin not found.")
-
-    valid, missing = manager.checkRequirements(test)
-    if not valid:
-        logging.error(f"Missing {[equip.__name__ for equip in missing]} equipment requirements for {test.name} test")
-    else:
-        logging.info(f"All required equipment for {test.name} test is available.")
-
-        test.Initialise()
-        # await test.run()
-        # result = test.getResult()
-        # print(f"Test result: {result.name} - {result.status}")
+    Shell().cmdloop()

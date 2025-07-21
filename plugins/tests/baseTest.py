@@ -30,7 +30,7 @@ class BaseTest(BasePlugin):
     def _addRequirements(self, typeNames):
         self.RequiredEquipment.extend(typeNames)
 
-    async def run(self):
+    def run(self):
         logging.info(f"Running test: {self.name}")
 
     def stop(self):
