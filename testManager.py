@@ -1,10 +1,10 @@
-from pdb import pm
-from typing import List, Tuple
+from typing import List, Tuple, Generator, Type
 import pluggy
 import logging
 
 from pluginDiscovery import PluginDiscovery
 from plugins.equipment.baseEquipment import BaseEquipment
+from plugins.products.baseProduct import BaseProduct
 from plugins.tests.baseTest import BaseTest
 
 class TestManager:
@@ -12,39 +12,41 @@ class TestManager:
         logging.info("Starting TestManager...")
         self.pm = pluggy.PluginManager("cerberus")
 
-        self.discoverTestPlugins()
-        self.discoverEquipmentPlugins()
-        self.discoverProductPlugins()
+        self._equipPlugins    = self._discover_plugins("Equipment", "equipment")
+        self._productsPlugins = self._discover_plugins("Product",   "products")
+        self._testPlugins     = self._discover_plugins("Test",      "tests")
 
-    def discoverEquipmentPlugins(self):
-        self.EquipPlugins = PluginDiscovery(self.pm, "Equipment", "equipment")
-        self.EquipPlugins.loadPlugins()
-        self.Equipment = list(self.EquipPlugins.createPlugins())
+    def _discover_plugins(self, pluginType: str, folder: str):
+        plugins = PluginDiscovery(self.pm, pluginType, folder)
+        plugins.loadPlugins()
+        return plugins
+    
+    def equipment(self) -> Generator[BaseEquipment, None, None]:
+        yield from self._equipPlugins.values()
 
-    def discoverProductPlugins(self):
-        self.ProductPlugins = PluginDiscovery(self.pm, "Product", "products")
-        self.ProductPlugins.loadPlugins()
-        self.Products = list(self.ProductPlugins.createPlugins())
+    def products(self) -> Generator[BaseProduct, None, None]:
+        yield from self._productsPlugins.values()
 
-    def discoverTestPlugins(self):
-        self.TestPlugins = PluginDiscovery(self.pm, "Test", "tests")
-        self.TestPlugins.loadPlugins()
-        self.Tests = list(self.TestPlugins.createPlugins())
+    def tests(self) -> Generator[BaseTest, None, None]:
+        yield from self._testPlugins.values()
 
     def checkRequirements(self, test: BaseTest) -> Tuple[bool, List[BaseEquipment]]:
         foundAll = True
         missingEquipment = []
-        for req_type in test.RequiredEquipment:
-            logging.debug("Checking for required equipment type: " + req_type.__name__)
+
+        logging.debug(f"Checking requirements for test: {test.name}")
+        equipmentRequirements: List[Type[BaseEquipment]] = test.RequiredEquipment
+        for equipment in equipmentRequirements:
+            logging.debug(" - Required equipment: " + equipment.__name__)
             # Find all equipment instances matching this required type
-            matching_equips = [equip for equip in self.Equipment if isinstance(equip, req_type)]
+            matching_equips = [equip for equip in self.equipment() if isinstance(equip, equipment)]
 
             if matching_equips:
                 for equip in matching_equips:
-                    logging.debug(f"Required equipment found: {equip.name}")
+                    logging.debug(f"   - Found: {equip.name}")
             else:
-                logging.warning(f"Missing required equipment of type: {req_type.__name__}")
-                missingEquipment.append(req_type)
+                logging.warning(f"   - Missing: {equipment.__name__}")
+                missingEquipment.append(equipment)
                 foundAll = False
         
         return foundAll, missingEquipment

@@ -9,26 +9,14 @@ from plugins.tests.baseTest import BaseTest
 from testManager import TestManager
 
 def displayPlugins():
-    displayEquipment()
-    displayProducts()
-    displayTests()
+    displayPluginCategory("Equipment", manager._equipPlugins)
+    displayPluginCategory("Product", manager._productsPlugins)
+    displayPluginCategory("Test", manager._testPlugins)
 
-def displayEquipment():
-    logging.info("Available equipment plugins:")
-    for equipment in manager.Equipment:
-        logging.info(" - " + equipment.name)
-    logging.info("")
-    
-def displayProducts():
-    logging.info("Available product plugins:")
-    for product in manager.Products:
-        logging.info(" - " + product.name)
-    logging.info("")
-
-def displayTests():
-    logging.info("Available test plugins:")
-    for test in manager.Tests:
-        logging.info(" - " + test.name)
+def displayPluginCategory(category_name, plugins):
+    logging.info(f"Available {category_name} plugins:")
+    for plugin in plugins.values():
+        logging.info(f" - {plugin.name}")
     logging.info("")
 
 if __name__ == "__main__":
@@ -40,7 +28,7 @@ if __name__ == "__main__":
 
     displayPlugins()
 
-    test : BaseTest = manager.TestPlugins.getPlugin("TxLevelTest")
+    test : BaseTest = manager._testPlugins.getPlugin("TxLevelTest")
     if test:
         print(f"Created test plugin: {test.name}")
     else:
