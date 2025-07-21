@@ -3,7 +3,7 @@ import logging
 import os
 from pathlib import Path
 from types import ModuleType
-from typing import Dict, List
+from typing import Dict
 
 from plugins.basePlugin import BasePlugin
 
@@ -81,13 +81,14 @@ class PluginDiscovery(Dict[str, BasePlugin]):
         else:
             logging.debug(f"Skipped {filePath}: no '{self.createMethodName}' specification found")
 
-    def getPlugin(self, pluginName) -> (BasePlugin | None):
-        for name in self:
-            if name.lower() == pluginName.lower():
-                return self[name]
+    def __getitem__(self, key: str) -> BasePlugin:
+        key_lower = key.lower()
+        for existing_key in self:
+            if isinstance(existing_key, str) and existing_key.lower() == key_lower:
+                return super().__getitem__(existing_key)
 
-        logging.error(f"Plugin {pluginName} not found.")
-        return None
+        logging.error(f"Plugin {key} not found.")
+        raise KeyError(key)
 
     def _checkForMissingImplementations(self):
         hookCaller = getattr(self.pm.hook, self.createMethodName, None)
