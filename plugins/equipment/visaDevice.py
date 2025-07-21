@@ -2,6 +2,7 @@ import logging
 import pyvisa as visa
 
 import common
+from plugins.equipment.baseEquipment import Identity
 
 
 class VISADevice():
@@ -86,3 +87,11 @@ class VISADevice():
             return self.operationComplete()
         else:
             return False
+
+    def identity(self) -> Identity | None:
+        cmd = "*IDN?"
+        idResp = self.query(cmd)
+        if idResp is None:
+            return None
+
+        return Identity(idResp)

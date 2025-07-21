@@ -9,10 +9,6 @@ class BaseSpecAnalyser(BaseEquipment, ABC):
     """
 
     @abstractmethod
-    def getIdentity(self) -> Identity:
-        '''Gets the *IDN? string from the'''
-
-    @abstractmethod
     def setRBW(self, bandwidth: float) -> bool:
         '''Sets the resolution bandwidth of the spectrum analyser'''
 

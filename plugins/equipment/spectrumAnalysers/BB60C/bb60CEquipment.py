@@ -23,7 +23,7 @@ class BB60CEquipment(BaseSpecAnalyser):
         if self.initialised:
             return True
 
-        if init is not None:
+        if len(init) > 0:
             super().initialise(init)
 
         self.visa = VISADevice(self.init["Port"], self.init["IPAddress"])
@@ -31,24 +31,18 @@ class BB60CEquipment(BaseSpecAnalyser):
             logging.error("Failed to open the BB60C Spectrum Analyser")
             return False
 
-        self.identity = self.getIdentity()
+        self.identity = self.visa.identity()
+        if self.identity is not None:
+            self.initialised = True
+            return True
 
-        self.initialised = True
-        return True
+        return False
 
     def finalise(self) -> bool:
         if self.visa.close():
             return super().finalise()
         else:
             return False
-
-    def getIdentity(self) -> Identity:
-        cmd = "*IDN?"
-        idResp = self.visa.query(cmd)
-        if idResp is None:
-            return None
-
-        return Identity(idResp)
 
     def setRBW(self, bandwidth: float) -> bool:
         cmd = f'BAND:RES {bandwidth}KHz'
