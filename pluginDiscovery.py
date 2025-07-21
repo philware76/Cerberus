@@ -44,9 +44,12 @@ class PluginDiscovery:
             return
         
         if hasattr(module, self.createMethodName):
-            self.pm.register(module, name=pluginName)
-            self._createPlugins[pluginName] = getattr(module, self.createMethodName)
-            logging.info(f" - Plugin registered: {pluginName}")
+            try:
+                self.pm.register(module, name=pluginName)
+                self._createPlugins[pluginName] = getattr(module, self.createMethodName)
+                logging.info(f" - Plugin registered: {pluginName}")
+            except ValueError as e:
+                logging.error(f"Failed to register plugin {pluginName}. Ensure plugins are correctly implemented.")
         else:
             logging.debug(f"Skipped {plugin_file_path}: no '{self.createMethodName}' specification found")
 

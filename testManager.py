@@ -12,21 +12,21 @@ class TestManager:
         self.pm = pluggy.PluginManager("cerberus")
         
         # Test Plugins
-        self.Test = PluginDiscovery(self.pm, "Test", "tests")
-        self.Test.loadPlugins()
+        self.TestPlugins = PluginDiscovery(self.pm, "Test", "tests")
+        self.TestPlugins.loadPlugins()
+        self.Tests = list(self.TestPlugins.createPlugins())
  
         # Equipment Plugins
-        self.Equipement = PluginDiscovery(self.pm, "Equipment", "equipment")
-        self.Equipement.loadPlugins()
+        self.EquipPlugins = PluginDiscovery(self.pm, "Equipment", "equipment")
+        self.EquipPlugins.loadPlugins()
+        self.Equipment = list(self.EquipPlugins.createPlugins())
 
     def checkRequirements(self, test: BaseTest) -> List[BaseEquipment]:
         foundAll = True
-        available_equipment = list(self.Equipement.createPlugins())  # list of equipment instances
-
         for req_type in test.RequiredEquipment:
             logging.debug("Checking for required equipment type: " + req_type.__name__)
             # Find all equipment instances matching this required type
-            matching_equips = [equip for equip in available_equipment if isinstance(equip, req_type)]
+            matching_equips = [equip for equip in self.Equipment if isinstance(equip, req_type)]
 
             if matching_equips:
                 for equip in matching_equips:

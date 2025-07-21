@@ -16,14 +16,14 @@ if __name__ == "__main__":
     manager = TestManager()
 
     logging.info("Available equipment plugins:")
-    for equipment in manager.Equipement.listPlugins():
-        logging.info(" - " + equipment)
+    for equipment in manager.Equipment:
+        logging.info(" - " + equipment.name)
 
     logging.info("Available test plugins:")
-    for test in manager.Test.listPlugins():
-        logging.info(" - " + test)
+    for test in manager.Tests:
+        logging.info(" - " + test.name)
 
-    test = manager.Test.createPlugin("TxLevelTest")
+    test = manager.TestPlugins.createPlugin("TxLevelTest")
     if test:
         print(f"Created test plugin: {test.name}")
     else:
