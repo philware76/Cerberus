@@ -1,5 +1,6 @@
-import logging
+from abc import ABC, abstractmethod
 from typing import Optional
+import logging
 import pluggy
 
 hookimpl = pluggy.HookimplMarker("cerberus")
@@ -18,8 +19,24 @@ def singleton(cls):
     return get_instance
 
 
-class BasePlugin:
+class BasePlugin(ABC):
     def __init__(self, name, description: Optional[str] = None):
         self.name = name
         self.description = description
+        self.initialised = False
+        self.configured = False
+        self.finalised = False
+
         logging.debug(f"__init__ {name}")
+
+    @abstractmethod
+    def initialise(self) -> bool:
+        '''Intialises a plugin'''
+
+    @abstractmethod
+    def configure(self, config) -> bool:
+        '''Provides the configuration for the plugin'''
+
+    @abstractmethod
+    def finalise(self) -> bool:
+        '''finalises a plugin'''

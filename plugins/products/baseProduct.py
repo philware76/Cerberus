@@ -1,15 +1,22 @@
 import logging
 from plugins.basePlugin import BasePlugin
 
+
 class BaseProduct(BasePlugin):
     def __init__(self, name):
         super().__init__(name)
-        self.initialised = False
 
-    def Initialise(self) -> bool:
-        logging.debug(f"Initialising")
+    def initialise(self) -> bool:
+        logging.debug("Initialise")
         self.initialised = True
         return True
 
-    def isInitialised(self) -> bool:
-        return self.initialised
+    def configure(self, config) -> bool:
+        logging.debug("Configure")
+        self.configured = True
+        return True
+
+    def finalise(self) -> bool:
+        logging.debug("Finalise")
+        self.finalised = True
+        return True
