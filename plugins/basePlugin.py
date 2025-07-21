@@ -1,3 +1,4 @@
+import logging
 import pluggy
 
 hookimpl = pluggy.HookimplMarker("cerberus")
@@ -17,3 +18,4 @@ def singleton(cls):
 class BasePlugin:
     def __init__(self, name):
         self.name = name
+        logging.debug(f"__init__ {name}")

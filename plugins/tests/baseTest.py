@@ -1,5 +1,8 @@
 import logging
+from typing import List, Type
 from PySide6.QtWidgets import QWidget
+
+from plugins.equipment.baseEquipment import BaseEquipment
 
 from .baseTestResult import BaseTestResult
 from plugins.basePlugin import BasePlugin
@@ -9,8 +12,7 @@ class BaseTest(BasePlugin):
         super().__init__(name)
         self.result: BaseTestResult = None
         self.widget: QWidget = None
-        self.RequiredEquipment = []
-        logging.debug(f"__init__ {name}")
+        self.RequiredEquipment : List[Type[BaseEquipment]] = []
 
     def Initialise(self) -> bool:
         logging.debug(f"Initialising")

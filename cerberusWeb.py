@@ -24,12 +24,12 @@ async def read_tests():
 
 @app.get("/equipment")
 async def read_equipment():
-    return {"Equipment": [equip.name for equip in manager.Equipment]}
+    return {"Equipment": [equip.name for equip in manager.equipment]}
 
 @app.get("/test/{test_name}")
 async def run_test(test_name: str):
     try:
-        test: BaseTest = manager.TestPlugins.getPlugin(test_name)
+        test: BaseTest = manager._testPlugins.getPlugin(test_name)
         if not test:
             return {"Error": f"Test plugin '{test_name}' not found."}
 
