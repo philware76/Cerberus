@@ -5,25 +5,33 @@ import logging
 import sys
 
 from logConfig import setupLogging
+from plugins.tests.baseTest import BaseTest
 from testManager import TestManager
+
+def displayPlugins():
+    displayEquipment()
+    displayTests()
+
+def displayEquipment():
+    logging.info("Available equipment plugins:")
+    for equipment in manager.Equipment:
+        logging.info(" - " + equipment.name)
+
+def displayTests():
+    logging.info("Available test plugins:")
+    for test in manager.Tests:
+        logging.info(" - " + test.name)
 
 if __name__ == "__main__":
     setupLogging(logging.DEBUG)
 
     app = QApplication(sys.argv)
 
-    logging.info("Starting TestManager...")
     manager = TestManager()
 
-    logging.info("Available equipment plugins:")
-    for equipment in manager.Equipment:
-        logging.info(" - " + equipment.name)
+    displayPlugins()
 
-    logging.info("Available test plugins:")
-    for test in manager.Tests:
-        logging.info(" - " + test.name)
-
-    test = manager.TestPlugins.createPlugin("TxLevelTest")
+    test : BaseTest = manager.TestPlugins.getPlugin("TxLevelTest")
     if test:
         print(f"Created test plugin: {test.name}")
     else:
@@ -36,6 +44,6 @@ if __name__ == "__main__":
         logging.info(f"All required equipment for {test.name} is available.")
 
         test.Initialise()
-        test.run()
-        result = test.getResult()
-        print(f"Test result: {result.name} - {result.status}")
+        # await test.run()
+        # result = test.getResult()
+        # print(f"Test result: {result.name} - {result.status}")

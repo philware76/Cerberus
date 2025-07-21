@@ -1,5 +1,5 @@
 from pdb import pm
-from typing import List
+from typing import List, Tuple
 import pluggy
 import logging
 
@@ -9,20 +9,25 @@ from plugins.tests.baseTest import BaseTest
 
 class TestManager:
     def __init__(self):
+        logging.info("Starting TestManager...")
         self.pm = pluggy.PluginManager("cerberus")
-        
-        # Test Plugins
-        self.TestPlugins = PluginDiscovery(self.pm, "Test", "tests")
-        self.TestPlugins.loadPlugins()
-        self.Tests = list(self.TestPlugins.createPlugins())
- 
-        # Equipment Plugins
+
+        self.discoverTestPlugins()
+        self.discoverEquipmentPlugins()
+
+    def discoverEquipmentPlugins(self):
         self.EquipPlugins = PluginDiscovery(self.pm, "Equipment", "equipment")
         self.EquipPlugins.loadPlugins()
         self.Equipment = list(self.EquipPlugins.createPlugins())
 
-    def checkRequirements(self, test: BaseTest) -> List[BaseEquipment]:
+    def discoverTestPlugins(self):
+        self.TestPlugins = PluginDiscovery(self.pm, "Test", "tests")
+        self.TestPlugins.loadPlugins()
+        self.Tests = list(self.TestPlugins.createPlugins())
+
+    def checkRequirements(self, test: BaseTest) -> Tuple[bool, List[BaseEquipment]]:
         foundAll = True
+        missingEquipment = []
         for req_type in test.RequiredEquipment:
             logging.debug("Checking for required equipment type: " + req_type.__name__)
             # Find all equipment instances matching this required type
@@ -33,6 +38,7 @@ class TestManager:
                     logging.debug(f"Required equipment found: {equip.name}")
             else:
                 logging.warning(f"Missing required equipment of type: {req_type.__name__}")
+                missingEquipment.append(req_type)
                 foundAll = False
         
-        return foundAll
+        return foundAll, missingEquipment

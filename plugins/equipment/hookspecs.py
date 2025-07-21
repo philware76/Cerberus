@@ -9,7 +9,7 @@
 ### The name of the Equipment plugins need to end with `Equipment.py` to be recognized by the PluginDiscovery for Equipment class.
 ###
 
-from plugins import hookspec
+from plugins.basePlugin import hookspec
 
 class EquipmentSpec:
     @hookspec
