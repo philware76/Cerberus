@@ -10,17 +10,26 @@ from testManager import TestManager
 
 def displayPlugins():
     displayEquipment()
+    displayProducts()
     displayTests()
 
 def displayEquipment():
     logging.info("Available equipment plugins:")
     for equipment in manager.Equipment:
         logging.info(" - " + equipment.name)
+    logging.info("")
+    
+def displayProducts():
+    logging.info("Available product plugins:")
+    for product in manager.Products:
+        logging.info(" - " + product.name)
+    logging.info("")
 
 def displayTests():
     logging.info("Available test plugins:")
     for test in manager.Tests:
         logging.info(" - " + test.name)
+    logging.info("")
 
 if __name__ == "__main__":
     setupLogging(logging.DEBUG)

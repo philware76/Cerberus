@@ -17,7 +17,7 @@ class TxLevelTestResult(BaseTestResult):
  
 class TxLevelTest(BaseTest):
     def __init__(self):
-        super().__init__("TxLevelTest")
+        super().__init__("Tx Level")
         self._addRequirements([BaseChamber])
 
     async def run(self):

@@ -90,7 +90,7 @@ class PluginDiscovery:
                     self.registeredPlugins += 1
                     pluginCount += 1
                 else:
-                    logging.trace(f"Skipped {entry.name}")
+                    logging.trace(f"Skipped {entry.name} - not a valid {self.pluginType} plugin file.")
             
             if pluginCount == 0:
                 logging.warning(f"No {self.pluginType} plugins found in {pluginFolder}. Ensure plugins are correctly implemented and named.")

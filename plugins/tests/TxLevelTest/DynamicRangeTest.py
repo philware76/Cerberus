@@ -8,4 +8,4 @@ def createTestPlugin():
 
 class DynamicRangeTest(BaseTest):
     def __init__(self):
-        super().__init__("DynamicRangeTest")
+        super().__init__("Tx Level Dynamic Range")
