@@ -51,22 +51,6 @@ class ProductShell(cmd.Cmd):
         displayPluginCategory("Product", manager.productPlugins)
 
 
-class TestShell(cmd.Cmd):
-    def __init__(self, test):
-        TestShell.intro = f"Welcome to Cerberus {test.name} Test System. Type help or ? to list commands.\n"
-        TestShell.prompt = f"{test.name}> "
-
-        super().__init__()
-        self.test = test
-
-    def do_exit(self, arg):
-        """Exit the Cerberus {test.name} shell"""
-        return True
-
-    def do_run(self, arg):
-        testRunner.runTest(self.test)
-
-
 class TestsShell(cmd.Cmd):
     intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
     prompt = 'Tests> '
@@ -86,6 +70,27 @@ class TestsShell(cmd.Cmd):
             TestShell(test).cmdloop()
         except KeyError:
             print(f"Unknown test: {testName}")
+
+
+class TestShell(cmd.Cmd):
+    def __init__(self, test):
+        TestShell.intro = f"Welcome to Cerberus {test.name} Test System. Type help or ? to list commands.\n"
+        TestShell.prompt = f"{test.name}> "
+
+        super().__init__()
+        self.test: BaseTest = test
+
+    def do_exit(self, arg):
+        """Exit the Cerberus Test shell"""
+        return True
+
+    def do_run(self, arg):
+        """Run the loaded test"""
+        testRunner.runTest(self.test)
+
+    def do_params(self, arg):
+        """Show the test parameters"""
+        print(self.test.Parameters)
 
 
 class Shell(cmd.Cmd):

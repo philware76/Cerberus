@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Type
+from typing import Dict, List, Optional, Type
 from PySide6.QtWidgets import QWidget
 
 from plugins.baseParameters import BaseParameters
@@ -10,8 +10,8 @@ from plugins.basePlugin import BasePlugin
 
 
 class BaseTest(BasePlugin):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, description: Optional[str] = None):
+        super().__init__(name, description)
         self.result = None
         self.widget = None
         self.RequiredEquipment: List[Type[BaseEquipment]] = []
