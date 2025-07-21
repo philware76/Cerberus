@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from plugins.baseParameters import BaseParameter, BaseParameters
 from plugins.basePlugin import hookimpl, singleton
 from plugins.equipment.chambers.baseChamber import BaseChamber
 from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
@@ -18,10 +19,20 @@ class TxLevelTestResult(BaseTestResult):
         super().__init__(name, status)
 
 
+class TxLevelTestParameters(BaseParameters):
+    def __init__(self, ):
+        super().__init__("RF Parameters")
+
+        self.addParameter(BaseParameter("Tx Level", 0.0, " dBm", "Sets the Transmit power level"))
+
+
 class TxLevelTest(BaseTest):
     def __init__(self):
         super().__init__("Tx Level")
         self._addRequirements([BaseChamber, str])
+
+        txLevelParams = TxLevelTestParameters()
+        self.Parameters[txLevelParams.groupName] = txLevelParams
 
     async def run(self):
         await super().run()

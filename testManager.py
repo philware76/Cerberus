@@ -1,8 +1,9 @@
-from typing import Any, List, Tuple, Generator, Type
+from typing import Any, Dict, List, Mapping, Tuple, Type, cast
 import pluggy
 import logging
 
 from pluginDiscovery import PluginDiscovery
+from plugins.basePlugin import BasePlugin
 from plugins.equipment.baseEquipment import BaseEquipment
 from plugins.products.baseProduct import BaseProduct
 from plugins.tests.baseTest import BaseTest
@@ -13,15 +14,15 @@ class TestManager:
         logging.info("Starting TestManager...")
         self.pm = pluggy.PluginManager("cerberus")
 
-        self._equipPlugins = self._discover_plugins("Equipment", "equipment")
-        self._productsPlugins = self._discover_plugins("Product",   "products")
-        self._testPlugins = self._discover_plugins("Test",      "tests")
+        self.equipPlugins: Dict[str, BaseEquipment] = cast(Dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
+        self.productsPlugins: Dict[str, BaseProduct] = cast(Dict[str, BaseProduct], self._discover_plugins("Product", "products"))
+        self.testPlugins: Dict[str, BaseTest] = cast(Dict[str, BaseTest], self._discover_plugins("Test", "tests"))
 
-        self.equipment = list(self._equipPlugins.values())
-        self.products = list(self._productsPlugins.values())
-        self.tests = list(self._testPlugins.values())
+        self.equipment: List[BaseEquipment] = list(self.equipPlugins.values())
+        self.products: List[BaseProduct] = list(self.productsPlugins.values())
+        self.tests: List[BaseTest] = list(self.testPlugins.values())
 
-    def _discover_plugins(self, pluginType: str, folder: str):
+    def _discover_plugins(self, pluginType: str, folder: str) -> Dict[str, BasePlugin]:
         plugins = PluginDiscovery(self.pm, pluginType, folder)
         plugins.loadPlugins()
         return plugins
