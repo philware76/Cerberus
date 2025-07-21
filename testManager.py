@@ -15,11 +15,11 @@ class TestManager:
         self.pm = pluggy.PluginManager("cerberus")
 
         self.equipPlugins: Dict[str, BaseEquipment] = cast(Dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
-        self.productsPlugins: Dict[str, BaseProduct] = cast(Dict[str, BaseProduct], self._discover_plugins("Product", "products"))
+        self.productPlugins: Dict[str, BaseProduct] = cast(Dict[str, BaseProduct], self._discover_plugins("Product", "products"))
         self.testPlugins: Dict[str, BaseTest] = cast(Dict[str, BaseTest], self._discover_plugins("Test", "tests"))
 
         self.equipment: List[BaseEquipment] = list(self.equipPlugins.values())
-        self.products: List[BaseProduct] = list(self.productsPlugins.values())
+        self.products: List[BaseProduct] = list(self.productPlugins.values())
         self.tests: List[BaseTest] = list(self.testPlugins.values())
 
     def _discover_plugins(self, pluginType: str, folder: str) -> Dict[str, BasePlugin]:
