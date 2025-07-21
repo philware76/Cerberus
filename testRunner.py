@@ -11,7 +11,7 @@ class TestRunner:
         logging.info(f"Running test: {test.name}")
 
         # Check if the test can be initialized
-        if not test.Initialise():
+        if not test.initialise():
             logging.error(f"Failed to initialize test: {test.name}")
             return False
 

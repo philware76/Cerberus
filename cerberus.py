@@ -6,6 +6,7 @@ import sys
 import cmd
 
 from logConfig import setupLogging
+from plugins.equipment.baseEquipment import BaseEquipment
 from plugins.tests.baseTest import BaseTest
 from testManager import TestManager
 from testRunner import TestRunner
@@ -36,6 +37,32 @@ class EquipShell(cmd.Cmd):
     def do_list(self, arg):
         """List all of the Equipment"""
         displayPluginCategory("Equipment", manager.equipPlugins)
+
+    def do_load(self, equipName):
+        """Loads equipment"""
+        try:
+            test = manager.equipPlugins[equipName]
+            EquipmentShell(test).cmdloop()
+        except KeyError:
+            print(f"Unknown equipment: {equipName}")
+
+
+class EquipmentShell(cmd.Cmd):
+    def __init__(self, equip):
+        EquipmentShell.intro = f"Welcome to Cerberus {equip.name} Equipment System. Type help or ? to list commands.\n"
+        EquipmentShell.prompt = f"{equip.name}> "
+
+        super().__init__()
+        self.equip: BaseEquipment = equip
+
+    def do_exit(self, arg):
+        """Exit the Cerberus Equipment shell"""
+        return True
+
+    def do_init(self, arg):
+        """Initialises the Equipment"""
+        if self.equip.Initialise():
+            print(f"Equipment Identity: {self.equip.identity}")
 
 
 class ProductShell(cmd.Cmd):
@@ -97,12 +124,12 @@ class Shell(cmd.Cmd):
     intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
     prompt = 'Cerberus> '
 
-    def do_quit(self, arg):
-        """Quit Cerberus shell and exit the application"""
+    def do_exit(self, arg):
+        """Exit Cerberus shell and exit the application"""
         print("Goodbye")
         exit(0)
 
-    def do_equipment(self, arg):
+    def do_equip(self, arg):
         """Go into the Equipment shell subsystem"""
         EquipShell().cmdloop()
 

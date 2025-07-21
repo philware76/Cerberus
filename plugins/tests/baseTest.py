@@ -17,8 +17,19 @@ class BaseTest(BasePlugin):
         self.RequiredEquipment: List[Type[BaseEquipment]] = []
         self.Parameters: Dict[str, BaseParameters] = {}
 
-    def Initialise(self) -> bool:
-        logging.debug(f"Initialising")
+    def initialise(self) -> bool:
+        logging.debug("Initialise")
+        self.initialised = True
+        return True
+
+    def configure(self, config) -> bool:
+        logging.debug("Configure")
+        self.configured = True
+        return True
+
+    def finalise(self) -> bool:
+        logging.debug("Finalise")
+        self.finalised = True
         return True
 
     # Do not use this if we are running headless/CLI/test runner etc!
