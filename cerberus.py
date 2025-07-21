@@ -63,7 +63,7 @@ class EquipmentShell(cmd.Cmd):
 
         super().__init__()
         self.equip: BaseEquipment = equip
-        self.config = None
+        self.config = {}
 
         self.comms = CommsParser()
 
@@ -88,7 +88,8 @@ class EquipmentShell(cmd.Cmd):
             pass
 
     def do_finalise(self, arg):
-        self.equip.finalise()
+        if self.equip.initialised:
+            self.equip.finalise()
 
 
 class ProductShell(cmd.Cmd):
