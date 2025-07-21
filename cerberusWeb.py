@@ -14,17 +14,21 @@ app = FastAPI()
 logging.info("Starting Cerberus Test Manager...")
 manager = TestManager()
 
+
 @app.get("/")
 async def read_root():
     return {"Message": "Welcome to Cerberus Test Manager"}
 
+
 @app.get("/tests")
 async def read_tests():
-    return {"Tests": [test.name for test in manager.Tests]}
+    return {"Tests": [test.name for test in manager.tests]}
+
 
 @app.get("/equipment")
 async def read_equipment():
     return {"Equipment": [equip.name for equip in manager.equipment]}
+
 
 @app.get("/test/{test_name}")
 async def run_test(test_name: str):
@@ -40,12 +44,12 @@ async def run_test(test_name: str):
     except Exception as e:
         logging.error(f"Error creating or checking requirements for test '{test_name}': {e}")
         return {"Error": str(e)}
-    
+
     logging.info(f"All required equipment for {test.name} is available.")
     test.Initialise()
     await test.run()
     result = test.getResult()
-    
+
     return {
         "Test Name": test.name,
         "Result": {

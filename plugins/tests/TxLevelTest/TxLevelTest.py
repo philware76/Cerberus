@@ -24,6 +24,7 @@ class TxLevelTestParameters(BaseParameters):
         super().__init__("RF Parameters")
 
         self.addParameter(BaseParameter("Tx Level", 0.0, " dBm", "Sets the Transmit power level"))
+        self.addParameter(BaseParameter("Range", None, " dBm", 0, 25, "Sets the Transmit power level"))
 
 
 class TxLevelTest(BaseTest):
