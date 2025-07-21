@@ -1,4 +1,4 @@
-from plugins import hookimpl, singleton
+from plugins.basePlugin import hookimpl, singleton
 from plugins.equipment.chambers.baseChamber import BaseChamber
 
 @hookimpl

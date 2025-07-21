@@ -1,4 +1,7 @@
-from plugins import hookimpl, singleton
+import asyncio
+import logging
+
+from plugins.basePlugin import hookimpl, singleton
 from plugins.equipment.chambers.baseChamber import BaseChamber
 from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 from plugins.tests.baseTest import BaseTest
@@ -17,7 +20,11 @@ class TxLevelTest(BaseTest):
         super().__init__("TxLevelTest")
         self._addRequirements([BaseChamber])
 
-    def run(self):
-        print(f"Running TxLevelTest: {self.name}")
-        
+    async def run(self):
+        await super().run()
+
+        for i in range(20):
+            logging.info(f"Running TxLevelTest iteration {i + 1}")
+            await asyncio.sleep(1)
+
         self.result = TxLevelTestResult(self.name, ResultStatus.PASSED)

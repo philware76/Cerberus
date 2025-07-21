@@ -56,7 +56,7 @@ class PluginDiscovery:
     def listPlugins(self) -> List[BasePlugin]:
        return list(self._createPlugins.keys())
     
-    def createPlugin(self, pluginName) -> BasePlugin:
+    def getPlugin(self, pluginName) -> BasePlugin:
         for name in self._createPlugins:
             if name.lower() == pluginName.lower():
                 return self._createPlugins[name]()
@@ -64,6 +64,7 @@ class PluginDiscovery:
         logging.error(f"Plugin {pluginName} not found.")
         return None
 
+    # Create all the plugins based on the registered methods
     def createPlugins(self) -> List[BasePlugin]:
         return [func() for func in self._createPlugins.values()]
 
