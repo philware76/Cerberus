@@ -1,4 +1,4 @@
-import asyncio
+import time
 import logging
 
 from plugins.baseParameters import BaseParameter, BaseParameters
@@ -34,11 +34,11 @@ class TxLevelTest(BaseTest):
         txLevelParams = TxLevelTestParameters()
         self.Parameters[txLevelParams.groupName] = txLevelParams
 
-    async def run(self):
-        await super().run()
+    def run(self):
+        super().run()
 
         for i in range(20):
             logging.info(f"Running TxLevelTest iteration {i + 1}")
-            await asyncio.sleep(1)
+            time.sleep(1)
 
         self.result = TxLevelTestResult(self.name, ResultStatus.PASSED)
