@@ -2,9 +2,11 @@ import importlib.util
 import logging
 import os
 from pathlib import Path
+from types import ModuleType
 from typing import Dict, List
 
 from plugins.basePlugin import BasePlugin
+
 
 class PluginDiscovery(Dict[str, BasePlugin]):
     def __init__(self, pluginManager, pluginType, folder):
@@ -32,29 +34,54 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             if not dirs:  # This is a leaf folder
                 yield root
 
-    def _registerPlugin(self, pluginName, plugin_file_path):
-        spec = importlib.util.spec_from_file_location(pluginName, plugin_file_path)
+    def _loadModule(self, pluginName: str, filePath: str) -> (ModuleType | None):
+        spec = importlib.util.spec_from_file_location(pluginName, filePath)
+        if spec is None:
+            logging.error(f"Can't find spec from file: {filePath}")
+            return None
+
         module = importlib.util.module_from_spec(spec)
-    
+        if module is None:
+            logging.error(f"Cant find module from spec: {spec}")
+            return None
+
+        if spec.loader is None:
+            logging.error(f"No loader associated with spec: {spec}")
+            return None
+
         try:
             spec.loader.exec_module(module)
         except Exception as e:
-            logging.error(f"Failed to load plugin {plugin_file_path}: {e}")
-            return
-        
-        if hasattr(module, self.createMethodName):
-            try:
-                self.pm.register(module, name=pluginName)
-                createFunc = getattr(module, self.createMethodName)
-                basePlugin = createFunc()
-                self[pluginName] = basePlugin
-                logging.info(f" - Plugin registered: {basePlugin.name}")
-            except ValueError as e:
-                logging.error(f"Failed to register plugin {pluginName}. Ensure plugins are correctly implemented.")
-        else:
-            logging.debug(f"Skipped {plugin_file_path}: no '{self.createMethodName}' specification found")
+            logging.error(f"Failed to load plugin {filePath}: {e}")
+            return None
 
-    def getPlugin(self, pluginName) -> BasePlugin:
+        return module
+
+    def _createPlugin(self, pluginName: str, module: ModuleType) -> (BasePlugin | None):
+        try:
+            self.pm.register(module, name=pluginName)
+            createFunc = getattr(module, self.createMethodName)
+            basePlugin = createFunc()
+            logging.info(f" - Plugin registered: {basePlugin.name}")
+            return basePlugin
+
+        except ValueError as e:
+            logging.error(f"Failed to register plugin {pluginName}. Ensure plugins are correctly implemented.")
+            return None
+
+    def _registerPlugin(self, pluginName, filePath):
+        module = self._loadModule(pluginName, filePath)
+        if module is None:
+            return
+
+        if hasattr(module, self.createMethodName):
+            basePlugin = self._createPlugin(pluginName, module)
+            if basePlugin is not None:
+                self[pluginName] = basePlugin
+        else:
+            logging.debug(f"Skipped {filePath}: no '{self.createMethodName}' specification found")
+
+    def getPlugin(self, pluginName) -> (BasePlugin | None):
         for name in self:
             if name.lower() == pluginName.lower():
                 return self[name]
@@ -63,7 +90,11 @@ class PluginDiscovery(Dict[str, BasePlugin]):
         return None
 
     def _checkForMissingImplementations(self):
-        hookCaller = getattr(self.pm.hook, self.createMethodName, None)        
+        hookCaller = getattr(self.pm.hook, self.createMethodName, None)
+        if hookCaller is None:
+            logging.error(f"Can't find createPlugin hook {self.createMethodName}")
+            return
+
         implementations = hookCaller.get_hookimpls()
         if not implementations:
             logging.error(f"No {self.createMethodName} implementations found for {self.pluginType} plugins. Ensure plugins are correctly implemented.")
@@ -71,7 +102,7 @@ class PluginDiscovery(Dict[str, BasePlugin]):
         elif len(implementations) != self.registeredPlugins:
             logging.warning(f"Only {len(implementations)} implementations found for {self.registeredPlugins} {self.pluginType} plugins. Ensure plugins are correctly implemented.")
 
-    def loadPlugins(self, pluginFolders = None):
+    def loadPlugins(self, pluginFolders=None):
         if pluginFolders is None:
             pluginFolders = self._getPluginFolders()
 
@@ -85,14 +116,13 @@ class PluginDiscovery(Dict[str, BasePlugin]):
                     pluginCount += 1
                 else:
                     logging.trace(f"Skipped {entry.name} - not a valid {self.pluginType} plugin file.")
-            
+
             if pluginCount == 0:
                 logging.warning(f"No {self.pluginType} plugins found in {pluginFolder}. Ensure plugins are correctly implemented and named.")
 
-
         if self.registeredPlugins > 0:
             self._checkForMissingImplementations()
-        else:   
+        else:
             logging.warning(f"No {self.pluginType} plugins found in {self.folder}. Ensure plugins are correctly implemented and named.")
 
         logging.debug(f"Finished registering {self.pluginType} plugins.")

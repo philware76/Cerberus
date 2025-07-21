@@ -8,16 +8,19 @@ from logConfig import setupLogging
 from plugins.tests.baseTest import BaseTest
 from testManager import TestManager
 
+
 def displayPlugins():
     displayPluginCategory("Equipment", manager._equipPlugins)
     displayPluginCategory("Product", manager._productsPlugins)
     displayPluginCategory("Test", manager._testPlugins)
+
 
 def displayPluginCategory(category_name, plugins):
     logging.info(f"Available {category_name} plugins:")
     for plugin in plugins.values():
         logging.info(f" - {plugin.name}")
     logging.info("")
+
 
 if __name__ == "__main__":
     setupLogging(logging.DEBUG)
@@ -28,17 +31,17 @@ if __name__ == "__main__":
 
     displayPlugins()
 
-    test : BaseTest = manager._testPlugins.getPlugin("TxLevelTest")
+    test: BaseTest = manager._testPlugins.getPlugin("TxLevelTest")
     if test:
         print(f"Created test plugin: {test.name}")
     else:
         print("Plugin not found.")
 
-    equipment = manager.checkRequirements(test)
-    if not equipment:
-        logging.error(f"Curent equipment does not meet the requirements for {test.name}")
+    valid, missing = manager.checkRequirements(test)
+    if not valid:
+        logging.error(f"Missing {[equip.__name__ for equip in missing]} equipment requirements for {test.name} test")
     else:
-        logging.info(f"All required equipment for {test.name} is available.")
+        logging.info(f"All required equipment for {test.name} test are available.")
 
         test.Initialise()
         # await test.run()

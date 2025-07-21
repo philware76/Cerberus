@@ -6,19 +6,22 @@ from plugins.equipment.chambers.baseChamber import BaseChamber
 from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 from plugins.tests.baseTest import BaseTest
 
+
 @hookimpl
 @singleton
 def createTestPlugin():
     return TxLevelTest()
 
+
 class TxLevelTestResult(BaseTestResult):
     def __init__(self, name, status):
         super().__init__(name, status)
- 
+
+
 class TxLevelTest(BaseTest):
     def __init__(self):
         super().__init__("Tx Level")
-        self._addRequirements([BaseChamber])
+        self._addRequirements([BaseChamber, str])
 
     async def run(self):
         await super().run()
