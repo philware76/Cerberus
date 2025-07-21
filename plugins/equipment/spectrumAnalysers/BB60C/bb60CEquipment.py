@@ -14,7 +14,7 @@ def createEquipmentPlugin():
 class BB60CEquipment(BaseSpecAnalyser):
     def __init__(self):
         super().__init__("BB60C Spectrum Analyser")
-        self.identity: Identity
+        self.identity: Identity | None
         self.visa: VISADevice
 
         self.init = {"Port": 5025, "IPAddress": "127.0.0.1"}
