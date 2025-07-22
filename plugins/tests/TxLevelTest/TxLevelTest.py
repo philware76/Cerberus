@@ -1,7 +1,7 @@
 import time
 import logging
 
-from plugins.baseParameters import BaseParameter, BaseParameters
+from plugins.baseParameters import BaseParameter, BaseParameters, NumericParameter, OptionParameter
 from plugins.basePlugin import hookimpl, singleton
 from plugins.equipment.chambers.baseChamber import BaseChamber
 from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
@@ -23,8 +23,9 @@ class TxLevelTestParameters(BaseParameters):
     def __init__(self, ):
         super().__init__("RF Parameters")
 
-        self.addParameter(BaseParameter("Tx Level", 0.0, " dBm", "Sets the Transmit power level"))
-        self.addParameter(BaseParameter("Range", None, " dBm", 0, 25, "Sets the Transmit power level"))
+        self.addParameter(NumericParameter("Tx Level", 0.0, units="dBm", minValue=-30, maxValue=+23, description="Sets the Transmit power level"))
+        self.addParameter(NumericParameter("Start", -10.5, units="dBm", minValue=0, maxValue=25, description="Sets the Transmit power level"))
+        self.addParameter(OptionParameter("Enable Tx PA", True))
 
 
 class TxLevelTest(BaseTest):
