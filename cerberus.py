@@ -2,12 +2,13 @@
 import argparse
 import json
 import shlex
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton
 
 import logging
 import sys
 import cmd
 
+from gui.widgetGen import apply_parameters, create_all_parameters_ui
 from logConfig import setupLogging
 from plugins.baseParameters import BaseParameters
 from plugins.equipment.baseEquipment import BaseEquipment
@@ -177,6 +178,39 @@ class TestShell(cmd.Cmd):
             print("JSON decoding failed:", e)
         except Exception as e:
             print("Error setting parameters:", e)
+
+    def do_showParams(self, arg):
+        """Show a GUI for the parameters to edit"""
+        # Make sure QApplication exists; create one if it doesn't
+        paramApp = QApplication.instance()
+        if paramApp is None:
+            paramApp = QApplication([])
+
+        window = QWidget()
+        layout = QVBoxLayout(window)
+
+        groups = self.test.parameters
+
+        ui, widget_map = create_all_parameters_ui(groups)
+        layout.addWidget(ui)
+
+        apply_btn = QPushButton("Apply")
+        layout.addWidget(apply_btn)
+
+        def on_apply():
+            apply_parameters(groups, widget_map)
+            print("Updated parameters:")
+            for group in groups.values():
+                for param in group.values():
+                    print(f"{group.groupName} -> {param.name}: {param.value} {param.units}")
+
+        apply_btn.clicked.connect(on_apply)
+
+        window.setWindowTitle("f{self.test.name} Parameters")
+        window.resize(400, 300)
+        window.show()
+
+        paramApp.exec()
 
 
 class Shell(cmd.Cmd):
