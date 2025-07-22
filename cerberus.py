@@ -152,7 +152,8 @@ class TestShell(cmd.Cmd):
     def do_getParams(self, group):
         """Show the test parameters as json string"""
         if group in self.test.parameters.keys():
-            print(self.test.parameters[group].toJson())
+            dict = self.test.parameters[group].to_dict()
+            print(json.dumps(dict))
         else:
             print(f"Parameter group '{group}' does not exist")
 
@@ -170,7 +171,7 @@ class TestShell(cmd.Cmd):
                 return
 
             group, json_str = parts
-            params = BaseParameters.fromJson(json_str)
+            params = BaseParameters.from_dict(json.loads(json_str))
             self.test.parameters[group] = params
             print(f"Parameters for '{group}' set successfully.")
 
