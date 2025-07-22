@@ -23,6 +23,7 @@ def create_parameter_widget(param: BaseParameter) -> QWidget:
         spin.setValue(param.value)
         spin.setSuffix(f" {param.units}" if param.units else "")
         spin.setDecimals(4)
+        spin.setSingleStep(0.1)
         widget = spin
 
     elif isinstance(param, OptionParameter):
