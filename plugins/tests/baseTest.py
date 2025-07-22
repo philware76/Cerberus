@@ -14,8 +14,8 @@ class BaseTest(BasePlugin):
         super().__init__(name, description)
         self.result = None
         self.widget = None
-        self.RequiredEquipment: List[Type[BaseEquipment]] = []
-        self.Parameters: Dict[str, BaseParameters] = {}
+        self.requiredEquipment: List[Type[BaseEquipment]] = []
+        self.parameters: Dict[str, BaseParameters] = {}
 
     def initialise(self, init) -> bool:
         logging.debug("Initialise")
@@ -39,7 +39,7 @@ class BaseTest(BasePlugin):
         return self.widget
 
     def _addRequirements(self, typeNames):
-        self.RequiredEquipment.extend(typeNames)
+        self.requiredEquipment.extend(typeNames)
 
     def run(self):
         logging.info(f"Running test: {self.name}")

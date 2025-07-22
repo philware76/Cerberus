@@ -1,5 +1,6 @@
 # cerberus/testmanager.py
 import argparse
+import json
 import shlex
 from PySide6.QtWidgets import QApplication
 
@@ -8,6 +9,7 @@ import sys
 import cmd
 
 from logConfig import setupLogging
+from plugins.baseParameters import BaseParameters
 from plugins.equipment.baseEquipment import BaseEquipment
 from plugins.tests.baseTest import BaseTest
 from testManager import TestManager
@@ -144,7 +146,37 @@ class TestShell(cmd.Cmd):
 
     def do_params(self, arg):
         """Show the test parameters"""
-        print(self.test.Parameters)
+        print(self.test.parameters)
+
+    def do_getParams(self, group):
+        """Show the test parameters as json string"""
+        if group in self.test.parameters.keys():
+            print(self.test.parameters[group].toJson())
+        else:
+            print(f"Parameter group '{group}' does not exist")
+
+    def do_setParams(self, line):
+        """
+        Set the parameters from a JSON string.
+        Usage:
+            setParams "Voltage Parameters" '{"param1": {"name": ..., ...}}'
+        """
+        try:
+            # Use shlex to properly parse quoted strings
+            parts = shlex.split(line)
+            if len(parts) != 2:
+                print("Usage: setParams \"Group Name\" '{...json...}'")
+                return
+
+            group, json_str = parts
+            params = BaseParameters.fromJson(json_str)
+            self.test.parameters[group] = params
+            print(f"Parameters for '{group}' set successfully.")
+
+        except json.JSONDecodeError as e:
+            print("JSON decoding failed:", e)
+        except Exception as e:
+            print("Error setting parameters:", e)
 
 
 class Shell(cmd.Cmd):
@@ -176,4 +208,7 @@ if __name__ == "__main__":
     manager = TestManager()
     testRunner = TestRunner(manager)
 
-    Shell().cmdloop()
+    try:
+        Shell().cmdloop()
+    except KeyboardInterrupt:
+        print("\nGoodbye\n")

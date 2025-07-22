@@ -32,7 +32,7 @@ class TestManager:
         missingEquipment = []
 
         logging.debug(f"Checking requirements for test: {test.name}")
-        equipmentRequirements: List[Type[BaseEquipment]] = test.RequiredEquipment
+        equipmentRequirements: List[Type[BaseEquipment]] = test.requiredEquipment
         for equipment in equipmentRequirements:
             logging.debug(" - Required equipment: " + equipment.__name__)
             # Find all equipment instances matching this required type
