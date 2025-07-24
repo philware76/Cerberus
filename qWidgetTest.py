@@ -2,13 +2,118 @@ from enum import Enum
 import logging
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import (
-    QWidget, QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QLineEdit, QDoubleSpinBox, QCheckBox, QApplication
+    QWidget, QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QToolButton,
+    QLineEdit, QDoubleSpinBox, QCheckBox, QFrame, QApplication
 )
+from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
+
 from PySide6.QtCore import Qt
 from typing import Dict, Union, cast
 
 from plugins.baseParameters import BaseParameter, BaseParameters, EmptyParameter, EnumParameter, NumericParameter, OptionParameter, StringParameter
+
+class CollapsibleGroupBox(QWidget):
+    def __init__(self, title: str, parent=None):
+        super().__init__(parent)
+
+        # === Toggle button ===
+        self.toggle_button = QToolButton()
+        self.toggle_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.toggle_button.setArrowType(Qt.DownArrow)
+        self.toggle_button.setCheckable(True)
+        self.toggle_button.setChecked(True)
+        self.toggle_button.setFixedSize(16, 16)
+        self.toggle_button.setStyleSheet("QToolButton { border: none; }")
+
+        # === Header label ===
+        self.header_label = QLabel(title)
+        self.header_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-weight: bold;
+                padding: 2px 6px;
+            }
+        """)
+
+        # === Header layout ===
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(6, 2, 6, 2)
+        header_layout.addWidget(self.header_label)
+        header_layout.addStretch()
+        header_layout.addWidget(self.toggle_button)
+
+        self.header_frame = QFrame()
+        self.header_frame.setLayout(header_layout)
+        self.header_frame.setStyleSheet("""
+            QFrame {
+                background-color: #2A6099;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+            }
+        """)
+
+        # === Content Area ===
+        self.content_area = QFrame()
+        self.content_area.setFrameShape(QFrame.StyledPanel)
+        self.content_area.setStyleSheet("""
+            QFrame {
+                background-color: #D6EAF8;
+                border-bottom-left-radius: 6px;
+                border-bottom-right-radius: 6px;
+            }
+        """)
+        self.content_layout = QVBoxLayout()
+        self.content_layout.setContentsMargins(10, 8, 10, 10)
+        self.content_layout.setSpacing(6)
+        self.content_area.setLayout(self.content_layout)
+
+        # === Animation ===
+        self.animation = QPropertyAnimation(self.content_area, b"maximumHeight")
+        self.animation.setDuration(250)
+        self.animation.setEasingCurve(QEasingCurve.InOutQuad)
+
+        # === Main layout ===
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(self.header_frame)
+        main_layout.addWidget(self.content_area)
+        self.setLayout(main_layout)
+
+        # === Connections ===
+        self.toggle_button.clicked.connect(self.toggle_content)
+
+        # === Initialize state ===
+        if self.toggle_button.isChecked():
+            self.content_area.setVisible(True)
+            self.content_area.setMaximumHeight(self.content_area.sizeHint().height())
+        else:
+            self.content_area.setVisible(False)
+            self.content_area.setMaximumHeight(0)
+
+    def toggle_content(self):
+        expanding = self.toggle_button.isChecked()
+        self.toggle_button.setArrowType(Qt.DownArrow if expanding else Qt.RightArrow)
+
+        if expanding:
+            self.content_area.setVisible(True)
+            self.content_area.setMaximumHeight(0)
+            self.animation.setStartValue(0)
+            self.animation.setEndValue(self.content_area.sizeHint().height())
+        else:
+            self.animation.setStartValue(self.content_area.height())
+            self.animation.setEndValue(0)
+
+        self.animation.finished.connect(self._on_animation_done)
+        self.animation.start()
+
+    def _on_animation_done(self):
+        if not self.toggle_button.isChecked():
+            self.content_area.setVisible(False)
+
+    def addWidget(self, widget):
+        self.content_layout.addWidget(widget)
+        self.content_area.setMaximumHeight(self.content_area.sizeHint().height())
 
 
 def create_parameter_widget(param: BaseParameter) -> QWidget:
@@ -57,31 +162,34 @@ def create_parameter_widget(param: BaseParameter) -> QWidget:
 
     return widget
 
-
-def create_parameters_groupbox(group_name: str, parameters: Dict[str, BaseParameter]) -> tuple[QGroupBox, dict[str, QWidget]]:
-    groupbox = QGroupBox(group_name)
-    vbox = QVBoxLayout()
+def create_parameters_groupbox(title: str, parameters: dict[str, BaseParameter]):
+    groupbox = CollapsibleGroupBox(title)
     widget_map = {}
 
     for param in parameters.values():
-        hbox = QHBoxLayout()
-        label = QLabel(f"{param.name}:")
-        label.setFixedWidth(120)
+        row = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
-        input_widget = create_parameter_widget(param)
-        widget_map[param.name] = input_widget
+        # Name label
+        name_label = QLabel(param.name)
+        name_label.setStyleSheet("QLabel { color: black; }")
 
-        if isinstance(param, OptionParameter):
-            # Label goes inline with checkbox
-            hbox.addWidget(input_widget)
-            hbox.addWidget(QLabel(param.name))
-        else:
-            hbox.addWidget(label)
-            hbox.addWidget(input_widget)
+        # Create parameter widget via polymorphic call
+        value_widget = create_parameter_widget(param)
+        value_widget.setFixedWidth(120)  # optional fixed width for alignment
 
-        vbox.addLayout(hbox)
+        layout.addWidget(name_label)
+        layout.addStretch()
+        layout.addWidget(value_widget)
+        layout.setStretch(1, 1)
 
-    groupbox.setLayout(vbox)
+        row.setLayout(layout)
+        groupbox.addWidget(row)
+
+        widget_map[param.name] = value_widget
+
     return groupbox, widget_map
 
 
