@@ -122,7 +122,9 @@ class EmptyParameter(BaseParameter):
 
 PARAMETER_TYPE_MAP = {
     "numeric": NumericParameter,
-    "option": OptionParameter
+    "option": OptionParameter,
+    "enum": EnumParameter,
+    "text": StringParameter
 }
 
 
