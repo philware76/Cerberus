@@ -1,5 +1,3 @@
-import logging
-
 from testManager import TestManager
 
 def displayPlugins(manager: TestManager):
@@ -9,8 +7,16 @@ def displayPlugins(manager: TestManager):
 
 
 def displayPluginCategory(category_name, plugins):
-    logging.info(f"Available {category_name} plugins:")
+    print(f"Available {category_name} plugins:")
+    idx = 0
     for name, plugin in plugins.items():
-        logging.info(f" - {name}: '{plugin.name}'")
+        print(f" #{idx} - {name}: '{plugin.name}'")
+        idx += 1
 
-    logging.info("")
+    print("")
+
+def getInt(text:str) -> int:
+    try:
+        return int(text)
+    except ValueError:
+        return None

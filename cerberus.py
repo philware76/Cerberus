@@ -41,5 +41,7 @@ if __name__ == "__main__":
     try:
         Shell().cmdloop()
     except KeyboardInterrupt:
-        print("\nGoodbye\n")
+        pass
+    finally:
+        print("\nGoodbye")
         exit(0)
