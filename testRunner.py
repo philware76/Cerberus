@@ -1,11 +1,12 @@
 import logging
 
+from testManager import TestManager
 from plugins.tests.baseTest import BaseTest
 
 
 class TestRunner:
     def __init__(self, testManager):
-        self.testManager = testManager
+        self.testManager: TestManager = testManager
 
     def runTest(self, test: BaseTest) -> bool:
         logging.info(f"Running test: {test.name}")

@@ -28,9 +28,9 @@ class BasePluginShell(BaseShell):
 
     def do_setParams(self, line):
         """
-        Set the parameters from a JSON string.
+        Set a group parameters from a JSON string.
         Usage:
-            setParams "Voltage Parameters" '{"param1": {"name": ..., ...}}'
+            setParams "RF Params" '{"param1": {"name": ..., ...}}'
         """
         try:
             # Use shlex to properly parse quoted strings
@@ -86,7 +86,7 @@ class BasePluginShell(BaseShell):
 
         apply_btn.clicked.connect(on_apply)
 
-        window.setWindowTitle("f{self.test.name} Parameters")
+        window.setWindowTitle(f"{self.plugin.name} Parameters")
         window.resize(400, 300)
         window.show()
 

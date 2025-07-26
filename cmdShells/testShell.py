@@ -23,7 +23,7 @@ class TestsShell(BaseShell):
         """Loads a test"""
         try:
             test = self.manager.testPlugins[testName]
-            TestShell(test).cmdloop()
+            TestShell(test, self.manager).cmdloop()
         except KeyError:
             print(f"Unknown test: {testName}")
 
