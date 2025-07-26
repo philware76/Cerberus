@@ -9,7 +9,7 @@ class TestRunner:
         self.testManager: TestManager = testManager
 
     def runTest(self, test: BaseTest) -> bool:
-        logging.info(f"Running test: {test.name}")
+        logging.warning(f"Running test: {test.name}")
 
         # Check if the test can be initialized
         if not test.initialise(None):

@@ -22,7 +22,7 @@ class ProductsShell(BaseShell):
         """Loads a product"""
         try:
             if idx := getInt(name):
-                name = self.manager.products[idx].name
+                name = list(self.manager.productPlugins.keys())[idx]
             
             product = self.manager.productPlugins[name]
             

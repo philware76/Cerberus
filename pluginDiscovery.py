@@ -75,11 +75,11 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             return
 
         if hasattr(module, self.createMethodName):
-            basePlugin = self._createPlugin(pluginName, module)
-            if basePlugin is not None:
-                self[pluginName] = basePlugin
+            plugin:BasePlugin = self._createPlugin(pluginName, module)
+            if plugin is not None:
+                self[plugin.name] = plugin
         else:
-            logging.debug(f"Skipped {filePath}: no '{self.createMethodName}' specification found")
+            logging.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
 
     def __getitem__(self, key: str) -> BasePlugin:
         key_lower = key.lower()
