@@ -1,5 +1,7 @@
 # cerberus/testmanager.py
 import argparse
+import inspect
+import argparse
 import json
 import shlex
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton
@@ -59,6 +61,14 @@ class CommsParser():
         self.parser.add_argument("port", type=int, help='Port number')
 
 
+def get_base_methods(base_cls):
+    return {
+        name: method
+        for name, method in inspect.getmembers(base_cls, predicate=inspect.isfunction)
+        if not name.startswith('_')
+    }
+
+
 class EquipmentShell(cmd.Cmd):
     def __init__(self, equip):
         EquipmentShell.intro = f"Welcome to Cerberus {equip.name} Equipment System. Type help or ? to list commands.\n"
@@ -68,7 +78,61 @@ class EquipmentShell(cmd.Cmd):
         self.equip: BaseEquipment = equip
         self.config = {}
 
+        self.base_cls = equip.__class__.__bases__[0]
+        self.allowed_methods = get_base_methods(self.base_cls)
+        self.parsers = self._buildParsers()
+
         self.comms = CommsParser()
+
+    def _buildParsers(self):
+        """Build ArgumentParsers for each allowed method based on its signature."""
+        parsers = {}
+
+        for name, method in self.allowed_methods.items():
+            sig = inspect.signature(method)
+            parser = argparse.ArgumentParser(prog=name, add_help=False)
+            for param_name, param in sig.parameters.items():
+                annotation = param.annotation if param.annotation is not inspect.Parameter.empty else str
+                parser.add_argument(param_name, type=annotation)
+
+            parsers[name] = parser
+
+        return parsers
+
+    def default(self, line):
+        parts = line.strip().split()
+        if not parts:
+            return
+
+        method_name = parts[0]
+        args = parts[1:]
+
+        if method_name not in self.allowed_methods:
+            print(f"Error: '{method_name}' is not a valid command.")
+            return
+
+        parser = self.parsers[method_name]
+        try:
+            parsed_args = parser.parse_args(args)
+            arg_values = vars(parsed_args)
+            method = getattr(self.equip, method_name)
+            method(**arg_values)
+        except SystemExit:
+            # argparse throws this when parsing fails
+            print(f"Usage error: {method_name} {parser.format_usage().strip()}")
+        except Exception as e:
+            print(f"Error calling method: {e}")
+
+    def do_help(self, arg):
+        if not arg:
+            print("Available commands (from BaseSpectrumAnalyser):")
+            for method_name, method in self.allowed_methods.items():
+                sig = inspect.signature(method)
+                print(f"  {method_name}{sig}")
+        elif arg in self.parsers:
+            self.parsers[arg].print_help()
+        else:
+            print(f"No help available for '{arg}'.")
 
     def do_exit(self, arg):
         """Exit the Cerberus Equipment shell"""
