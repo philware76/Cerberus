@@ -1,7 +1,7 @@
 from testManager import TestManager
-from cmdShells.basePluginShell import BasePluginShell
+from cmdShells.common import displayPluginCategory, getInt
 from cmdShells.baseShell import BaseShell
-from cmdShells.common import displayPluginCategory
+from cmdShells.basePluginShell import BasePluginShell
 from plugins.tests.baseTest import BaseTest
 from testRunner import TestRunner
 
@@ -22,7 +22,11 @@ class TestsShell(BaseShell):
     def do_load(self, testName):
         """Loads a test"""
         try:
-            test = self.manager.testPlugins[testName]
+            if idx := getInt(testName):
+                test = self.manager.tests[idx]
+            else:
+                test = self.manager.testPlugins[testName]
+    
             TestShell(test, self.manager).cmdloop()
         except KeyError:
             print(f"Unknown test: {testName}")

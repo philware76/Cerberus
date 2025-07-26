@@ -46,6 +46,7 @@ class BB60CEquipment(BaseSpecAnalyser):
             return False
 
     def setRBW(self, bandwidth: float) -> bool:
+        """Sets the resolution bandwidth"""
         cmd = f'BAND:RES {bandwidth}KHz'
         return self.visa.command(cmd)
 

@@ -2,15 +2,23 @@ import argparse
 import ast
 import inspect
 import shlex
-from typing import Union
+from typing import Dict, Union
 from cmdShells.basePluginShell import BasePluginShell
 
 def get_base_methods(base_cls):
     return {
         name: method
         for name, method in inspect.getmembers(base_cls, predicate=inspect.isfunction)
-        if not name.startswith('_')
+        if not name.startswith('_') and (name.startswith("set") or name.startswith("get"))
     }
+
+class SilentArgParser(argparse.ArgumentParser):
+    def __init__(self, prog, add_help):
+        super().__init__(prog=prog, add_help=add_help)
+
+    def error(self, message):
+        # Raise a clean exception instead of printing to stderr
+        raise argparse.ArgumentError(None, message)
 
 class RunCommandShell(BasePluginShell):
     def __init__(self, plugin):
@@ -20,13 +28,13 @@ class RunCommandShell(BasePluginShell):
         self.allowed_methods = get_base_methods(self.base_cls)
         self.parsers = self._buildParsers()
 
-    def _buildParsers(self):
+    def _buildParsers(self) -> Dict[str, argparse.ArgumentParser]:
         """Build ArgumentParsers for each allowed method based on its signature."""
         parsers = {}
 
         for name, method in self.allowed_methods.items():
             sig = inspect.signature(method)
-            parser = argparse.ArgumentParser(prog=name, add_help=False)
+            parser = SilentArgParser(prog=name, add_help=False)
             for param_name, param in sig.parameters.items():
                 if param_name == 'self':
                     continue
@@ -92,12 +100,16 @@ class RunCommandShell(BasePluginShell):
 
             method = getattr(self.equip, method_name)
             method(**arg_values)
+
         except SystemExit:
-            # argparse throws this when parsing fails
-            print(f"Usage error: {method_name} {parser.format_usage().strip()}")
+            pass
+        
+        except argparse.ArgumentError:
+            print(self.parsers[method_name].format_usage().strip())
+            
         except Exception as e:
             print(f"Error calling method: {e}")
-
+        
     def _format_type_annotation(self, annotation):
         """Format type annotation for clean display."""
         if annotation == inspect.Parameter.empty:
@@ -115,9 +127,9 @@ class RunCommandShell(BasePluginShell):
 
         return type_str
 
-    def do_cmds(self, arg):
-        """List the commands this equipment can execute"""
-        if not arg:
+    def do_cmds(self, cmd):
+        """List the commands this plugin can execute"""
+        if not cmd:
             print("Available commands:-")
             for method_name, method in self.allowed_methods.items():
                 sig = inspect.signature(method)
@@ -140,7 +152,10 @@ class RunCommandShell(BasePluginShell):
 
                 print(f"  {method_name} {param_str}")
 
-        elif arg in self.parsers:
-            self.parsers[arg].print_help()
+            print()
+
+        elif cmd in self.parsers:
+            print(self.parsers[cmd].format_usage().strip())
+            
         else:
-            print(f"No help available for '{arg}'.")
+            print(f"No help available for '{cmd}'.")

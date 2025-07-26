@@ -1,5 +1,5 @@
-from cmdShells.common import displayPluginCategory
 from testManager import TestManager
+from cmdShells.common import displayPluginCategory, getInt
 from cmdShells.baseShell import BaseShell
 from cmdShells.runCommandShell import RunCommandShell
 from plugins.products.baseProduct import BaseProduct
@@ -21,7 +21,11 @@ class ProductsShell(BaseShell):
     def do_load(self, prodName):
         """Loads a product"""
         try:
-            product:BaseProduct = self.manager.productPlugins[prodName]
+            if idx := getInt(prodName):
+                product = self.manager.products[idx]
+            else:
+                product = self.manager.productPlugins[prodName]
+            
             ProductShell(product).cmdloop()
         except KeyError:
             print(f"Unknown product: {prodName}")
