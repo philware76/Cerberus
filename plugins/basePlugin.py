@@ -30,7 +30,7 @@ class BasePlugin(ABC):
         logging.debug(f"__init__ {name}")
 
     @abstractmethod
-    def initialise(self, init: (Dict[str, Any] | None)) -> bool:
+    def initialise(self, init: (Dict[str, Any])) -> bool:
         '''Intialises a plugin with some initlisation meta data'''
 
     @abstractmethod
