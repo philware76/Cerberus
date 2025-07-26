@@ -13,6 +13,7 @@ from testRunner import TestRunner
 
 from PySide6.QtWidgets import QApplication
 
+import readline
 
 class Shell(BaseShell):
     intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
