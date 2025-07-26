@@ -1,9 +1,11 @@
 # cerberus/testmanager.py
 import argparse
+import ast
 import inspect
 import argparse
 import json
 import shlex
+from typing import Union
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton
 
 import logging
@@ -33,7 +35,13 @@ def displayPluginCategory(category_name, plugins):
     logging.info("")
 
 
-class EquipShell(cmd.Cmd):
+class BaseShell(cmd.Cmd):
+    def do_quit(self, arg):
+        """Quits the shell immediately"""
+        raise KeyboardInterrupt()
+
+
+class EquipShell(BaseShell):
     intro = "Welcome to Cerberus Equipment System. Type help or ? to list commands.\n"
     prompt = 'Equipment> '
 
@@ -69,7 +77,7 @@ def get_base_methods(base_cls):
     }
 
 
-class EquipmentShell(cmd.Cmd):
+class EquipmentShell(BaseShell):
     def __init__(self, equip):
         EquipmentShell.intro = f"Welcome to Cerberus {equip.name} Equipment System. Type help or ? to list commands.\n"
         EquipmentShell.prompt = f"{equip.name}> "
@@ -92,17 +100,53 @@ class EquipmentShell(cmd.Cmd):
             sig = inspect.signature(method)
             parser = argparse.ArgumentParser(prog=name, add_help=False)
             for param_name, param in sig.parameters.items():
-                annotation = param.annotation if param.annotation is not inspect.Parameter.empty else str
-                parser.add_argument(param_name, type=annotation)
+                if param_name == 'self':
+                    continue
+
+                # Check if parameter is Optional
+                is_optional = self._is_optional_type(param.annotation)
+
+                if is_optional:
+                    # Optional parameters become optional arguments with --
+                    parser.add_argument(f'--{param_name}', type=self._safe_eval_type, default=None)
+                else:
+                    # Required parameters remain positional
+                    parser.add_argument(param_name, type=self._safe_eval_type)
 
             parsers[name] = parser
 
         return parsers
 
+    def _is_optional_type(self, annotation):
+        """Check if a type annotation represents an Optional type."""
+        if annotation == inspect.Parameter.empty:
+            return False
+
+        # Check for typing.Optional or typing.Union[X, None]
+        origin = getattr(annotation, '__origin__', None)
+        if origin is Union:
+            args = getattr(annotation, '__args__', ())
+            # Optional[X] is equivalent to Union[X, None]
+            return type(None) in args
+
+        return False
+
+    def _safe_eval_type(self, value):
+        """Safely evaluate Python literals, fall back to string."""
+        try:
+            return ast.literal_eval(value)
+        except (ValueError, SyntaxError):
+            return value
+
     def default(self, line):
-        parts = line.strip().split()
-        if not parts:
+        try:
+            parts = shlex.split(line.strip())
+        except ValueError as e:
+            print(f"Error parsing command: {e}")
             return
+
+        if not parts:
+            raise ValueError("No arguments!")
 
         method_name = parts[0]
         args = parts[1:]
@@ -115,6 +159,9 @@ class EquipmentShell(cmd.Cmd):
         try:
             parsed_args = parser.parse_args(args)
             arg_values = vars(parsed_args)
+            if 'self' in arg_values:
+                del arg_values['self']
+
             method = getattr(self.equip, method_name)
             method(**arg_values)
         except SystemExit:
@@ -123,12 +170,48 @@ class EquipmentShell(cmd.Cmd):
         except Exception as e:
             print(f"Error calling method: {e}")
 
-    def do_help(self, arg):
+    def _format_type_annotation(self, annotation):
+        """Format type annotation for clean display."""
+        if annotation == inspect.Parameter.empty:
+            return None
+
+        # Convert to string and clean up common patterns
+        type_str = str(annotation)
+
+        # Remove 'typing.' prefix
+        type_str = type_str.replace('typing.', '')
+
+        # Handle <class 'type'> format
+        if type_str.startswith("<class '") and type_str.endswith("'>"):
+            type_str = type_str[8:-2]  # Remove <class '...'> wrapper
+
+        return type_str
+
+    def do_cmds(self, arg):
+        """List the commands this equipment can execute"""
         if not arg:
-            print("Available commands (from BaseSpectrumAnalyser):")
+            print("Available commands:-")
             for method_name, method in self.allowed_methods.items():
                 sig = inspect.signature(method)
-                print(f"  {method_name}{sig}")
+
+                # Build parameter list, excluding 'self'
+                params = []
+                for param_name, param in sig.parameters.items():
+                    if param_name == 'self':
+                        continue
+
+                    # Add type annotation if available
+                    formatted_type = self._format_type_annotation(param.annotation)
+                    if formatted_type:
+                        params.append(f"{param_name}: {formatted_type}")
+                    else:
+                        params.append(param_name)
+
+                # Join parameters with spaces or commas as you prefer
+                param_str = ' '.join(params)
+
+                print(f"  {method_name} {param_str}")
+
         elif arg in self.parsers:
             self.parsers[arg].print_help()
         else:
@@ -152,14 +235,13 @@ class EquipmentShell(cmd.Cmd):
 
         except SystemExit:
             logging.warning("Failed to parse your Set IP Comms command")
-            pass
 
     def do_finalise(self, arg):
         if self.equip.initialised:
             self.equip.finalise()
 
 
-class ProductShell(cmd.Cmd):
+class ProductShell(BaseShell):
     intro = "Welcome to Cerberus Product System. Type help or ? to list commands.\n"
     prompt = 'Product> '
 
@@ -172,7 +254,7 @@ class ProductShell(cmd.Cmd):
         displayPluginCategory("Product", manager.productPlugins)
 
 
-class TestsShell(cmd.Cmd):
+class TestsShell(BaseShell):
     intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
     prompt = 'Tests> '
 
@@ -193,7 +275,7 @@ class TestsShell(cmd.Cmd):
             print(f"Unknown test: {testName}")
 
 
-class TestShell(cmd.Cmd):
+class TestShell(BaseShell):
     def __init__(self, test):
         TestShell.intro = f"Welcome to Cerberus {test.name} Test System. Type help or ? to list commands.\n"
         TestShell.prompt = f"{test.name}> "
@@ -278,7 +360,7 @@ class TestShell(cmd.Cmd):
         paramApp.exec()
 
 
-class Shell(cmd.Cmd):
+class Shell(BaseShell):
     intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
     prompt = 'Cerberus> '
 

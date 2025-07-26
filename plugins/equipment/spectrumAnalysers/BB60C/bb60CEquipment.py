@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict
 from plugins.basePlugin import hookimpl, singleton
 from plugins.equipment.baseEquipment import Identity
 from plugins.equipment.spectrumAnalysers.baseSpecAnalyser import BaseSpecAnalyser
@@ -19,7 +20,7 @@ class BB60CEquipment(BaseSpecAnalyser):
 
         self.init = {"Port": 5025, "IPAddress": "127.0.0.1"}
 
-    def initialise(self, init=None) -> bool:
+    def initialise(self, init: Dict[str, Any]) -> bool:
         if self.initialised:
             return True
 

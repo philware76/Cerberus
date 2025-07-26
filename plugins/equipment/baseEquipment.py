@@ -28,7 +28,8 @@ class BaseEquipment(BasePlugin):
     def __init__(self, name):
         super().__init__(name)
         self.identity = Identity("")
-        self.init: Dict[str, Any] = {}
+        self.init: Dict[str, Any] | None = {}
+        self.config: Any | None = None
 
     def initialise(self, init: Dict[str, Any]) -> bool:
         logging.debug("Initialise")
@@ -38,6 +39,7 @@ class BaseEquipment(BasePlugin):
 
     def configure(self, config) -> bool:
         logging.debug("Configure")
+        self.config = config
         self.configured = True
         return True
 
