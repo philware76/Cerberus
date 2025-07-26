@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Dict
+from plugins.baseParameters import BaseParameters, NumericParameter, StringParameter
 from plugins.basePlugin import BasePlugin
 
 
@@ -23,21 +24,28 @@ class Identity():
     def __repr__(self) -> str:
         return str(self)
 
+class CommsParams(BaseParameters):
+    def __init__(self, ):
+        super().__init__("Communication")
+
+        self.addParameter(StringParameter("IP Address", "127.0.0.1", description="IP Address of the device"))
+        self.addParameter(NumericParameter("Port", 5025, units="", minValue=0, maxValue=50000, description="Socket port number"))
+        self.addParameter(NumericParameter("Timeout", 1000, units="ms", minValue=0, maxValue=10000, description="Communication timeout in milliseconds"))
 
 class BaseEquipment(BasePlugin):
     def __init__(self, name):
         super().__init__(name)
         self.identity = Identity("")
-        self.init: Dict[str, Any] | None = {}
-        self.config: Any | None = None
 
-    def initialise(self, init: Dict[str, Any]) -> bool:
+        self.addParameterGroup(CommsParams())
+
+    def initialise(self, init: Any | None = None) -> bool:
         logging.debug("Initialise")
         self.init = init
         self.initialised = True
         return True
 
-    def configure(self, config) -> bool:
+    def configure(self, config: Any | None = None) -> bool:
         logging.debug("Configure")
         self.config = config
         self.configured = True

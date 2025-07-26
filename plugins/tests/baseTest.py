@@ -15,7 +15,6 @@ class BaseTest(BasePlugin):
         self.result = None
         self.widget = None
         self.requiredEquipment: List[Type[BaseEquipment]] = []
-        self.parameters: Dict[str, BaseParameters] = {}
 
     def initialise(self, init) -> bool:
         logging.debug("Initialise")
