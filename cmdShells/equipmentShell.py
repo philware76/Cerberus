@@ -21,7 +21,7 @@ class EquipShell(BaseShell):
         """Loads equipment"""
         try:
             if idx := getInt(name):
-                name = self.manager.equipment[idx].name
+                name = list(self.manager.equipPlugins.keys())[idx]
             
             equip = self.manager.equipPlugins[name]
 

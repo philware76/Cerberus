@@ -23,9 +23,9 @@ class TestsShell(BaseShell):
         """Loads a test"""
         try:
             if idx := getInt(name):
-                name = self.manager.tests[idx].name
+                name = list(self.manager.testPlugins.keys())[idx]
             
-            test = self.manager.testPlugins[name]
+            test: BaseTest = self.manager.testPlugins[name]
     
             TestShell(test, self.manager).cmdloop()
         except KeyError:
