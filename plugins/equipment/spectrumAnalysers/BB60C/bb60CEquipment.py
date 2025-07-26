@@ -20,11 +20,11 @@ class BB60CEquipment(BaseSpecAnalyser):
 
         self.init = {"Port": 5025, "IPAddress": "127.0.0.1"}
 
-    def initialise(self, init: Dict[str, Any]) -> bool:
+    def initialise(self, init: Any | None = None) -> bool:
         if self.initialised:
             return True
 
-        if len(init) > 0:
+        if init is not None:
             super().initialise(init)
 
         self.visa = VISADevice(self.init["Port"], self.init["IPAddress"])

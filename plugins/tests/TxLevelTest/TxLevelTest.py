@@ -33,8 +33,7 @@ class TxLevelTest(BaseTest):
         super().__init__("Tx Level")
         self._addRequirements([BaseChamber, str])
 
-        txLevelParams = TxLevelTestParameters()
-        self.parameters[txLevelParams.groupName] = txLevelParams
+        self.addParameterGroup(TxLevelTestParameters())
 
     def run(self):
         super().run()

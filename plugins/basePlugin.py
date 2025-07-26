@@ -3,6 +3,8 @@ from typing import Any, Dict, Optional
 import logging
 import pluggy
 
+from plugins.baseParameters import BaseParameters
+
 hookimpl = pluggy.HookimplMarker("cerberus")
 hookspec = pluggy.HookspecMarker("cerberus")
 
@@ -27,14 +29,25 @@ class BasePlugin(ABC):
         self.configured = False
         self.finalised = False
 
+        self.init: Any | None = {}
+        self.config: Any | None = None
+
+        self.parameters: Dict[str, BaseParameters] = {}
+
         logging.debug(f"__init__ {name}")
 
-    @abstractmethod
-    def initialise(self, init: (Dict[str, Any])) -> bool:
-        '''Intialises a plugin with some initlisation meta data'''
+    def addParameterGroup(self, group: BaseParameters):
+        if group.groupName in self.parameters:
+            logging.warning(f"Parameter group '{group.groupName}' already exists. Overwriting.")
+
+        self.parameters[group.groupName] = group
 
     @abstractmethod
-    def configure(self, config) -> bool:
+    def initialise(self, init: Any = None) -> bool:
+        '''Initialises a plugin with some initialisation meta data'''
+
+    @abstractmethod
+    def configure(self, config: Any = None) -> bool:
         '''Provides the configuration for the plugin'''
 
     @abstractmethod
