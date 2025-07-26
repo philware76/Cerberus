@@ -18,17 +18,17 @@ class ProductsShell(BaseShell):
         """List all of the Products"""
         displayPluginCategory("Product", self.manager.productPlugins)
 
-    def do_load(self, prodName):
+    def do_load(self, name):
         """Loads a product"""
         try:
-            if idx := getInt(prodName):
-                product = self.manager.products[idx]
-            else:
-                product = self.manager.productPlugins[prodName]
+            if idx := getInt(name):
+                name = self.manager.products[idx].name
+            
+            product = self.manager.productPlugins[name]
             
             ProductShell(product).cmdloop()
         except KeyError:
-            print(f"Unknown product: {prodName}")
+            print(f"Unknown product: {name}")
 
 class ProductShell(RunCommandShell):
     def __init__(self, product:BaseProduct):

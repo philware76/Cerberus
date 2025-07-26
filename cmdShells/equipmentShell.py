@@ -17,18 +17,18 @@ class EquipShell(BaseShell):
         """List all of the Equipment"""
         displayPluginCategory("Equipment", self.manager.equipPlugins)
 
-    def do_load(self, equipName):
+    def do_load(self, name):
         """Loads equipment"""
         try:
-            if idx := getInt(equipName):
-                equip = self.manager.equipment[idx]
-            else:
-                equip = self.manager.equipPlugins[equipName]
+            if idx := getInt(name):
+                name = self.manager.equipment[idx].name
+            
+            equip = self.manager.equipPlugins[name]
 
             EquipmentShell(equip).cmdloop()
 
         except KeyError:
-            print(f"Unknown equipment: {equipName}")
+            print(f"Unknown equipment: {name}")
 
 class EquipmentShell(RunCommandShell):
     def __init__(self, equip:BaseEquipment):

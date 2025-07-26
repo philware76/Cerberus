@@ -19,17 +19,17 @@ class TestsShell(BaseShell):
         """List all of the Tests"""
         displayPluginCategory("Test", self.manager.testPlugins)
 
-    def do_load(self, testName):
+    def do_load(self, name):
         """Loads a test"""
         try:
-            if idx := getInt(testName):
-                test = self.manager.tests[idx]
-            else:
-                test = self.manager.testPlugins[testName]
+            if idx := getInt(name):
+                name = self.manager.tests[idx].name
+            
+            test = self.manager.testPlugins[name]
     
             TestShell(test, self.manager).cmdloop()
         except KeyError:
-            print(f"Unknown test: {testName}")
+            print(f"Unknown test: {name}")
 
 class TestShell(BasePluginShell):
     def __init__(self, test: BaseTest, manager: TestManager):
