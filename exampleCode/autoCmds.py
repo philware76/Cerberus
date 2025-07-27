@@ -243,8 +243,13 @@ if __name__ == "__main__":
     groupbox = CollapsibleGroupBox("Example Device")
     groupbox.addWidget(widget)
 
-    widget.setWindowTitle("Device Command Interface")
-    widget.resize(600, 400)
-    widget.show()
+    window = QWidget()
+    mainLayout = QVBoxLayout(window)
+    mainLayout.addWidget(groupbox)
+    mainLayout.addStretch()
+
+    window.setWindowTitle("Device Command Interface")
+    window.resize(600, 400)
+    window.show()
 
     sys.exit(app.exec())
