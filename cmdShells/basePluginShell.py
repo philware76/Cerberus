@@ -24,8 +24,8 @@ class BasePluginShell(BaseShell):
     def do_getParamGroup(self, group):
         """Show the test parameters for the group as json string"""
         if group in self.plugin.parameters.keys():
-            dict = self.plugin.parameters[group].to_dict()
-            print(json.dumps(dict))
+            pluginDict = self.plugin.parameters[group].to_dict()
+            print(json.dumps(pluginDict))
         else:
             print(f"Parameter group '{group}' does not exist")
 
@@ -98,7 +98,7 @@ class BasePluginShell(BaseShell):
     def do_init(self, arg):
         """Initialises the plugin"""
         if self.plugin.initialise(self.config):
-            print(f"Equipment Identity: {self.equip.identity}")
+            print(f"Identity: {self.plugin.identity}")
 
     def do_finalise(self, arg):
         """Finalises and closes the equipment"""

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any
 from plugins.basePlugin import hookimpl, singleton
 from plugins.equipment.baseEquipment import Identity
 from plugins.equipment.spectrumAnalysers.baseSpecAnalyser import BaseSpecAnalyser
@@ -51,7 +51,7 @@ class BB60CEquipment(BaseSpecAnalyser):
             return False
 
         if self.visa.command(cmd):
-            print("Success!")
+            logging.debug(f"Command {cmd} successful")
 
         return True
 
