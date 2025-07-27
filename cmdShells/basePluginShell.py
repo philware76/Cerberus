@@ -11,12 +11,12 @@ from testManager import TestManager
 
 
 class BasePluginShell(BaseShell):
-    def __init__(self, plugin:BasePlugin, manager: TestManager):
+    def __init__(self, plugin: BasePlugin, manager: TestManager):
         self.plugin = plugin
         self.manager = manager
 
         super().__init__()
-            
+
     def do_params(self, arg):
         """Show the test parameters"""
         print(self.plugin.parameters)
@@ -45,7 +45,7 @@ class BasePluginShell(BaseShell):
             group, json_str = parts
             # Parse the JSON string into a dictionary
             params_dict = json.loads(json_str)
-            
+
             # Ensure that the group exists in the test parameters
             if group in self.plugin.parameters:
                 # Convert the dictionary into a BaseParameters (or subclass) object
@@ -101,5 +101,6 @@ class BasePluginShell(BaseShell):
             print(f"Equipment Identity: {self.equip.identity}")
 
     def do_finalise(self, arg):
+        """Finalises and closes the equipment"""
         if self.plugin.initialised:
             self.plugin.finalise()

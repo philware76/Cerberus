@@ -61,8 +61,8 @@ class VISADevice():
         return self.device.query(command)
 
     def operationComplete(self) -> bool:
-        logging.trace(f"{self.resource} - *IDN?")
-        resp = self.query("*IDN?")
+        logging.trace(f"{self.resource} - *OPC?")
+        resp = self.query("*OPC?")
         if resp is None:
             return False
 

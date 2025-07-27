@@ -75,20 +75,22 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             return
 
         if hasattr(module, self.createMethodName):
-            plugin:BasePlugin = self._createPlugin(pluginName, module)
+            plugin: BasePlugin = self._createPlugin(pluginName, module)
             if plugin is not None:
                 self[plugin.name] = plugin
         else:
             logging.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
 
     def __getitem__(self, key: str) -> BasePlugin:
+        if key is None or key is "":
+            raise ValueError("Empty Plugin name, name must be valid")
+
         key_lower = key.lower()
         for existing_key in self:
             if isinstance(existing_key, str) and existing_key.lower() == key_lower:
                 return super().__getitem__(existing_key)
 
-        logging.error(f"Plugin {key} not found.")
-        raise KeyError(key)
+        raise KeyError(f"Plugin '{key}' not found.")
 
     def _checkForMissingImplementations(self):
         hookCaller = getattr(self.pm.hook, self.createMethodName, None)
