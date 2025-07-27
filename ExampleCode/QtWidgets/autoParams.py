@@ -2,15 +2,16 @@ from enum import Enum
 import logging
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import (
-    QWidget, QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QToolButton,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QToolButton,
     QLineEdit, QDoubleSpinBox, QCheckBox, QFrame, QApplication
 )
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
 
 from PySide6.QtCore import Qt
-from typing import Dict, Union, cast
+from typing import Dict, cast
 
 from plugins.baseParameters import BaseParameter, BaseParameters, EmptyParameter, EnumParameter, NumericParameter, OptionParameter, StringParameter
+
 
 class CollapsibleGroupBox(QWidget):
     def __init__(self, title: str, parent=None):
@@ -161,6 +162,7 @@ def create_parameter_widget(param: BaseParameter) -> QWidget:
         widget.setToolTip(param.description)
 
     return widget
+
 
 def create_parameters_groupbox(title: str, parameters: dict[str, BaseParameter]):
     groupbox = CollapsibleGroupBox(title)
