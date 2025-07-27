@@ -26,7 +26,8 @@ class PluginsShell(BaseShell):
     def do_load(self, name):
         """Load a specific plugin."""
         try:
-            if idx := getInt(name) is not None:
+            idx = getInt(name)
+            if idx is not None:
                 name = list(self.plugins.keys())[idx]
 
             plugin = self.plugins[name]
