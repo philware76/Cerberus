@@ -10,7 +10,7 @@ from testRunner import TestRunner
 
 class TestsShell(PluginsShell):
     def __init__(self, manager:TestManager):
-        super().__init__(manager.equipPlugins, "Test")
+        super().__init__(manager, manager.testPlugins, "Test")
 
 
 # class TestsShell(BaseShell):
@@ -43,7 +43,7 @@ class TestShell(BasePluginShell):
         TestShell.intro = f"Welcome to Cerberus {test.name} Test System. Type help or ? to list commands.\n"
         TestShell.prompt = f"{test.name}> "
 
-        super().__init__(test)
+        super().__init__(test, manager)
         self.test: BaseTest = test
         self.manager : TestManager = manager
 

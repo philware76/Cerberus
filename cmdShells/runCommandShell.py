@@ -4,6 +4,8 @@ import inspect
 import shlex
 from typing import Dict, Union
 from cmdShells.basePluginShell import BasePluginShell
+from plugins.basePlugin import BasePlugin
+from testManager import TestManager
 
 def get_base_methods(base_cls):
     return {
@@ -21,8 +23,8 @@ class SilentArgParser(argparse.ArgumentParser):
         raise argparse.ArgumentError(None, message)
 
 class RunCommandShell(BasePluginShell):
-    def __init__(self, plugin):
-        super().__init__(plugin)
+    def __init__(self, plugin:BasePlugin, manager: TestManager):
+        super().__init__(plugin, manager)
 
         self.base_cls = plugin.__class__.__bases__[0]
         self.allowed_methods = get_base_methods(self.base_cls)
