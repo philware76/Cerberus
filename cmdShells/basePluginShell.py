@@ -21,8 +21,8 @@ class BasePluginShell(BaseShell):
         """Show the test parameters in a human readable way"""
         for groupParams in self.plugin.parameters.values():
             print(groupParams.groupName)
-            for value in groupParams:
-                print(" - " + value)
+            for value in list(groupParams.values()):
+                print(" - " + str(value))
         
         print()
 
