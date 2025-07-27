@@ -1,14 +1,16 @@
+from enum import Enum
 import logging
+from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QToolButton,
-    QLineEdit, QDoubleSpinBox, QCheckBox, QFrame
+    QLineEdit, QDoubleSpinBox, QCheckBox, QFrame, QApplication
 )
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
 
 from PySide6.QtCore import Qt
 from typing import Dict, cast
 
-from plugins.baseParameters import BaseParameter, BaseParameters, EnumParameter, NumericParameter, OptionParameter, StringParameter
+from plugins.baseParameters import BaseParameter, BaseParameters, EmptyParameter, EnumParameter, NumericParameter, OptionParameter, StringParameter
 
 
 class CollapsibleGroupBox(QWidget):
@@ -224,3 +226,59 @@ def apply_parameters(groups: Dict[str, BaseParameters], widget_map: dict[str, di
                 param.value = widget.isChecked()
             elif isinstance(widget, QComboBox):
                 param.value = cast(QComboBox, widget).currentData()
+
+
+class TimingMode(Enum):
+    Plaid = 0
+    Fast = 1
+    Slow = 2
+
+
+def show_parameters_ui_with_apply():
+    import sys
+    from PySide6.QtWidgets import QVBoxLayout, QMainWindow
+
+    app = QApplication(sys.argv)
+
+    # Sample data
+    bp1 = BaseParameters("Voltage Parameters")
+    bp1.addParameter(NumericParameter(name="VCC", value=3.3, units="V", minValue=3.0, maxValue=3.6))
+    bp1.addParameter(NumericParameter(name="VDDIO", value=1.8, units="V", minValue=1.6, maxValue=2.0))
+    bp1.addParameter(NumericParameter(name="Dangle berries", value=5000, units="Ber", minValue=1000, maxValue=10000))
+    bp1.addParameter(StringParameter(name="Username", value="bert.russell", description="It's a coverup!"))
+    bp1.addParameter(EmptyParameter())
+
+    bp2 = BaseParameters("Timing Parameters")
+    bp2.addParameter(NumericParameter(name="Delay", value=10.0, units="ms"))
+    bp2.addParameter(OptionParameter(name="Bert Mode", value=True, description="This is to enable BERT MODE!"))
+    bp2.addParameter(EnumParameter("Timing Mode", TimingMode.Fast, enum_type=TimingMode))
+    groups = {bp1.groupName: bp1, bp2.groupName: bp2}
+
+    # Main window
+    window = QWidget()
+    layout = QVBoxLayout(window)
+
+    ui, widget_map = create_all_parameters_ui(groups)
+    layout.addWidget(ui)
+
+    apply_btn = QPushButton("Apply")
+    layout.addWidget(apply_btn)
+
+    def on_apply():
+        apply_parameters(groups, widget_map)
+        print("Updated parameters:")
+        for group in groups.values():
+            for param in group.values():
+                print(f"{group.groupName} -> {param.name}: {param.value} {param.units}")
+
+    apply_btn.clicked.connect(on_apply)
+
+    window.setWindowTitle("Test Parameters")
+    window.resize(400, 300)
+    window.show()
+
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    show_parameters_ui_with_apply()

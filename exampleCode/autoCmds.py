@@ -1,9 +1,12 @@
 import sys
+import inspect
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QLineEdit, QSpinBox, QDoubleSpinBox,
                                QCheckBox, QComboBox, QLabel, QScrollArea)
 from PySide6.QtCore import Qt
-import inspect
+
+
+from gui.widgetGen import CollapsibleGroupBox
 
 
 class CommandWidgetGenerator:
@@ -13,28 +16,30 @@ class CommandWidgetGenerator:
 
     def create_parameter_widget(self, param_name, param_type, default_value=None):
         """Create appropriate widget based on parameter type"""
-        if param_type == bool:
+        print(f"    Creating widget for {param_name}: type={param_type}, default={default_value}")  # Debug
+
+        if param_type == bool:  # or (default_value is not None and isinstance(default_value, bool)):
             widget = QCheckBox()
             if default_value is not None:
                 widget.setChecked(default_value)
             return widget
 
-        elif param_type == int:
+        elif param_type == int:  # or (default_value is not None and isinstance(default_value, int)):
             widget = QSpinBox()
             widget.setRange(-2147483648, 2147483647)
             if default_value is not None:
                 widget.setValue(default_value)
             return widget
 
-        elif param_type == float:
+        elif param_type == float:  # or (default_value is not None and isinstance(default_value, float)):
             widget = QDoubleSpinBox()
             widget.setRange(-999999.99, 999999.99)
-            widget.setDecimals(6)
+            widget.setDecimals(2)
             if default_value is not None:
                 widget.setValue(default_value)
             return widget
 
-        elif param_type == str:
+        elif param_type == str:  # or (default_value is not None and isinstance(default_value, str)):
             widget = QLineEdit()
             if default_value is not None:
                 widget.setText(str(default_value))
@@ -45,6 +50,7 @@ class CommandWidgetGenerator:
             widget = QLineEdit()
             if default_value is not None:
                 widget.setText(str(default_value))
+            widget.setPlaceholderText(f"Enter {param_type.__name__ if hasattr(param_type, '__name__') else 'value'}")
             return widget
 
     def get_widget_value(self, widget, param_type):
@@ -57,11 +63,11 @@ class CommandWidgetGenerator:
             return widget.value()
         elif isinstance(widget, QLineEdit):
             text = widget.text()
-            if param_type == str:
+            if param_type == str or not text:
                 return text
             elif param_type == int:
                 try:
-                    return int(text)
+                    return int(float(text))  # Handle "1.0" -> 1
                 except ValueError:
                     return 0
             elif param_type == float:
@@ -80,46 +86,78 @@ class CommandWidgetGenerator:
         # Create command button
         cmd_button = QPushButton(method_name)
         cmd_button.setMinimumWidth(120)
+        cmd_button.setToolTip(method.__doc__.strip())
         layout.addWidget(cmd_button)
 
         # Get method signature
         try:
             sig = inspect.signature(method)
-            params = list(sig.parameters.values())[1:]  # Skip 'self' parameter
-        except (ValueError, TypeError):
+            # Get ALL parameters except 'self'
+            all_params = list(sig.parameters.values())
+            params = [p for p in all_params if p.name != 'self']
+            print(f"Method {method_name} has {len(params)} parameters: {[p.name for p in params]}")  # Debug print
+        except (ValueError, TypeError) as e:
+            print(f"Could not get signature for {method_name}: {e}")
             params = []
 
-        param_widgets = []
+        paramWidgets = []
 
-        # Create parameter widgets
-        for param in params:
+        # Create parameter widgets for ALL parameters
+        for i, param in enumerate(params):
             param_type = param.annotation if param.annotation != inspect.Parameter.empty else str
-            default_val = param.default if param.default != inspect.Parameter.empty else None
+            has_default = param.default != inspect.Parameter.empty
+            default_val = param.default if has_default else None
+
+            print(f"  Parameter {i}: {param.name}, type: {param_type}, has_default: {has_default}, default: {default_val}")
 
             # Add parameter label
             label = QLabel(f"{param.name}:")
-            label.setMinimumWidth(60)
+            label.setMinimumWidth(30)
+            label.setAlignment(Qt.AlignRight)
             layout.addWidget(label)
 
-            # Create appropriate widget
-            widget = self.create_parameter_widget(param.name, param_type, default_val)
-            widget.setMinimumWidth(100)
-            layout.addWidget(widget)
+            # Infer type from default value if no annotation and has default
+            if param_type == inspect.Parameter.empty and default_val is not None:
+                param_type = type(default_val)
+            elif param_type == inspect.Parameter.empty:
+                param_type = str  # Default to string for unknown types
 
-            param_widgets.append((param.name, widget, param_type))
+            # Create widget
+            paramWidget = self.create_parameter_widget(param.name, param_type, default_val)
+            paramWidget.setMinimumWidth(100)
+            paramWidget.setToolTip(f"{param.name}")
+            layout.addWidget(paramWidget)
+
+            paramWidgets.append((param.name, paramWidget, param_type, param.default, has_default))
 
         # Connect button click to method call
         def call_method():
             args = []
-            for param_name, widget, param_type in param_widgets:
-                value = self.get_widget_value(widget, param_type)
-                args.append(value)
+            kwargs = {}
+
+            for param_name, paramWidget, param_type, default_value, has_default in paramWidgets:
+                value = self.get_widget_value(paramWidget, param_type)
+
+                # Required parameters (no default) go as positional args
+                if not has_default:
+                    args.append(value)
+                else:
+                    # Optional parameters go as kwargs only if different from default
+                    if value != default_value:
+                        kwargs[param_name] = value
 
             try:
-                result = method(*args)
-                print(f"Called {method_name}({', '.join(map(str, args))}) -> {result}")
+                if kwargs:
+                    result = method(*args, **kwargs)
+                    print(f"Called {method_name}({', '.join(map(str, args))}, {kwargs}) -> {result}")
+                else:
+                    result = method(*args)
+                    print(f"Called {method_name}({', '.join(map(str, args))}) -> {result}")
+
             except Exception as e:
                 print(f"Error calling {method_name}: {e}")
+                import traceback
+                traceback.print_exc()
 
         cmd_button.clicked.connect(call_method)
 
@@ -136,13 +174,14 @@ class CommandWidgetGenerator:
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)
 
-        # Find all callable methods (excluding private ones)
+        # Find all callable methods (excluding private ones and common object methods)
         methods = []
-        for attr_name in dir(self.target_object):
-            if not attr_name.startswith('_'):
+        for attr_name in sorted(dir(self.target_object)):
+            if not attr_name.startswith('_') or attr_name.startswith('__'):
                 attr = getattr(self.target_object, attr_name)
-                if callable(attr):
+                if callable(attr) and not attr_name.startswith('_'):
                     methods.append((attr_name, attr))
+                    print(f"Found method: {attr_name}")  # Debug print
 
         # Create widgets for each method
         for method_name, method in methods:
@@ -171,12 +210,12 @@ class ExampleDevice:
         self.rbw = freq
         return f"RBW set to {freq} Hz"
 
-    def setSpan(self, span: float, units: str = "Hz"):
+    def setSpan(self, span: float):
         """Set frequency span"""
         self.span = span
-        return f"Span set to {span} {units}"
+        return f"Span set to {span}"
 
-    def setMode(self, mode: str, auto_scale: bool = True):
+    def setMode(self, mode: str, auto_scale: bool):
         """Set measurement mode"""
         self.mode = mode
         return f"Mode set to {mode}, auto_scale: {auto_scale}"
@@ -201,8 +240,11 @@ if __name__ == "__main__":
     generator = CommandWidgetGenerator(device)
     widget = generator.generate_widget()
 
+    groupbox = CollapsibleGroupBox("Example Device")
+    groupbox.addWidget(widget)
+
     widget.setWindowTitle("Device Command Interface")
     widget.resize(600, 400)
     widget.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
