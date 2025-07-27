@@ -1,4 +1,5 @@
 from enum import Enum
+import inspect
 import logging
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import (
@@ -10,6 +11,7 @@ from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
 from PySide6.QtCore import Qt
 from typing import Dict, cast
 
+from common import camel2Human
 from plugins.baseParameters import BaseParameter, BaseParameters, EmptyParameter, EnumParameter, NumericParameter, OptionParameter, StringParameter
 
 
@@ -228,13 +230,155 @@ def apply_parameters(groups: Dict[str, BaseParameters], widget_map: dict[str, di
                 param.value = cast(QComboBox, widget).currentData()
 
 
+def create_method_param_widget(name, param_type, default_value=None):
+    if param_type == bool:  # or (default_value is not None and isinstance(default_value, bool)):
+        widget = QCheckBox()
+        if default_value is not None:
+            widget.setChecked(default_value)
+        return widget
+
+    elif param_type == int:  # or (default_value is not None and isinstance(default_value, int)):
+        widget = QSpinBox()
+        widget.setRange(-2147483648, 2147483647)
+        widget.setMinimumWidth(30)
+        if default_value is not None:
+            widget.setValue(default_value)
+        return widget
+
+    elif param_type == float:  # or (default_value is not None and isinstance(default_value, float)):
+        widget = QDoubleSpinBox()
+        widget.setRange(-999999.99, 999999.99)
+        widget.setDecimals(2)
+        widget.setMinimumWidth(30)
+        if default_value is not None:
+            widget.setValue(default_value)
+        return widget
+
+    elif param_type == str:  # or (default_value is not None and isinstance(default_value, str)):
+        widget = QLineEdit()
+        if default_value is not None:
+            widget.setText(str(default_value))
+        widget.setMinimumWidth(100)
+        return widget
+
+    else:
+        # Default to string input for unknown types
+        widget = QLineEdit()
+        if default_value is not None:
+            widget.setText(str(default_value))
+        return widget
+
+
+def create_all_methods_ui(instance) -> CollapsibleGroupBox:
+    groupbox = CollapsibleGroupBox("Device Methods")
+    methods = inspect.getmembers(instance, predicate=inspect.ismethod)
+
+    for method_name, method in methods:
+        if method_name.startswith("_"):
+            continue
+
+        row = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        try:
+            sig = inspect.signature(method)
+            params = [p for p in sig.parameters.values() if p.name != 'self']
+        except Exception as e:
+            print(f"Could not inspect {method_name}: {e}")
+            continue
+
+        widget_map = {}
+
+        def make_handler(method, widget_map):
+            def handler():
+                args = []
+                for name, (widget, ptype) in widget_map.items():
+                    if isinstance(widget, QLineEdit):
+                        val = widget.text()
+                        try:
+                            val = ptype(val)
+                        except:
+                            pass
+                    elif isinstance(widget, QCheckBox):
+                        val = widget.isChecked()
+                    else:
+                        val = None
+                    args.append(val)
+                result = method(*args)
+                print(f"→ {method.__name__}({args}) = {result}")
+            return handler
+
+        button = QPushButton(camel2Human(method_name))
+        if method.__doc__ is not None:
+            button.setToolTip(method.__doc__.strip())
+        button.setMinimumWidth(120)
+        button.clicked.connect(make_handler(method, widget_map))
+        layout.addWidget(button)
+
+        for param in params:
+            label = QLabel(param.name + ":")
+            label.setStyleSheet("QLabel { color: black; }")
+            label.setAlignment(Qt.AlignRight)
+            label.setMinimumWidth(50)
+            layout.addWidget(label)
+
+            param_type = param.annotation if param.annotation != inspect.Parameter.empty else str
+            default_val = param.default if param.default != inspect.Parameter.empty else None
+            widget = create_method_param_widget(param.name, param_type, default_val)
+            widget.setMinimumWidth(100)
+            widget.setToolTip(param.name)
+            layout.addWidget(widget)
+
+            widget_map[param.name] = (widget, param_type)
+
+        layout.addStretch()
+        row.setLayout(layout)
+        groupbox.addWidget(row)
+
+    return groupbox
+
+
 class TimingMode(Enum):
     Plaid = 0
     Fast = 1
     Slow = 2
 
 
-def show_parameters_ui_with_apply():
+class ExampleDevice:
+    def __init__(self):
+        self.rbw = 1000.0
+        self.span = 10000.0
+        self.enabled = True
+        self.mode = "auto"
+
+    def setRBW(self, freq: float):
+        """Set resolution bandwidth"""
+        self.rbw = freq
+        return f"RBW set to {freq} Hz"
+
+    def setSpan(self, span: float):
+        """Set frequency span"""
+        self.span = span
+        return f"Span set to {span}"
+
+    def setMode(self, mode: str, auto_scale: bool):
+        """Set measurement mode"""
+        self.mode = mode
+        return f"Mode set to {mode}, auto_scale: {auto_scale}"
+
+    def enable(self, state: bool):
+        """Enable/disable device"""
+        self.enabled = state
+        return f"Device {'enabled' if state else 'disabled'}"
+
+    def calibrate(self):
+        """Perform calibration"""
+        return "Calibration complete"
+
+
+def demo():
     import sys
     from PySide6.QtWidgets import QVBoxLayout, QMainWindow
 
@@ -273,6 +417,11 @@ def show_parameters_ui_with_apply():
 
     apply_btn.clicked.connect(on_apply)
 
+    device = ExampleDevice()
+    group = create_all_methods_ui(device)
+    layout.addWidget(group)
+    layout.addStretch()
+
     window.setWindowTitle("Test Parameters")
     window.resize(400, 300)
     window.show()
@@ -281,4 +430,4 @@ def show_parameters_ui_with_apply():
 
 
 if __name__ == "__main__":
-    show_parameters_ui_with_apply()
+    demo()
