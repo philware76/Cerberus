@@ -45,30 +45,32 @@ class BB60CEquipment(BaseSpecAnalyser):
         else:
             return False
 
-    def checkSend(self, cmd):
+    def checkSend(self, cmd) -> bool:
         if not self.initialised:
             print("Device needs to be initialised with 'init' command")
-            return
+            return False
 
         if self.visa.command(cmd):
             print("Success!")
 
+        return True
+
     def setRBW(self, bandwidth: float) -> bool:
         """Sets the resolution bandwidth"""
         cmd = f'BAND:RES {bandwidth}KHz'
-        self.checkSend(cmd)
+        return self.checkSend(cmd)
 
     def setVBW(self, bandwidth: float) -> bool:
         cmd = f'BAND:VID {bandwidth}KHz'
-        self.checkSend(cmd)
+        return self.checkSend(cmd)
 
     def setCentre(self, frequency: float) -> bool:
         cmd = f'FREQ:CENT {frequency}MHz'
-        self.checkSend(cmd)
+        return self.checkSend(cmd)
 
     def setSpan(self, frequency: float) -> bool:
         cmd = f'FREQ:SPAN {frequency}MHz'
-        self.checkSend(cmd)
+        return self.checkSend(cmd)
 
     def setStart(self, frequency: float) -> bool:
         '''Sets the start frequency of the spectrum analyser'''
@@ -81,7 +83,7 @@ class BB60CEquipment(BaseSpecAnalyser):
     def setRefLevel(self, refLevel: float) -> bool:
         '''Sets the power reference level of the spectrum analyser'''
         cmd = f"POW:RLEV {refLevel}"
-        self.checkSend(cmd)
+        return self.checkSend(cmd)
 
     def setMarker(self, frequency: float) -> bool:
         '''Sets the marker frequency position'''
