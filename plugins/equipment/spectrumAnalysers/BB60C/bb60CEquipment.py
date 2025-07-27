@@ -24,8 +24,8 @@ class BB60CEquipment(BaseSpecAnalyser):
         if self.initialised:
             return True
 
-        if init is not None:
-            super().initialise(init)
+        # if init is not None:
+        #     super().initialise(init)
 
         self.visa = VISADevice(self.init["Port"], self.init["IPAddress"])
         if self.visa.open() is None:
@@ -45,22 +45,30 @@ class BB60CEquipment(BaseSpecAnalyser):
         else:
             return False
 
+    def checkSend(self, cmd):
+        if not self.initialised:
+            print("Device needs to be initialised with 'init' command")
+            return
+
+        if self.visa.command(cmd):
+            print("Success!")
+
     def setRBW(self, bandwidth: float) -> bool:
         """Sets the resolution bandwidth"""
         cmd = f'BAND:RES {bandwidth}KHz'
-        return self.visa.command(cmd)
+        self.checkSend(cmd)
 
     def setVBW(self, bandwidth: float) -> bool:
         cmd = f'BAND:VID {bandwidth}KHz'
-        return self.visa.command(cmd)
+        self.checkSend(cmd)
 
     def setCentre(self, frequency: float) -> bool:
         cmd = f'FREQ:CENT {frequency}MHz'
-        return self.visa.command(cmd)
+        self.checkSend(cmd)
 
     def setSpan(self, frequency: float) -> bool:
         cmd = f'FREQ:SPAN {frequency}MHz'
-        return self.visa.command(cmd)
+        self.checkSend(cmd)
 
     def setStart(self, frequency: float) -> bool:
         '''Sets the start frequency of the spectrum analyser'''
@@ -73,7 +81,7 @@ class BB60CEquipment(BaseSpecAnalyser):
     def setRefLevel(self, refLevel: float) -> bool:
         '''Sets the power reference level of the spectrum analyser'''
         cmd = f"POW:RLEV {refLevel}"
-        return self.visa.command(cmd)
+        self.checkSend(cmd)
 
     def setMarker(self, frequency: float) -> bool:
         '''Sets the marker frequency position'''
