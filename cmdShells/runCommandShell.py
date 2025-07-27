@@ -7,12 +7,14 @@ from cmdShells.basePluginShell import BasePluginShell
 from plugins.basePlugin import BasePlugin
 from testManager import TestManager
 
+
 def get_base_methods(base_cls):
     return {
         name: method
         for name, method in inspect.getmembers(base_cls, predicate=inspect.isfunction)
         if not name.startswith('_') and (name.startswith("set") or name.startswith("get"))
     }
+
 
 class SilentArgParser(argparse.ArgumentParser):
     def __init__(self, prog, add_help):
@@ -22,8 +24,9 @@ class SilentArgParser(argparse.ArgumentParser):
         # Raise a clean exception instead of printing to stderr
         raise argparse.ArgumentError(None, message)
 
+
 class RunCommandShell(BasePluginShell):
-    def __init__(self, plugin:BasePlugin, manager: TestManager):
+    def __init__(self, plugin: BasePlugin, manager: TestManager):
         super().__init__(plugin, manager)
 
         self.base_cls = plugin.__class__.__bases__[0]
@@ -100,18 +103,30 @@ class RunCommandShell(BasePluginShell):
             if 'self' in arg_values:
                 del arg_values['self']
 
-            method = getattr(self.equip, method_name)
-            method(**arg_values)
+            method = getattr(self.plugin, method_name)
+            if not method(**arg_values):
+                return True
 
         except SystemExit:
             pass
-        
+
         except argparse.ArgumentError:
             print(self.parsers[method_name].format_usage().strip())
-            
+
         except Exception as e:
             print(f"Error calling method: {e}")
-        
+
+    def onecmd(self, line):
+        """Override onecmd to handle multiple commands separated by semicolons"""
+        # Split the line by semicolons and process each command
+        commands = [cmd.strip() for cmd in line.split(';') if cmd.strip()]
+
+        for command in commands:
+            if super().onecmd(command):
+                break                       # stop processing if we get a 'Exit' (True) returned
+
+        return False
+
     def _format_type_annotation(self, annotation):
         """Format type annotation for clean display."""
         if annotation == inspect.Parameter.empty:
@@ -158,6 +173,6 @@ class RunCommandShell(BasePluginShell):
 
         elif cmd in self.parsers:
             print(self.parsers[cmd].format_usage().strip())
-            
+
         else:
             print(f"No help available for '{cmd}'.")
