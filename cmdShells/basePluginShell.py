@@ -7,10 +7,13 @@ from plugins.basePlugin import BasePlugin
 
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton
 
+from testManager import TestManager
+
 
 class BasePluginShell(BaseShell):
-    def __init__(self, plugin:BasePlugin):
+    def __init__(self, plugin:BasePlugin, manager: TestManager):
         self.plugin = plugin
+        self.manager = manager
 
         super().__init__()
             

@@ -40,7 +40,7 @@ class TestManager:
             if matching_equips:
                 for equip in matching_equips:
                     logging.debug(f"   - Found: {equip.name}")
-                    
+
             else:
                 logging.debug(f"   - Missing: {equipment.__name__}")
                 missingEquipment.append(equipment.__name__)
