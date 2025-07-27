@@ -113,8 +113,11 @@ class RunCommandShell(BasePluginShell):
         except argparse.ArgumentError:
             print(self.parsers[method_name].format_usage().strip())
 
+        except NotImplementedError:
+            print(f"The command '{method_name}' has not been implemented.")
+
         except Exception as e:
-            print(f"Error calling method: {e}")
+            print(f"Error calling method: {str(e)}")
 
     def onecmd(self, line):
         """Override onecmd to handle multiple commands separated by semicolons"""
