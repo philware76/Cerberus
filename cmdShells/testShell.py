@@ -1,3 +1,4 @@
+from cmdShells.pluginsShell import PluginsShell
 from testManager import TestManager
 from cmdShells.common import displayPluginCategory, getInt
 from cmdShells.baseShell import BaseShell
@@ -6,30 +7,36 @@ from plugins.tests.baseTest import BaseTest
 from testRunner import TestRunner
 
 
-class TestsShell(BaseShell):
-    intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
-    prompt = 'Tests> '
 
-    def __init__(self, manager: TestManager):
-        super().__init__()
+class TestsShell(PluginsShell):
+    def __init__(self, manager:TestManager):
+        super().__init__(manager.equipPlugins, "Test")
 
-        self.manager = manager
 
-    def do_list(self, arg):
-        """List all of the Tests"""
-        displayPluginCategory("Test", self.manager.testPlugins)
+# class TestsShell(BaseShell):
+#     intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
+#     prompt = 'Tests> '
 
-    def do_load(self, name):
-        """Loads a test"""
-        try:
-            if idx := getInt(name):
-                name = list(self.manager.testPlugins.keys())[idx]
+#     def __init__(self, manager: TestManager):
+#         super().__init__()
+
+#         self.manager = manager
+
+#     def do_list(self, arg):
+#         """List all of the Tests"""
+#         displayPluginCategory("Test", self.manager.testPlugins)
+
+#     def do_load(self, name):
+#         """Loads a test"""
+#         try:
+#             if idx := getInt(name):
+#                 name = list(self.manager.testPlugins.keys())[idx]
             
-            test: BaseTest = self.manager.testPlugins[name]
+#             test: BaseTest = self.manager.testPlugins[name]
     
-            TestShell(test, self.manager).cmdloop()
-        except KeyError:
-            print(f"Unknown test: {name}")
+#             TestShell(test, self.manager).cmdloop()
+#         except KeyError:
+#             print(f"Unknown test: {name}")
 
 class TestShell(BasePluginShell):
     def __init__(self, test: BaseTest, manager: TestManager):

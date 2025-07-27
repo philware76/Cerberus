@@ -1,3 +1,4 @@
+from cmdShells.pluginsShell import PluginsShell
 from testManager import TestManager
 from cmdShells.common import displayPluginCategory, getInt
 from cmdShells.baseShell import BaseShell
@@ -5,30 +6,33 @@ from cmdShells.runCommandShell import RunCommandShell
 from plugins.products.baseProduct import BaseProduct
 
 
-class ProductsShell(BaseShell):
-    intro = "Welcome to Cerberus Product System. Type help or ? to list commands.\n"
-    prompt = 'Product> '
+class ProductsShell(PluginsShell):
+    def __init__(self, manager:TestManager):
+        super().__init__(manager.equipPlugins, "Product")
 
-    def __init__(self, manager: TestManager):
-        super().__init__()
+    # intro = "Welcome to Cerberus Product System. Type help or ? to list commands.\n"
+    # prompt = 'Product> '
 
-        self.manager = manager
+    # def __init__(self, manager: TestManager):
+    #     super().__init__()
 
-    def do_list(self, arg):
-        """List all of the Products"""
-        displayPluginCategory("Product", self.manager.productPlugins)
+    #     self.manager = manager
 
-    def do_load(self, name):
-        """Loads a product"""
-        try:
-            if idx := getInt(name):
-                name = list(self.manager.productPlugins.keys())[idx]
+    # def do_list(self, arg):
+    #     """List all of the Products"""
+    #     displayPluginCategory("Product", self.manager.productPlugins)
+
+    # def do_load(self, name):
+    #     """Loads a product"""
+    #     try:
+    #         if idx := getInt(name):
+    #             name = list(self.manager.productPlugins.keys())[idx]
             
-            product = self.manager.productPlugins[name]
+    #         product = self.manager.productPlugins[name]
             
-            ProductShell(product).cmdloop()
-        except KeyError:
-            print(f"Unknown product: {name}")
+    #         ProductShell(product).cmdloop()
+    #     except KeyError:
+    #         print(f"Unknown product: {name}")
 
 class ProductShell(RunCommandShell):
     def __init__(self, product:BaseProduct):
