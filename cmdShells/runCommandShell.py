@@ -125,6 +125,9 @@ class RunCommandShell(BasePluginShell):
         commands = [cmd.strip() for cmd in line.split(';') if cmd.strip()]
 
         for command in commands:
+            if command == "exit":
+                return True
+
             if super().onecmd(command):
                 break                       # stop processing if we get a 'Exit' (True) returned
 
