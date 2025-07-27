@@ -18,11 +18,16 @@ class BasePluginShell(BaseShell):
         super().__init__()
 
     def do_params(self, arg):
-        """Show the test parameters"""
-        print(self.plugin.parameters)
+        """Show the test parameters in a human readable way"""
+        for groupParams in self.plugin.parameters.values():
+            print(groupParams.groupName)
+            for value in groupParams:
+                print(" - " + value)
+        
+        print()
 
     def do_getParamGroup(self, group):
-        """Show the test parameters for the group as json string"""
+        """Show the test parameters for the specified group as json.dumps(params.to_dict()) string"""
         if group in self.plugin.parameters.keys():
             pluginDict = self.plugin.parameters[group].to_dict()
             print(json.dumps(pluginDict))

@@ -16,15 +16,15 @@ class BaseParameter(ABC):
 
     @abstractmethod
     def to_dict(self) -> dict:
-        pass
+        """"Returns a dictionary of the parameters"""
 
     @classmethod
     @abstractmethod
     def from_dict(cls, data: dict) -> "BaseParameter":
-        pass
+        """Returns a class initiated by the data dictionary"""
 
     def __repr__(self) -> str:
-        return f"{self.name}: {self.value} {self.units}".strip()
+        return f"{self.name}:{self.value} {self.units}".strip()
 
 
 class NumericParameter(BaseParameter):
