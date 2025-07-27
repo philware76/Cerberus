@@ -19,9 +19,9 @@ class BaseParameter(ABC):
         """"Returns a dictionary of the parameters"""
 
     @classmethod
-    @abstractmethod
-    def from_dict(cls, data: dict) -> "BaseParameter":
-        """Returns a class initiated by the data dictionary"""
+    def from_dict(cls, data: dict) -> "OptionParameter":
+        data.pop("type", None)
+        return cls(**data)
 
     def __repr__(self) -> str:
         return f"{self.name}:{self.value} {self.units}".strip()
@@ -45,10 +45,6 @@ class NumericParameter(BaseParameter):
             "description": self.description
         }
 
-    @classmethod
-    def from_dict(cls, data: dict) -> "NumericParameter":
-        return cls(**data)
-
 
 class OptionParameter(BaseParameter):
     def __init__(self, name: str, value: bool, description: Optional[str] = None):
@@ -62,28 +58,22 @@ class OptionParameter(BaseParameter):
             "description": self.description
         }
 
-    @classmethod
-    def from_dict(cls, data: dict) -> "OptionParameter":
-        return cls(**data)
+
 
 
 class EnumParameter(BaseParameter):
-    def __init__(self, name: str, value: Enum, enum_type: Type[Enum], description: str = ""):
+    def __init__(self, name: str, value: Enum, enumType: Type[Enum], description: str = ""):
         super().__init__(name=name, value=value, units="", description=description)
-        self.enum_type = enum_type
+        self.enum_type = enumType
 
     def to_dict(self) -> dict:
         return {
             "type": "enum",
             "name": self.name,
             "value": self.value.name,  # serialize by enum name
-            "enum_type": self.enum_type.__name__,  # just name, or full path if needed
+            "enumType": self.enumType.__name__,  # just name, or full path if needed
             "description": self.description,
         }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "EnumParameter":
-        return cls(**data)
 
 
 class StringParameter(BaseParameter):
@@ -98,11 +88,6 @@ class StringParameter(BaseParameter):
             "description": self.description
         }
 
-    @classmethod
-    def from_dict(cls, data: dict) -> "StringParameter":
-        return cls(**data)
-
-
 class EmptyParameter(BaseParameter):
     def __init__(self):
         super().__init__("Empty", 0, description="Placeholder")
@@ -111,13 +96,9 @@ class EmptyParameter(BaseParameter):
         return {
             "type": "empty",
             "name": self.name,
-            "value": 0,
+            "value": self.value,
             "description": self.description
         }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "EmptyParameter":
-        return cls(**data)
 
 
 PARAMETER_TYPE_MAP = {
@@ -143,12 +124,14 @@ class BaseParameters(dict[str, BaseParameter]):
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "BaseParameters":
-        obj = cls(groupName=data["groupName"])
-        for name, param_data in data["parameters"].items():
+    def from_dict(cls, groupName:str, data: dict) -> "BaseParameters":
+        obj = cls(groupName)
+        for name, param_data in data.items():
             param_type = param_data.get("type")
             param_cls = PARAMETER_TYPE_MAP.get(param_type)
             if not param_cls:
                 raise ValueError(f"Unknown parameter type: {param_type}")
+        
             obj.addParameter(param_cls.from_dict(param_data))
+
         return obj

@@ -17,7 +17,7 @@ class BasePluginShell(BaseShell):
 
         super().__init__()
 
-    def do_params(self, arg):
+    def do_txtParams(self, arg):
         """Show the test parameters in a human readable way"""
         for groupParams in self.plugin.parameters.values():
             print(groupParams.groupName)
@@ -26,15 +26,24 @@ class BasePluginShell(BaseShell):
         
         print()
 
-    def do_getParamGroup(self, group):
+    def do_listGroups(self, line):
+        """List the parameter groups"""
+        for name in self.plugin.parameters.keys():
+            print(name)
+
+        print()
+
+    def do_getGroupParams(self, group):
         """Show the test parameters for the specified group as json.dumps(params.to_dict()) string"""
         if group in self.plugin.parameters.keys():
-            pluginDict = self.plugin.parameters[group].to_dict()
-            print(json.dumps(pluginDict))
+            params = self.plugin.parameters[group].to_dict()["parameters"]
+            print(json.dumps(params))
         else:
             print(f"Parameter group '{group}' does not exist")
 
-    def do_setParams(self, line):
+        print()
+
+    def do_setGroupParams(self, line):
         """
         Set a group parameters from a JSON string.
         Usage:
@@ -47,18 +56,23 @@ class BasePluginShell(BaseShell):
                 print("Usage: setParams \"Group Name\" '{...json...}'")
                 return
 
-            group, json_str = parts
+            groupName, json_str = parts
             # Parse the JSON string into a dictionary
             params_dict = json.loads(json_str)
 
             # Ensure that the group exists in the test parameters
-            if group in self.plugin.parameters:
+            if groupName in self.plugin.parameters:
                 # Convert the dictionary into a BaseParameters (or subclass) object
-                params = BaseParameters.from_dict(params_dict)
-                self.plugin.parameters[group] = params
-                print(f"Parameters for '{group}' set successfully.")
+                params = BaseParameters.from_dict(groupName, params_dict)
+                oldParams = self.plugin.parameters[groupName]
+                oldParams = params
+                print(f"\nNew {groupName} parameters:")
+                for value in list(oldParams.values()):
+                    print(" - " + str(value))
+        
+                print()
             else:
-                print(f"Error: Group '{group}' does not exist in test parameters.")
+                print(f"Error: Group '{groupName}' does not exist in test parameters.")
 
         except json.JSONDecodeError as e:
             print("JSON decoding failed:", e)
@@ -67,7 +81,7 @@ class BasePluginShell(BaseShell):
         except Exception as e:
             print("Error setting parameters:", e)
 
-    def do_showParams(self, arg):
+    def do_uiParams(self, arg):
         """Show a GUI for the parameters to edit"""
         # Make sure QApplication exists; create one if it doesn't
         paramApp = QApplication.instance()
