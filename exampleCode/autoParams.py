@@ -383,6 +383,7 @@ def demo():
     from PySide6.QtWidgets import QVBoxLayout, QMainWindow
 
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
 
     # Sample data
     bp1 = BaseParameters("Voltage Parameters")
