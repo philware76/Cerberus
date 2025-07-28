@@ -31,23 +31,28 @@ jobs:
       - name: Run unit tests
         run: |
           pytest tests/unit --cov=. --cov-report=term --cov-report=xml
-          mv .coverage .coverage.unit
-          chmod 644 .coverage.unit
-          sleep 1
+          mv .coverage coverage.unit
           echo "Full path: $(pwd)/"
-          ls -l .coverage*
+          ls -l coverage*
+          echo "test" > test.txt
 
 
       - name: Upload unit coverage artifact
         uses: actions/upload-artifact@v4
         with:
             name: coverage-unit
-            path: .coverage.unit
+            path: coverage.unit
+
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: test-unit
+            path: test.txt
 
       - name: Check .coverage file still exists
         run: |
           echo "Full path: $(pwd)/"
-          ls -l .coverage.* 
+          ls -l .coverage* 
 
   gui-tests:
     name: GUI (Qt/PySide6) Tests
@@ -88,7 +93,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
             name: coverage-unit
-            path: .coverage.unit
+            path: .coverage.gui
 
       - name: Check .coverage file still exists
         run: |
