@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QApplication
 
 import readline
 
+
 class Shell(BaseShell):
     intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
     prompt = 'Cerberus> '
@@ -43,6 +44,7 @@ if __name__ == "__main__":
         Shell().cmdloop()
     except KeyboardInterrupt:
         pass
+
     finally:
         print("\nGoodbye")
         exit(0)
