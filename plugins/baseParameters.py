@@ -4,12 +4,27 @@ from enum import Enum
 from typing import Any, Optional
 
 
+class GenRepr:
+    def __init__(self, instance):
+        self.class_name = instance.__class__.__name__
+        self.parts = []
+
+    def addParam(self, name, value):
+        self.parts.append(f"{name}={repr(value)}")
+
+    def __repr__(self):
+        return f"{self.class_name}({', '.join(self.parts)})"
+
+
 class BaseParameter(ABC):
     def __init__(self, name: str, value: Any, units: Optional[str] = "", description: Optional[str] = None):
         self.name = name
         self.value = value
         self.units = units
         self.description = description
+        self.genRepr = GenRepr(self)
+        self.genRepr.addParam("name", self.name)
+        self.genRepr.addParam("value", self.value)
 
     def getDescription(self) -> Optional[str]:
         return self.description
@@ -23,8 +38,38 @@ class BaseParameter(ABC):
         data.pop("type", None)
         return cls(**data)
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"{self.name}:{self.value} {self.units}".strip()
+
+    def __repr__(self):
+        return repr(self.genRepr)
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+
+        self_dict = self.to_dict()
+        other_dict = other.to_dict()
+
+        # Exclude 'type' field if it's virtual and not meaningful for equality
+        ignore_keys = {"type"}
+
+        for key, value in self_dict.items():
+            if key in ignore_keys:
+                continue
+            if key not in other_dict:
+                return False
+            if other_dict[key] != value:
+                return False
+
+        # Check for unexpected keys in other_dict
+        for key in other_dict:
+            if key in ignore_keys:
+                continue
+            if key not in self_dict:
+                return False
+
+        return True
 
 
 class NumericParameter(BaseParameter):
@@ -33,6 +78,7 @@ class NumericParameter(BaseParameter):
         super().__init__(name, value, units, description)
         self.minValue = minValue
         self.maxValue = maxValue
+        self.genRepr.addParam("units", self.units)
 
     def to_dict(self) -> dict:
         return {
@@ -59,12 +105,10 @@ class OptionParameter(BaseParameter):
         }
 
 
-
-
 class EnumParameter(BaseParameter):
     def __init__(self, name: str, value: Enum, enumType: Type[Enum], description: str = ""):
         super().__init__(name=name, value=value, units="", description=description)
-        self.enum_type = enumType
+        self.enumType = enumType
 
     def to_dict(self) -> dict:
         return {
@@ -87,6 +131,7 @@ class StringParameter(BaseParameter):
             "value": self.value,
             "description": self.description
         }
+
 
 class EmptyParameter(BaseParameter):
     def __init__(self):
@@ -124,14 +169,14 @@ class BaseParameters(dict[str, BaseParameter]):
         }
 
     @classmethod
-    def from_dict(cls, groupName:str, data: dict) -> "BaseParameters":
+    def from_dict(cls, groupName: str, data: dict) -> "BaseParameters":
         obj = cls(groupName)
-        for name, param_data in data.items():
+        for _, param_data in data.items():
             param_type = param_data.get("type")
             param_cls = PARAMETER_TYPE_MAP.get(param_type)
             if not param_cls:
                 raise ValueError(f"Unknown parameter type: {param_type}")
-        
+
             obj.addParameter(param_cls.from_dict(param_data))
 
         return obj
