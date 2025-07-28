@@ -31,8 +31,11 @@ jobs:
       - name: Run unit tests
         run: |
           pytest tests/unit --cov=. --cov-report=term --cov-report=xml
-          ls -lah
+          
+      - name: move .coverage
+        run: |
           mv .coverage .coverage.unit
+          ls -lah
 
       - name: Upload unit coverage artifact
         uses: actions/upload-artifact@v4
@@ -69,8 +72,11 @@ jobs:
       - name: Run GUI tests
         run: |
           xvfb-run pytest tests/gui --cov=. --cov-report=xml
-          ls -lah
+
+      - name: move .coverage
+        run: |
           mv .coverage .coverage.gui
+          ls -lah
 
       - name: Upload gui coverage artifact
         uses: actions/upload-artifact@v4
