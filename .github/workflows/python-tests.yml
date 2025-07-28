@@ -42,6 +42,10 @@ jobs:
             name: coverage-unit
             path: .coverage.unit
 
+      - name: Check .coverage file still exists
+        run: |
+          echo "Full path: $(pwd)/"
+          ls -l .coverage.* 
 
   gui-tests:
     name: GUI (Qt/PySide6) Tests
@@ -81,6 +85,11 @@ jobs:
         with:
             name: coverage-unit
             path: .coverage.unit
+
+      - name: Check .coverage file still exists
+        run: |
+          echo "Full path: $(pwd)/"
+          ls -l .coverage.* 
 
   coverage-summary:
     name: Combine Coverage & Generate Report
