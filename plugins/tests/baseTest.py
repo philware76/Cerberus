@@ -1,6 +1,5 @@
 import logging
 from typing import Dict, List, Optional, Type
-from PySide6.QtWidgets import QWidget
 
 from plugins.baseParameters import BaseParameters
 from plugins.equipment.baseEquipment import BaseEquipment
@@ -30,12 +29,6 @@ class BaseTest(BasePlugin):
         logging.debug("Finalise")
         self.finalised = True
         return True
-
-    # Do not use this if we are running headless/CLI/test runner etc!
-    def getUI(self) -> QWidget:
-        self.widget = QWidget()
-        self.widget.setWindowTitle(self.name)
-        return self.widget
 
     def _addRequirements(self, typeNames):
         self.requiredEquipment.extend(typeNames)
