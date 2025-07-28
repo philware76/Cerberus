@@ -141,7 +141,7 @@ def create_parameter_widget(param: BaseParameter) -> QWidget:
 
     elif isinstance(param, EnumParameter):
         combobox = QComboBox()
-        enum_members = list(param.enum_type)
+        enum_members = list(param.enumType)
 
         for member in enum_members:
             combobox.addItem(member.name, member)
@@ -396,7 +396,7 @@ def demo():
     bp2 = BaseParameters("Timing Parameters")
     bp2.addParameter(NumericParameter(name="Delay", value=10.0, units="ms"))
     bp2.addParameter(OptionParameter(name="Bert Mode", value=True, description="This is to enable BERT MODE!"))
-    bp2.addParameter(EnumParameter("Timing Mode", TimingMode.Fast, enum_type=TimingMode))
+    bp2.addParameter(EnumParameter("Timing Mode", TimingMode.Fast, enumType=TimingMode))
     groups = {bp1.groupName: bp1, bp2.groupName: bp2}
 
     # Main window
