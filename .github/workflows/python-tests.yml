@@ -17,7 +17,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          
+
       - name: Install Qt dependencies
         run: |
           sudo apt-get update
@@ -33,9 +33,10 @@ jobs:
           pytest tests/unit --cov=. --cov-report=term --cov-report=xml
           mv .coverage .coverage.unit
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload unit coverage artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-unit
           path: .coverage.unit
 
   gui-tests:
@@ -69,9 +70,10 @@ jobs:
           xvfb-run pytest tests/gui --cov=. --cov-report=xml
           mv .coverage .coverage.gui
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload gui coverage artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-gui
           path: .coverage.gui
 
   coverage-summary:
