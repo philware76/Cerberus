@@ -90,10 +90,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Download coverage files
+      - name: Download unit test coverage
         uses: actions/download-artifact@v4
         with:
-          name: coverage-data
+          name: coverage-unit
+          path: .
+
+      - name: Download GUI test coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-gui
           path: .
 
       - name: Combine & Report Coverage
