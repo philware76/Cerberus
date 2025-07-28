@@ -1,8 +1,7 @@
 import logging
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QToolButton,
-    QLineEdit, QDoubleSpinBox, QCheckBox, QFrame
-)
+    QLineEdit, QDoubleSpinBox, QCheckBox, QFrame)
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
 
 from PySide6.QtCore import Qt
