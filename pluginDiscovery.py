@@ -82,7 +82,7 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             logging.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
 
     def __getitem__(self, key: str) -> BasePlugin:
-        if key is None or key is "":
+        if key is None or key == "":
             raise ValueError("Empty Plugin name, name must be valid")
 
         key_lower = key.lower()

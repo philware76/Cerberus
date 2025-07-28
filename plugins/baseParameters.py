@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Self, Type
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Optional
@@ -26,15 +26,12 @@ class BaseParameter(ABC):
         self.genRepr.addParam("name", self.name)
         self.genRepr.addParam("value", self.value)
 
-    def getDescription(self) -> Optional[str]:
-        return self.description
-
     @abstractmethod
     def to_dict(self) -> dict:
         """"Returns a dictionary of the parameters"""
 
     @classmethod
-    def from_dict(cls, data: dict) -> "OptionParameter":
+    def from_dict(cls, data: dict) -> Self:
         data.pop("type", None)
         return cls(**data)
 
@@ -44,7 +41,7 @@ class BaseParameter(ABC):
     def __repr__(self):
         return repr(self.genRepr)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, self.__class__):
             return NotImplemented
 
