@@ -90,22 +90,28 @@ class PluginDiscovery(Dict[str, BasePlugin]):
 
         raise KeyError(f"Plugin '{key}' not found.")
 
-    def _checkForMissingImplementations(self):
+    def _checkForMissingImplementations(self) -> bool:
         hookCaller = getattr(self.pm.hook, self.createMethodName, None)
         if hookCaller is None:
             logging.error(f"Can't find createPlugin hook {self.createMethodName}")
-            return
+            return False
 
         implementations = hookCaller.get_hookimpls()
         if not implementations:
             logging.error(f"No {self.createMethodName} implementations found for {self.pluginType} plugins. Ensure plugins are correctly implemented.")
+            return False
 
         elif len(implementations) != self.registeredPlugins:
             logging.warning(f"Only {len(implementations)} implementations found for {self.registeredPlugins} {self.pluginType} plugins. Ensure plugins are correctly implemented.")
+            return False
+        
+        return True
 
     def loadPlugins(self, pluginFolders=None):
         if pluginFolders is None:
             pluginFolders = self._getPluginFolders()
+
+        missingPlugins = []
 
         for pluginFolder in pluginFolders:
             logging.info(f"Loading {self.pluginType} plugin from: {pluginFolder}")
@@ -131,10 +137,13 @@ class PluginDiscovery(Dict[str, BasePlugin]):
 
             if pluginCount == 0:
                 logging.warning(f"No {self.pluginType} plugins found in {pluginFolder}. Ensure plugins are correctly implemented and named.")
+                missingPlugins.append(pluginFolder)
 
         if self.registeredPlugins > 0:
-            self._checkForMissingImplementations()
-        else:
-            logging.warning(f"No {self.pluginType} plugins found in {self.folder}. Ensure plugins are correctly implemented and named.")
+            ImpsOK = self._checkForMissingImplementations()
+            if not ImpsOK:
+                missingPlugins.append(pluginFolder)
 
         logging.debug(f"Finished registering {self.pluginType} plugins.")
+
+        return missingPlugins

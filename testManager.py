@@ -18,9 +18,22 @@ class TestManager:
         self.productPlugins: Dict[str, BaseProduct] = cast(Dict[str, BaseProduct], self._discover_plugins("Product", "products"))
         self.testPlugins: Dict[str, BaseTest] = cast(Dict[str, BaseTest], self._discover_plugins("Test", "tests"))
 
+    def findTest(self, testName: str) -> BaseTest:
+        return self.testPlugins.get(testName, None)
+    
+    def findEquipment(self, equipName: str) -> BaseEquipment:
+        return self.equipPlugins.get(equipName, None)
+    
+    def findProduct(self, productName: str) -> BaseProduct:
+        return self.productPlugins.get(productName, None)
+
     def _discover_plugins(self, pluginType: str, folder: str) -> Dict[str, BasePlugin]:
         plugins = PluginDiscovery(self.pm, pluginType, folder)
-        plugins.loadPlugins()
+        self.missingPlugins = plugins.loadPlugins()
+        
+        if len(self.missingPlugins) > 0:
+            logging.warning(f"Missing plugins: {self.missingPlugins}")
+        
         return plugins
 
     def checkRequirements(self, test: BaseTest) -> Tuple[bool, List[BaseEquipment]]:

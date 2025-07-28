@@ -1,5 +1,7 @@
 import logging
 
+from exceptions import TestError
+from plugins.tests.baseTestResult import ResultStatus
 from testManager import TestManager
 from plugins.tests.baseTest import BaseTest
 
@@ -23,7 +25,12 @@ class TestRunner:
             return False
 
         # Run the actual test logic
-        test.run()
+        try:
+            test.run()
+        except TestError as e:
+            logging.error(f"Failed to run {test.name} with {e}")
+        finally:
+            test.finalise()
 
         logging.info(f"Test {test.name} completed.")
 
@@ -31,4 +38,4 @@ class TestRunner:
         result = test.getResult()
         logging.info(f"Test {test.name} result: {result}")
 
-        return True
+        return result.status == ResultStatus.PASSED  
