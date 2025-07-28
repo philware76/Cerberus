@@ -49,6 +49,6 @@ class SimpleTest1(BaseTest):
 
         for i in range(20):
             logging.info(f"Running {self.name} iteration {i + 1}")
-            time.sleep(1)
+            time.sleep(.1)
 
         self.result = SimpleTestResult(self.name, ResultStatus.PASSED)

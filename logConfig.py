@@ -4,7 +4,7 @@ import sys
 TRACE_LEVEL_NUM = 5
 
 
-def setupLogging(level=logging.DEBUG):
+def setupLogging(level=logging.INFO):
     logging.TRACE = TRACE_LEVEL_NUM
     logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
 
