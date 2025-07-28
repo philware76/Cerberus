@@ -391,7 +391,6 @@ def demo():
     bp1.addParameter(NumericParameter(name="VDDIO", value=1.8, units="V", minValue=1.6, maxValue=2.0))
     bp1.addParameter(NumericParameter(name="Dangle berries", value=5000, units="Ber", minValue=1000, maxValue=10000))
     bp1.addParameter(StringParameter(name="Username", value="bert.russell", description="It's a coverup!"))
-    bp1.addParameter(EmptyParameter())
 
     bp2 = BaseParameters("Timing Parameters")
     bp2.addParameter(NumericParameter(name="Delay", value=10.0, units="ms"))
