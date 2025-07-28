@@ -109,13 +109,14 @@ class EnumParameter(BaseParameter):
     def __init__(self, name: str, value: Enum, enumType: Type[Enum], description: str = ""):
         super().__init__(name=name, value=value, units="", description=description)
         self.enumType = enumType
+        self.genRepr.addParam("enumType", self.enumType)
 
     def to_dict(self) -> dict:
         return {
             "type": "enum",
             "name": self.name,
-            "value": self.value.name,  # serialize by enum name
-            "enumType": self.enumType.__name__,  # just name, or full path if needed
+            "value": self.value,
+            "enumType": self.enumType,
             "description": self.description,
         }
 
@@ -126,20 +127,7 @@ class StringParameter(BaseParameter):
 
     def to_dict(self) -> dict:
         return {
-            "type": "text",
-            "name": self.name,
-            "value": self.value,
-            "description": self.description
-        }
-
-
-class EmptyParameter(BaseParameter):
-    def __init__(self):
-        super().__init__("Empty", 0, description="Placeholder")
-
-    def to_dict(self) -> dict:
-        return {
-            "type": "empty",
+            "type": "string",
             "name": self.name,
             "value": self.value,
             "description": self.description
@@ -150,7 +138,7 @@ PARAMETER_TYPE_MAP = {
     "numeric": NumericParameter,
     "option": OptionParameter,
     "enum": EnumParameter,
-    "text": StringParameter
+    "string": StringParameter
 }
 
 
