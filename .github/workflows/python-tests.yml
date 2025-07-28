@@ -32,8 +32,10 @@ jobs:
         run: |
           pytest tests/unit --cov=. --cov-report=term --cov-report=xml
           mv .coverage .coverage.unit
+          chmod 644 .coverage.unit
+          sleep 1
           echo "Full path: $(pwd)/"
-          ls -l .coverage.*
+          ls -l .coverage*
 
 
       - name: Upload unit coverage artifact
@@ -77,8 +79,10 @@ jobs:
         run: |
           xvfb-run pytest tests/gui --cov=. --cov-report=xml
           mv .coverage .coverage.gui
+          chmod 644 .coverage.gui
+          sleep 1
           echo "Full path: $(pwd)/"
-          ls -l .coverage.* 
+          ls -l .coverage*
 
       - name: Upload unit coverage artifact
         uses: actions/upload-artifact@v4
