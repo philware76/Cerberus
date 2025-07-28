@@ -27,16 +27,32 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Install system libraries required by Qt
+    - name: Install system dependencies for Qt
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           xvfb \
+          libx11-xcb1 \
+          libxcomposite1 \
+          libxcursor1 \
+          libxdamage1 \
+          libxfixes3 \
+          libxi6 \
+          libxtst6 \
+          libnss3 \
           libegl1 \
-          libglib2.0-0 \
-          libgl1 \
+          libxrandr2 \
           libxkbcommon-x11-0 \
-          libxcb-xinerama0
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-render-util0 \
+          libxcb-xinerama0 \
+          libxcb-xkb1 \
+          libxcb1 \
+          libgl1 \
+          libglib2.0-0
+
 
     - name: Install dependencies
       run: |
