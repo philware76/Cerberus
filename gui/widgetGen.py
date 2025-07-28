@@ -136,7 +136,7 @@ def create_parameter_widget(param: BaseParameter) -> QWidget:
 
     elif isinstance(param, EnumParameter):
         combobox = QComboBox()
-        enum_members = list(param.enum_type)
+        enum_members = list(param.enumType)
 
         for member in enum_members:
             combobox.addItem(member.name, member)
