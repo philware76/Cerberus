@@ -31,7 +31,7 @@ class TxLevelTestParameters(BaseParameters):
 class TxLevelTest(BaseTest):
     def __init__(self):
         super().__init__("Tx Level")
-        self._addRequirements([BaseChamber, str])
+        self._addRequirements([BaseChamber])
 
         self.addParameterGroup(TxLevelTestParameters())
 
@@ -40,6 +40,6 @@ class TxLevelTest(BaseTest):
 
         for i in range(20):
             logging.info(f"Running TxLevelTest iteration {i + 1}")
-            time.sleep(1)
+            time.sleep(.2)
 
         self.result = TxLevelTestResult(self.name, ResultStatus.PASSED)

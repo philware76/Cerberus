@@ -15,7 +15,7 @@ def createEquipmentPlugin():
 class SimpleEquip1(BaseEquipment):
     def __init__(self):
         super().__init__("Simple Equipment #1")
-        self.identity: Identity | None
+        self.identity: Identity | None = None
         # self.visa: VISADevice
 
         self.init = {"Port": 5025, "IPAddress": "127.0.0.1"}

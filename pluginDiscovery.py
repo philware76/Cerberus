@@ -2,6 +2,7 @@ import importlib.util
 import logging
 import os
 from pathlib import Path
+import sys
 from types import ModuleType
 from typing import Dict
 
@@ -33,29 +34,26 @@ class PluginDiscovery(Dict[str, BasePlugin]):
 
             if not dirs:  # This is a leaf folder
                 yield root
-
-    def _loadModule(self, pluginName: str, filePath: str) -> (ModuleType | None):
-        spec = importlib.util.spec_from_file_location(pluginName, filePath)
-        if spec is None:
-            logging.error(f"Can't find spec from file: {filePath}")
-            return None
-
-        module = importlib.util.module_from_spec(spec)
-        if module is None:
-            logging.error(f"Cant find module from spec: {spec}")
-            return None
-
-        if spec.loader is None:
-            logging.error(f"No loader associated with spec: {spec}")
-            return None
-
+   
+    def _loadModule(self, moduleName: str, filePath: str) -> ModuleType | None:
         try:
-            spec.loader.exec_module(module)
-        except Exception as e:
-            logging.error(f"Failed to load plugin {filePath}: {e}")
-            return None
+            # If already loaded, return from sys.modules
+            if moduleName in sys.modules:
+                return sys.modules[moduleName]
 
-        return module
+            spec = importlib.util.spec_from_file_location(moduleName, filePath)
+            if not spec or not spec.loader:
+                logging.error(f"Failed to create spec for module: {moduleName}")
+                return None
+
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[moduleName] = module  # ✅ Register with full module name
+            spec.loader.exec_module(module)
+            return module
+
+        except Exception as e:
+            logging.exception(f"Exception loading module {moduleName} from {filePath}: {e}")
+            return None
 
     def _createPlugin(self, pluginName: str, module: ModuleType) -> (BasePlugin | None):
         try:
@@ -113,12 +111,23 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             logging.info(f"Loading {self.pluginType} plugin from: {pluginFolder}")
             pluginCount = 0
             for entry in os.scandir(pluginFolder):
-                if entry.is_file() and entry.name.endswith(f"{self.pluginType}.py") and not entry.name.startswith("__"):
-                    self._registerPlugin(entry.name[:-3], entry.path)
-                    self.registeredPlugins += 1
-                    pluginCount += 1
+                if entry.is_file() and not entry.name.startswith("__"):
+                    if entry.name.endswith(f"{self.pluginType}.py"):
+
+                        # ✅ Convert plugin path to Python module name
+                        abs_plugin_path = os.path.abspath(entry.path)
+                        abs_project_root = os.path.abspath(".")  # Or wherever your root is
+                        rel_path = os.path.relpath(abs_plugin_path, abs_project_root)
+                        module_name = rel_path.replace(os.sep, ".")[:-3]  # remove .py
+
+                        self._registerPlugin(module_name, entry.path)
+
+                        self.registeredPlugins += 1
+                        pluginCount += 1
+                    else:
+                        logging.debug(f"Skipped {entry.name} - module doesn't end in {self.pluginType}.py")
                 else:
-                    logging.trace(f"Skipped {entry.name} - not a valid {self.pluginType} plugin file.")
+                    logging.trace(f"Skipped {entry.name} - not a valid {self.pluginType}.py plugin file.")
 
             if pluginCount == 0:
                 logging.warning(f"No {self.pluginType} plugins found in {pluginFolder}. Ensure plugins are correctly implemented and named.")
