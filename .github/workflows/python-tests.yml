@@ -31,6 +31,7 @@ jobs:
       - name: Run unit tests
         run: |
           pytest tests/unit --cov=. --cov-report=term --cov-report=xml
+          ls -l .coverage.unit
           mv .coverage .coverage.unit
           ls -l .coverage.unit
 
