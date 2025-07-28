@@ -43,7 +43,6 @@ jobs:
           libxcb-xtest0 \
           libxcb-xfixes0 \
           libxcb-shape0 \
-          libgl1-mesa-glx \
           libx11-xcb1 \
           libxcomposite1 \
           libxcursor1 \
@@ -53,7 +52,6 @@ jobs:
           libxtst6 \
           libnss3 \
           libxrandr2 \
-          libasound2 \
           libglib2.0-0 \
           libfontconfig1 \
           libfreetype6 \
