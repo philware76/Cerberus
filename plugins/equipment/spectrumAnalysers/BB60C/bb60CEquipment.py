@@ -24,8 +24,8 @@ class BB60CEquipment(BaseSpecAnalyser):
         if self.initialised:
             return True
 
-        # if init is not None:
-        #     super().initialise(init)
+        if init is not None:
+            super().initialise(init)
 
         self.visa = VISADevice(self.init["Port"], self.init["IPAddress"])
         if self.visa.open() is None:

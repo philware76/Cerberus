@@ -3,10 +3,11 @@ import sys
 
 TRACE_LEVEL_NUM = 5
 
+
 def setupLogging(level=logging.DEBUG):
-    logging.TRACE = TRACE_LEVEL_NUM 
+    logging.TRACE = TRACE_LEVEL_NUM
     logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
-    
+
     def trace(self, message, *args, **kwargs):
         if self.isEnabledFor(TRACE_LEVEL_NUM):
             self._log(TRACE_LEVEL_NUM, message, args, **kwargs)
@@ -21,7 +22,7 @@ def setupLogging(level=logging.DEBUG):
     class ColorFormatter(logging.Formatter):
         COLORS = {
             TRACE_LEVEL_NUM: "\033[90m",    # Grey
-            logging.DEBUG: "\033[38;5;244m",      # White
+            logging.DEBUG: "\033[38;5;244m",  # White
             logging.INFO: "\033[32m",       # Green
             logging.WARNING: "\033[33m",    # Yellow
             logging.ERROR: "\033[31m",      # Red
