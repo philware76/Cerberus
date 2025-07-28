@@ -32,27 +32,12 @@ jobs:
         run: |
           pytest tests/unit --cov=. --cov-report=term --cov-report=xml
           mv .coverage coverage.unit
-          echo "Full path: $(pwd)/"
-          ls -l coverage*
-          echo "test" > test.txt
-
 
       - name: Upload unit coverage artifact
         uses: actions/upload-artifact@v4
         with:
             name: coverage-unit
             path: coverage.unit
-
-      - name: Upload test artifact
-        uses: actions/upload-artifact@v4
-        with:
-            name: test-unit
-            path: test.txt
-
-      - name: Check .coverage file still exists
-        run: |
-          echo "Full path: $(pwd)/"
-          ls -l .coverage* 
 
   gui-tests:
     name: GUI (Qt/PySide6) Tests
@@ -83,22 +68,14 @@ jobs:
       - name: Run GUI tests
         run: |
           xvfb-run pytest tests/gui --cov=. --cov-report=xml
-          mv .coverage .coverage.gui
-          chmod 644 .coverage.gui
-          sleep 1
-          echo "Full path: $(pwd)/"
-          ls -l .coverage*
+          mv .coverage coverage.gui
 
       - name: Upload unit coverage artifact
         uses: actions/upload-artifact@v4
         with:
             name: coverage-unit
-            path: .coverage.gui
+            path: coverage.gui
 
-      - name: Check .coverage file still exists
-        run: |
-          echo "Full path: $(pwd)/"
-          ls -l .coverage.* 
 
   coverage-summary:
     name: Combine Coverage & Generate Report
@@ -122,7 +99,7 @@ jobs:
       - name: Combine & Report Coverage
         run: |
           pip install coverage
-          coverage combine .coverage.unit .coverage.gui
+          coverage combine coverage.unit coverage.gui
           coverage report
           coverage html
 
