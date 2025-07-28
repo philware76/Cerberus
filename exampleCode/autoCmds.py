@@ -125,7 +125,6 @@ class CommandWidgetGenerator:
             # Create widget
             paramWidget = self.create_parameter_widget(param.name, param_type, default_val)
             paramWidget.setMinimumWidth(100)
-            paramWidget.setToolTip(f"{param.name}")
             layout.addWidget(paramWidget)
 
             paramWidgets.append((param.name, paramWidget, param_type, param.default, has_default))
