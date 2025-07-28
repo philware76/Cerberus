@@ -4,7 +4,7 @@ import logging
 
 from plugins.baseParameters import BaseParameter, BaseParameters, EnumParameter, NumericParameter, OptionParameter, StringParameter
 from plugins.basePlugin import hookimpl, singleton
-from plugins.equipment.simpleEquip.simpleEquip1 import SimpleEquip1
+from plugins.equipment.simpleEquip.simple1Equipment import SimpleEquip1
 from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 from plugins.tests.baseTest import BaseTest
 
