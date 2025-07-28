@@ -73,7 +73,7 @@ jobs:
       - name: Upload unit coverage artifact
         uses: actions/upload-artifact@v4
         with:
-            name: coverage-unit
+            name: coverage-gui
             path: coverage.gui
 
 
