@@ -1,3 +1,21 @@
 [run]
 omit =
     **/__init__.py
+
+[report]
+# Common exclusions — add more if needed
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    @abstractmethod
+    raise NotImplementedError
+
+# Prevent errors from crashing the report
+ignore_errors = True
+
+# Optionally omit any noisy modules or files
+omit =
+    */site-packages/*
+    */shibokensupport/*
+    */pyscript
+    */signature_bootstrap.py
