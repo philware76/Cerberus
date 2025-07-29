@@ -3,3 +3,4 @@ venv
 .venv
 .coverage
 cov.json
+.vscode
