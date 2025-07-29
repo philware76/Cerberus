@@ -5,11 +5,12 @@ import sys
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QToolButton,
-    QLineEdit, QDoubleSpinBox, QCheckBox, QFrame, QApplication
+    QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QFrame, QApplication
 )
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
 
 from typing import Dict, cast
+
 
 from common import camel2Human
 from plugins.baseParameters import BaseParameter, BaseParameters, EnumParameter, NumericParameter, OptionParameter, StringParameter
@@ -21,8 +22,8 @@ class CollapsibleGroupBox(QWidget):
 
         # === Toggle button ===
         self.toggle_button = QToolButton()
-        self.toggle_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        self.toggle_button.setArrowType(Qt.DownArrow)
+        self.toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.toggle_button.setArrowType(Qt.ArrowType.DownArrow)
         self.toggle_button.setCheckable(True)
         self.toggle_button.setChecked(True)
         self.toggle_button.setFixedSize(16, 16)
@@ -57,7 +58,7 @@ class CollapsibleGroupBox(QWidget):
 
         # === Content Area ===
         self.content_area = QFrame()
-        self.content_area.setFrameShape(QFrame.StyledPanel)
+        self.content_area.setFrameShape(QFrame.Shape.StyledPanel)
         self.content_area.setStyleSheet("""
             QFrame {
                 background-color: #D6EAF8;
@@ -73,7 +74,7 @@ class CollapsibleGroupBox(QWidget):
         # === Animation ===
         self.animation = QPropertyAnimation(self.content_area, b"maximumHeight")
         self.animation.setDuration(250)
-        self.animation.setEasingCurve(QEasingCurve.InOutQuad)
+        self.animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
         # === Main layout ===
         main_layout = QVBoxLayout()
@@ -96,7 +97,7 @@ class CollapsibleGroupBox(QWidget):
 
     def toggle_content(self):
         expanding = self.toggle_button.isChecked()
-        self.toggle_button.setArrowType(Qt.DownArrow if expanding else Qt.RightArrow)
+        self.toggle_button.setArrowType(Qt.ArrowType.DownArrow if expanding else Qt.ArrowType.RightArrow)
 
         if expanding:
             self.content_area.setVisible(True)
@@ -320,7 +321,7 @@ def create_all_methods_ui(instance) -> CollapsibleGroupBox:
         for param in params:
             label = QLabel(param.name + ":")
             label.setStyleSheet("QLabel { color: black; }")
-            label.setAlignment(Qt.AlignRight)
+            label.setAlignment(Qt.AlignmentFlag.AlignRight)
             label.setMinimumWidth(50)
             layout.addWidget(label)
 
