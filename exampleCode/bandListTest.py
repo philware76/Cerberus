@@ -1,8 +1,5 @@
-from PySide6.QtWidgets import (
-    QApplication, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QMainWindow, QSizePolicy
-)
+from PySide6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QMainWindow
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPalette
 import sys
 import random
 
@@ -28,13 +25,13 @@ class BandWidget(QWidget):
     def __init__(self, band_number: float, tx_status=TestStatus.NOT_TESTED, rx_status=TestStatus.NOT_TESTED):
         super().__init__()
         self.tx_label = QLabel("TX")
-        self.tx_label.setAlignment(Qt.AlignCenter)
-        
+        self.tx_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         self.band_label = QLabel(f"{band_number}")
-        self.band_label.setAlignment(Qt.AlignCenter)
-        
+        self.band_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         self.rx_label = QLabel("RX")
-        self.rx_label.setAlignment(Qt.AlignCenter)
+        self.rx_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout = QHBoxLayout()
         layout.setSpacing(3)
@@ -51,7 +48,6 @@ class BandWidget(QWidget):
         self.setFixedHeight(30)
         self.setMinimumWidth(150)
         self.setStyleSheet("border: 1px solid red; background-color: black;")
-
 
     def apply_label_style(self, label: QLabel, status: str):
         style = label_style(status)
@@ -75,15 +71,15 @@ class BandWidget(QWidget):
 
 
 class BandListWidget(QWidget):
-    def __init__(self, bands: list[float]):
+    def __init__(self, bands: list[int]):
         super().__init__()
         layout = QVBoxLayout()
 
-        layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("Band Details", alignment=Qt.AlignCenter))
+        layout.addWidget(QLabel("Band Details", alignment=Qt.AlignmentFlag.AlignCenter))
         for band in bands:
             tx_status = random.choice([TestStatus.NOT_TESTED, TestStatus.PASSED, TestStatus.FAILED])
             rx_status = random.choice([TestStatus.NOT_TESTED, TestStatus.PASSED, TestStatus.FAILED])
@@ -105,7 +101,7 @@ class MainWindow(QMainWindow):
         band_list = BandListWidget(band_numbers)
 
         layout = QVBoxLayout()
-        layout.addWidget(band_list, alignment=Qt.AlignCenter | Qt.AlignHCenter)
+        layout.addWidget(band_list, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignHCenter)
         layout.addStretch()
 
         central_widget.setLayout(layout)
