@@ -1,8 +1,7 @@
 import logging
 
-import pyvisa as visa
-
 import common
+import pyvisa as visa
 from plugins.equipment.baseEquipment import Identity
 
 
@@ -18,26 +17,27 @@ class VISADevice():
         self.resource = f'TCPIP::{self.ipAddress}::5025::SOCKET'
 
         self.rm = visa.ResourceManager()
-        self.device = None
+        self.instrument = None
 
     def open(self):
         try:
             logging.debug(f"Opening VISA resource: {self.resource}")
-            self.device = self.rm.open_resource(self.resource, read_termination='\n', write_termination='\n')
-            self.device.timeout = self.timeout
-            return self.device
+            self.instrument = self.rm.open_resource(self.resource, read_termination='\n', write_termination='\n')
+            print(self.instrument)
+            self.instrument.timeout = self.timeout
+            return self.instrument
 
         except Exception as e:
             logging.error(f"Failed to open resource: {self.resource} - {e}")
             return None
 
     def close(self) -> bool:
-        if self.device is None:
+        if self.instrument is None:
             return True
 
         try:
             logging.debug(f"Closeing VISA resource: {self.resource}")
-            self.device.close()
+            self.instrument.close()
             return True
 
         except Exception as e:
@@ -46,20 +46,20 @@ class VISADevice():
 
     def write(self, command) -> bool:
         logging.debug(f"{self.resource} - Query {command}")
-        if self.device is None:
+        if self.instrument is None:
             logging.warning("VISA Device is not open, can't write to device.")
             return False
 
-        self.device.write(command)
+        self.instrument.write(command)
         return True
 
-    def query(self, command) -> str:
+    def query(self, command) -> str | None:
         logging.debug(f"{self.resource} - Query {command}")
-        if self.device is None:
+        if self.instrument is None:
             logging.warning("VISA Device is not open, can't query the device.")
             return None
 
-        return self.device.query(command)
+        return self.instrument.query(command)
 
     def operationComplete(self) -> bool:
         logging.debug(f"{self.resource} - *OPC?")
