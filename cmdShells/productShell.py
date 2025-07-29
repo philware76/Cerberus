@@ -10,29 +10,6 @@ class ProductsShell(PluginsShell):
     def __init__(self, manager:TestManager):
         super().__init__(manager, manager.productPlugins, "Product")
 
-    # intro = "Welcome to Cerberus Product System. Type help or ? to list commands.\n"
-    # prompt = 'Product> '
-
-    # def __init__(self, manager: TestManager):
-    #     super().__init__()
-
-    #     self.manager = manager
-
-    # def do_list(self, arg):
-    #     """List all of the Products"""
-    #     displayPluginCategory("Product", self.manager.productPlugins)
-
-    # def do_load(self, name):
-    #     """Loads a product"""
-    #     try:
-    #         if idx := getInt(name):
-    #             name = list(self.manager.productPlugins.keys())[idx]
-            
-    #         product = self.manager.productPlugins[name]
-            
-    #         ProductShell(product).cmdloop()
-    #     except KeyError:
-    #         print(f"Unknown product: {name}")
 
 class ProductShell(RunCommandShell):
     def __init__(self, product:BaseProduct, manager: TestManager):

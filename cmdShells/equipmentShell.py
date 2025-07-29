@@ -9,27 +9,6 @@ class EquipShell(PluginsShell):
     def __init__(self, manager:TestManager):
         super().__init__(manager, manager.equipPlugins, "Equipment")
 
-    # def __init__(self, manager: TestManager):
-    #     super().__init__()
-
-    #     self.manager = manager
-
-    # def do_list(self, arg):
-    #     """List all of the Equipment"""
-    #     displayPluginCategory("Equipment", self.manager.equipPlugins)
-
-    # def do_load(self, name):
-    #     """Loads equipment"""
-    #     try:
-    #         if idx := getInt(name):
-    #             name = list(self.manager.equipPlugins.keys())[idx]
-            
-    #         equip = self.manager.equipPlugins[name]
-
-    #         EquipmentShell(equip).cmdloop()
-
-    #     except KeyError:
-    #         print(f"Unknown equipment: {name}")
 
 class EquipmentShell(RunCommandShell):
     def __init__(self, equip:BaseEquipment, manager: TestManager):
