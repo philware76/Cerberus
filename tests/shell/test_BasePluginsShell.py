@@ -9,30 +9,42 @@ from plugins.baseParameters import BaseParameters, BaseParameter, NumericParamet
 from plugins.basePlugin import BasePlugin  # Your real BasePlugin
 
 groupName = "RF Params"
-numParam1 = NumericParameter("power", 10.0, "dBm")
-numParam2 = NumericParameter("freq", 2.4e9, "Hz")
+g1Param1 = NumericParameter("power", 10.0, "dBm")
+g1Param2 = NumericParameter("freq", 2.4e9, "Hz")
+
+g2Param1 = NumericParameter("power", 20.0, "dBm")
+g2Param2 = NumericParameter("freq", 2.0e9, "Hz")
+
+group1 = BaseParameters(groupName)    \
+    .addParameter(g1Param1)  \
+    .addParameter(g1Param2)
+
+group2 = BaseParameters(groupName)    \
+    .addParameter(g2Param1)  \
+    .addParameter(g2Param2)
+
 
 class DummyPlugin(BasePlugin):
     def __init__(self):
-        super().__init__("Dummy")                                           
-        self.addParameterGroup(BaseParameters(groupName) \
-                .addParameter(numParam1) \
-                .addParameter(numParam2))
+        super().__init__("Dummy")
+        self.addParameterGroup(group1)
 
     def initialise(self, init: Any = None) -> bool:
         '''Initialises a plugin with some initialisation meta data'''
-        pass
+        return True
 
     def configure(self, config: Any = None) -> bool:
         '''Provides the configuration for the plugin'''
-        pass
+        return True
 
     def finalise(self) -> bool:
         '''finalises a plugin'''
-        pass
-    
+        return True
+
+
 class DummyManager:
     pass
+
 
 def test_BasePluginShell():
     plugin = DummyPlugin()
@@ -44,18 +56,18 @@ def test_BasePluginShell():
         shell.do_txtParams("")
         output = buf.getvalue()
     assert groupName in output
-    assert numParam1.name in output
-    assert numParam2.name in output
+    assert g1Param1.name in output
+    assert g1Param2.name in output
 
     # Test listGroups
     with StringIO() as buf, redirect_stdout(buf):
         shell.do_listGroups("")
         output = buf.getvalue()
-    assert "RF Params" in output
+    assert groupName in output
 
     # Test getGroupParams
     with StringIO() as buf, redirect_stdout(buf):
-        shell.do_getGroupParams("RF Params")
+        shell.do_getGroupParams(groupName)
         output = buf.getvalue()
     assert '"power"' in output
     assert '"value": 10.0' in output
@@ -67,19 +79,15 @@ def test_BasePluginShell():
     assert "does not exist" in output
 
     # Test setGroupParams
-    new_params = {
-        "power": {"name": "power", "value": 20.0, "units": "dBm"},
-        "freq": {"name": "freq", "value": 915e6, "units": "Hz"}
-    }
-    line = f'"RF Params" \'{json.dumps(new_params)}\''
+    line = json.dumps(group2.to_dict())
     with StringIO() as buf, redirect_stdout(buf):
         shell.do_setGroupParams(line)
         output = buf.getvalue()
     assert "New RF Params parameters" in output
-    assert "915000000.0" in output
+    assert str(g2Param1.value) in output
 
     # Confirm plugin parameter actually updated
     updated = plugin._groupParams["RF Params"]
     assert isinstance(updated["power"], NumericParameter)
-    assert updated["power"].value == 20.0
-    assert updated["freq"].value == 915e6
+    assert updated["power"].value == g2Param1.value
+    assert updated["freq"].value == g2Param2.value

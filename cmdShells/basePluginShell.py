@@ -23,7 +23,7 @@ class BasePluginShell(BaseShell):
             print(groupParams.groupName)
             for value in list(groupParams.values()):
                 print(" - " + str(value))
-        
+
         print()
 
     def do_listGroups(self, line):
@@ -47,29 +47,22 @@ class BasePluginShell(BaseShell):
         """
         Set a group parameters from a JSON string.
         Usage:
-            setParams "RF Params" '{"param1": {"name": ..., ...}}'
+            setParams "{'GroupName':<groupName> }, {"Parameters":{"param1": {"name": ..., ...}}'
         """
         try:
-            # Use shlex to properly parse quoted strings
-            parts = shlex.split(line)
-            if len(parts) != 2:
-                print("Usage: setParams \"Group Name\" '{...json...}'")
-                return
-
-            groupName, json_str = parts
             # Parse the JSON string into a dictionary
-            params_dict = json.loads(json_str)
-
+            jsonTxt = json.loads(line)
+            groupName = jsonTxt["groupName"]
+            params = jsonTxt["parameters"]
             # Ensure that the group exists in the test parameters
             if groupName in self.plugin._groupParams:
                 # Convert the dictionary into a BaseParameters (or subclass) object
-                params = BaseParameters.from_dict(groupName, params_dict)
-                oldParams = self.plugin._groupParams[groupName]
-                oldParams = params
+                params = BaseParameters.from_dict(groupName, params)
+                self.plugin._groupParams[groupName] = params
                 print(f"\nNew {groupName} parameters:")
-                for value in list(oldParams.values()):
+                for value in list(params.values()):
                     print(" - " + str(value))
-        
+
                 print()
             else:
                 print(f"Error: Group '{groupName}' does not exist in test parameters.")
