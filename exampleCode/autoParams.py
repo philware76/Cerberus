@@ -1,19 +1,19 @@
-from enum import Enum
 import inspect
 import logging
 import sys
-from PySide6.QtWidgets import QPushButton
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QToolButton,
-    QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QFrame, QApplication
-)
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
-
+from enum import Enum
 from typing import Dict, cast
 
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox,
+                               QDoubleSpinBox, QFrame, QHBoxLayout, QLabel,
+                               QLineEdit, QPushButton, QSpinBox, QToolButton,
+                               QVBoxLayout, QWidget)
 
 from common import camel2Human
-from plugins.baseParameters import BaseParameter, BaseParameters, EnumParameter, NumericParameter, OptionParameter, StringParameter
+from plugins.baseParameters import (BaseParameter, BaseParameters,
+                                    EnumParameter, NumericParameter,
+                                    OptionParameter, StringParameter)
 
 
 class CollapsibleGroupBox(QWidget):

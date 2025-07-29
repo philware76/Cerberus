@@ -1,10 +1,10 @@
-import sys
 import inspect
-from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-                               QPushButton, QLineEdit, QSpinBox, QDoubleSpinBox,
-                               QCheckBox, QLabel, QScrollArea)
-from PySide6.QtCore import Qt
+import sys
 
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (QApplication, QCheckBox, QDoubleSpinBox,
+                               QHBoxLayout, QLabel, QLineEdit, QPushButton,
+                               QScrollArea, QSpinBox, QVBoxLayout, QWidget)
 
 from gui.widgetGen import CollapsibleGroupBox
 

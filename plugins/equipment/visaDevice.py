@@ -1,4 +1,5 @@
 import logging
+
 import pyvisa as visa
 
 import common
