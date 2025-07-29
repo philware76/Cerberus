@@ -5,9 +5,6 @@ from typing import Any, Type, cast
 
 from plugins.baseParameters import BaseParameters, BaseParameter, NumericParameter, OptionParameter, StringParameter, EnumParameter
 
-
-logging.basicConfig(level=logging.INFO)
-
 testCaseParameters: dict[str, tuple[dict[str, Any], str, str]] = {
     "NumericParameter": (
         {
@@ -101,7 +98,7 @@ def test_BaseParameters():
 
     # Create BaseParameters from the string-keyed test cases
     for class_name, value in testCaseParameters.items():
-        data_raw, expected_str, expected_type = value
+        data_raw, _, _ = value
         data: dict[str, Any] = data_raw
 
         ParamClass = cast(Type[BaseParameter], CLASS_NAME_MAP[class_name])

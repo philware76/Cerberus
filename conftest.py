@@ -20,3 +20,8 @@ def warn_assert(request):
         elif not condition:
             logging.warning(f"[WARN] {message}")
     return _assert
+
+
+@pytest.fixture(autouse=True, scope="session")
+def configure_logging():
+    logging.basicConfig(level=logging.DEBUG)

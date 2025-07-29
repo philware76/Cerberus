@@ -1,11 +1,11 @@
 import time
 import logging
 
-from plugins.baseParameters import BaseParameter, BaseParameters, NumericParameter, OptionParameter
+from plugins.baseParameters import BaseParameters, NumericParameter, OptionParameter
 from plugins.basePlugin import hookimpl, singleton
 from plugins.equipment.chambers.baseChamber import BaseChamber
-from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 from plugins.tests.baseTest import BaseTest
+from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 
 
 @hookimpl

@@ -2,7 +2,7 @@ from enum import Enum
 import time
 import logging
 
-from plugins.baseParameters import BaseParameter, BaseParameters, EnumParameter, NumericParameter, OptionParameter, StringParameter
+from plugins.baseParameters import BaseParameters, EnumParameter, NumericParameter, OptionParameter, StringParameter
 from plugins.basePlugin import hookimpl, singleton
 from plugins.equipment.simpleEquip.simple1Equipment import SimpleEquip1
 from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
@@ -18,7 +18,7 @@ def createTestPlugin():
 class SimpleTestResult(BaseTestResult):
     def __init__(self, name, status):
         super().__init__(name, status)
-        logging.trace("Created Simple Test Result")
+        logging.debug("Created Simple Test Result")
 
 
 class SimpleEnum(Enum):
@@ -47,8 +47,11 @@ class SimpleTest1(BaseTest):
     def run(self):
         super().run()
 
-        for i in range(20):
+        count = self.config.get("Count", 20)
+        sleep = self.config.get("Sleep", 0.1)
+
+        for i in range(count):
             logging.info(f"Running {self.name} iteration {i + 1}")
-            time.sleep(.1)
+            time.sleep(sleep)
 
         self.result = SimpleTestResult(self.name, ResultStatus.PASSED)

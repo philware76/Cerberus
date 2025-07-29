@@ -29,12 +29,12 @@ class PluginDiscovery(Dict[str, BasePlugin]):
         logging.info(f"Discovering {self.pluginType} plugins in {self.folder}")
 
     def _getPluginFolders(self):
-        for root, dirs, files in os.walk(self.folder):
+        for root, dirs, _ in os.walk(self.folder):
             dirs[:] = [d for d in dirs if not d.startswith("__") and not d.startswith(".")]
 
             if not dirs:  # This is a leaf folder
                 yield root
-   
+
     def _loadModule(self, moduleName: str, filePath: str) -> ModuleType | None:
         try:
             # If already loaded, return from sys.modules
@@ -63,7 +63,7 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             logging.info(f" - Plugin registered: {basePlugin.name}")
             return basePlugin
 
-        except ValueError as e:
+        except ValueError:
             logging.error(f"Failed to register plugin {pluginName}. Ensure plugins are correctly implemented.")
             return None
 
@@ -73,7 +73,7 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             return
 
         if hasattr(module, self.createMethodName):
-            plugin: BasePlugin = self._createPlugin(pluginName, module)
+            plugin: BasePlugin | None = self._createPlugin(pluginName, module)
             if plugin is not None:
                 self[plugin.name] = plugin
         else:
@@ -104,7 +104,7 @@ class PluginDiscovery(Dict[str, BasePlugin]):
         elif len(implementations) != self.registeredPlugins:
             logging.warning(f"Only {len(implementations)} implementations found for {self.registeredPlugins} {self.pluginType} plugins. Ensure plugins are correctly implemented.")
             return False
-        
+
         return True
 
     def loadPlugins(self, pluginFolders=None):
@@ -119,8 +119,6 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             for entry in os.scandir(pluginFolder):
                 if entry.is_file() and not entry.name.startswith("__"):
                     if entry.name.endswith(f"{self.pluginType}.py"):
-
-                        # ✅ Convert plugin path to Python module name
                         abs_plugin_path = os.path.abspath(entry.path)
                         abs_project_root = os.path.abspath(".")  # Or wherever your root is
                         rel_path = os.path.relpath(abs_plugin_path, abs_project_root)
@@ -133,16 +131,15 @@ class PluginDiscovery(Dict[str, BasePlugin]):
                     else:
                         logging.debug(f"Skipped {entry.name} - module doesn't end in {self.pluginType}.py")
                 else:
-                    logging.trace(f"Skipped {entry.name} - not a valid {self.pluginType}.py plugin file.")
+                    logging.debug(f"Skipped {entry.name} - not a valid {self.pluginType}.py plugin file.")
 
             if pluginCount == 0:
                 logging.warning(f"No {self.pluginType} plugins found in {pluginFolder}. Ensure plugins are correctly implemented and named.")
                 missingPlugins.append(pluginFolder)
 
-        if self.registeredPlugins > 0:
-            ImpsOK = self._checkForMissingImplementations()
-            if not ImpsOK:
-                missingPlugins.append(pluginFolder)
+        ImpsOK = self._checkForMissingImplementations()
+        if not ImpsOK:
+            logging.error("Some hooks are not valid/registered/broken/missing... please check!")
 
         logging.debug(f"Finished registering {self.pluginType} plugins.")
 

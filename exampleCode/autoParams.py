@@ -1,6 +1,7 @@
 from enum import Enum
 import inspect
 import logging
+import sys
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QToolButton,
@@ -8,11 +9,10 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
 
-from PySide6.QtCore import Qt
 from typing import Dict, cast
 
 from common import camel2Human
-from plugins.baseParameters import BaseParameter, BaseParameters, EmptyParameter, EnumParameter, NumericParameter, OptionParameter, StringParameter
+from plugins.baseParameters import BaseParameter, BaseParameters, EnumParameter, NumericParameter, OptionParameter, StringParameter
 
 
 class CollapsibleGroupBox(QWidget):
@@ -230,7 +230,7 @@ def apply_parameters(groups: Dict[str, BaseParameters], widget_map: dict[str, di
                 param.value = cast(QComboBox, widget).currentData()
 
 
-def create_method_param_widget(name, param_type, default_value=None):
+def create_method_param_widget(param_type, default_value=None):
     if param_type == bool:  # or (default_value is not None and isinstance(default_value, bool)):
         widget = QCheckBox()
         if default_value is not None:
@@ -294,12 +294,12 @@ def create_all_methods_ui(instance) -> CollapsibleGroupBox:
         def make_handler(method, widget_map):
             def handler():
                 args = []
-                for name, (widget, ptype) in widget_map.items():
+                for _, (widget, ptype) in widget_map.items():
                     if isinstance(widget, QLineEdit):
                         val = widget.text()
                         try:
                             val = ptype(val)
-                        except:
+                        except Exception:
                             pass
                     elif isinstance(widget, QCheckBox):
                         val = widget.isChecked()
@@ -326,7 +326,7 @@ def create_all_methods_ui(instance) -> CollapsibleGroupBox:
 
             param_type = param.annotation if param.annotation != inspect.Parameter.empty else str
             default_val = param.default if param.default != inspect.Parameter.empty else None
-            widget = create_method_param_widget(param.name, param_type, default_val)
+            widget = create_method_param_widget(param_type, default_val)
             widget.setMinimumWidth(100)
             widget.setToolTip(param.name)
             layout.addWidget(widget)
@@ -379,9 +379,6 @@ class ExampleDevice:
 
 
 def demo():
-    import sys
-    from PySide6.QtWidgets import QVBoxLayout, QMainWindow
-
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
