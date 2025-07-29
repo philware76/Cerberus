@@ -1,5 +1,6 @@
 import logging
-from plugins.basePlugin import BasePlugin
+
+from Cerberus.plugins.basePlugin import BasePlugin
 
 
 class BaseProduct(BasePlugin):

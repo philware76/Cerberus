@@ -1,5 +1,6 @@
-from plugins.basePlugin import hookimpl, singleton
-from plugins.tests.baseTest import BaseTest
+from Cerberus.plugins.basePlugin import hookimpl, singleton
+from Cerberus.plugins.tests.baseTest import BaseTest
+
 
 @hookimpl
 @singleton

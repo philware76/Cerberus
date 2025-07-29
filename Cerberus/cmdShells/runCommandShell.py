@@ -3,9 +3,10 @@ import ast
 import inspect
 import shlex
 from typing import Dict, Union
-from cmdShells.basePluginShell import BasePluginShell
-from plugins.basePlugin import BasePlugin
-from testManager import TestManager
+
+from Cerberus.cmdShells.basePluginShell import BasePluginShell
+from Cerberus.plugins.basePlugin import BasePlugin
+from Cerberus.testManager import TestManager
 
 
 def get_base_methods(base_cls):

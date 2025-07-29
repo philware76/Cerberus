@@ -10,10 +10,10 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox,
                                QLineEdit, QPushButton, QSpinBox, QToolButton,
                                QVBoxLayout, QWidget)
 
-from common import camel2Human
-from plugins.baseParameters import (BaseParameter, BaseParameters,
-                                    EnumParameter, NumericParameter,
-                                    OptionParameter, StringParameter)
+from Cerberus.common import camel2Human
+from Cerberus.plugins.baseParameters import (BaseParameter, BaseParameters,
+                                             EnumParameter, NumericParameter,
+                                             OptionParameter, StringParameter)
 
 
 class CollapsibleGroupBox(QWidget):

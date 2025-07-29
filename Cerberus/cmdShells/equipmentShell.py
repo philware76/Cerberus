@@ -1,9 +1,8 @@
-from cmdShells.pluginsShell import PluginsShell
-from testManager import TestManager
-from cmdShells.common import displayPluginCategory, getInt
-from cmdShells.baseShell import BaseShell
-from cmdShells.runCommandShell import RunCommandShell
-from plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.cmdShells.pluginsShell import PluginsShell
+from Cerberus.cmdShells.runCommandShell import RunCommandShell
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.testManager import TestManager
+
 
 class EquipShell(PluginsShell):
     def __init__(self, manager:TestManager):

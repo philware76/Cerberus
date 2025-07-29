@@ -5,8 +5,8 @@ from dataclasses import dataclass
 import pytest
 from PySide6.QtWidgets import QDoubleSpinBox, QCheckBox, QComboBox, QLineEdit
 
-from gui.widgetGen import create_parameter_widget
-from plugins.baseParameters import EnumParameter, NumericParameter, OptionParameter, StringParameter
+from Cerberus.gui.widgetGen import create_parameter_widget
+from Cerberus.plugins.baseParameters import EnumParameter, NumericParameter, OptionParameter, StringParameter
 
 class Mode(Enum):
     AUTO = 0

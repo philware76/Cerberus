@@ -1,4 +1,5 @@
-from plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+
 
 class BaseChamber(BaseEquipment):
     """

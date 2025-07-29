@@ -1,6 +1,8 @@
 import logging
-from plugins.basePlugin import hookimpl, singleton
-from plugins.products.baseProduct import BaseProduct
+
+from Cerberus.plugins.basePlugin import hookimpl, singleton
+from Cerberus.plugins.products.baseProduct import BaseProduct
+
 
 @hookimpl
 @singleton

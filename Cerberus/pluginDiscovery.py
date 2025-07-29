@@ -1,19 +1,19 @@
 import importlib.util
 import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from types import ModuleType
 from typing import Dict
 
-from plugins.basePlugin import BasePlugin
+from Cerberus.plugins.basePlugin import BasePlugin
 
 
 class PluginDiscovery(Dict[str, BasePlugin]):
     def __init__(self, pluginManager, pluginType, folder):
         self.pm = pluginManager
         self.pluginType = pluginType
-        self.folder = Path("plugins") / Path(f"{folder.lower()}")
+        self.folder = Path("Cerberus") / Path("plugins") / Path(f"{folder.lower()}")
         self.registeredPlugins = 0
 
         # Dynamically import hookspec class based on pluginType

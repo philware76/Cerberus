@@ -1,14 +1,15 @@
 import logging
 import sys
 
-from cmdShells.baseShell import BaseShell
-from cmdShells.equipmentShell import EquipShell
-from cmdShells.productShell import ProductsShell
-from cmdShells.testShell import TestsShell
 from logConfig import setupLogging
 from PySide6.QtWidgets import QApplication
-from testManager import TestManager
-from testRunner import TestRunner
+
+from Cerberus.cmdShells.baseShell import BaseShell
+from Cerberus.cmdShells.equipmentShell import EquipShell
+from Cerberus.cmdShells.productShell import ProductsShell
+from Cerberus.cmdShells.testShell import TestsShell
+from Cerberus.testManager import TestManager
+from Cerberus.testRunner import TestRunner
 
 
 class Shell(BaseShell):

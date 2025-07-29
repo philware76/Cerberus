@@ -1,10 +1,10 @@
 from importlib import import_module
 from typing import Dict, Type
 
-from cmdShells.baseShell import BaseShell
-from cmdShells.common import displayPluginCategory, getInt
-from plugins.basePlugin import BasePlugin
-from testManager import TestManager
+from Cerberus.cmdShells.baseShell import BaseShell
+from Cerberus.cmdShells.common import displayPluginCategory, getInt
+from Cerberus.plugins.basePlugin import BasePlugin
+from Cerberus.testManager import TestManager
 
 
 class PluginsShell(BaseShell):

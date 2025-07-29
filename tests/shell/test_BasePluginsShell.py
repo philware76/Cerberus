@@ -1,12 +1,12 @@
 import json
 import shlex
-from io import StringIO
 from contextlib import redirect_stdout
+from io import StringIO
 from typing import Any
 
-from cmdShells.basePluginShell import BasePluginShell  # Update import path as needed
-from plugins.baseParameters import BaseParameters, BaseParameter, NumericParameter  # Use your actual module paths
-from plugins.basePlugin import BasePlugin  # Your real BasePlugin
+from Cerberus.cmdShells.basePluginShell import BasePluginShell
+from Cerberus.plugins.baseParameters import BaseParameters, NumericParameter
+from Cerberus.plugins.basePlugin import BasePlugin
 
 groupName = "RF Params"
 g1Param1 = NumericParameter("power", 10.0, "dBm")
@@ -90,4 +90,8 @@ def test_BasePluginShell():
     updated = plugin._groupParams["RF Params"]
     assert isinstance(updated["power"], NumericParameter)
     assert updated["power"].value == g2Param1.value
+    assert updated["freq"].value == g2Param2.value
+    assert isinstance(updated["power"], NumericParameter)
+    assert updated["power"].value == g2Param1.value
+    assert updated["freq"].value == g2Param2.value
     assert updated["freq"].value == g2Param2.value

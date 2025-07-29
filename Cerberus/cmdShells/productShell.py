@@ -1,9 +1,7 @@
-from cmdShells.pluginsShell import PluginsShell
-from testManager import TestManager
-from cmdShells.common import displayPluginCategory, getInt
-from cmdShells.baseShell import BaseShell
-from cmdShells.runCommandShell import RunCommandShell
-from plugins.products.baseProduct import BaseProduct
+from Cerberus.cmdShells.pluginsShell import PluginsShell
+from Cerberus.cmdShells.runCommandShell import RunCommandShell
+from Cerberus.plugins.products.baseProduct import BaseProduct
+from Cerberus.testManager import TestManager
 
 
 class ProductsShell(PluginsShell):

@@ -1,7 +1,9 @@
 import logging
 from typing import Any, Dict
-from plugins.baseParameters import BaseParameters, NumericParameter, StringParameter
-from plugins.basePlugin import BasePlugin
+
+from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
+                                             StringParameter)
+from Cerberus.plugins.basePlugin import BasePlugin
 
 
 class Identity():

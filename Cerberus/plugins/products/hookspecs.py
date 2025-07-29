@@ -9,7 +9,8 @@
 ### The name of the Product plugins need to end with `Product.py` to be recognized by the PluginDiscovery for Product class.
 ###
 
-from plugins.basePlugin import hookspec
+from Cerberus.plugins.basePlugin import hookspec
+
 
 class ProductSpec:
     @hookspec

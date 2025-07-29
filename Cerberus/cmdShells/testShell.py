@@ -1,12 +1,10 @@
 from typing import Type, cast
-from cmdShells.pluginsShell import PluginsShell
-from testManager import TestManager
-from cmdShells.common import displayPluginCategory, getInt
-from cmdShells.baseShell import BaseShell
-from cmdShells.basePluginShell import BasePluginShell
-from plugins.tests.baseTest import BaseTest
-from testRunner import TestRunner
 
+from Cerberus.cmdShells.basePluginShell import BasePluginShell
+from Cerberus.cmdShells.pluginsShell import PluginsShell
+from Cerberus.plugins.tests.baseTest import BaseTest
+from Cerberus.testManager import TestManager
+from Cerberus.testRunner import TestRunner
 
 
 class TestsShell(PluginsShell):
@@ -25,3 +23,4 @@ class TestShell(BasePluginShell):
         """Run the loaded test"""
         testRunner = TestRunner(self.manager)
         testRunner.runTest(cast(Type[BaseTest], self.plugin))
+        

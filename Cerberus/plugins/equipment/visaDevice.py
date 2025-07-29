@@ -2,7 +2,8 @@ import logging
 
 import common
 import pyvisa as visa
-from plugins.equipment.baseEquipment import Identity
+
+from Cerberus.plugins.equipment.baseEquipment import Identity
 
 
 class VISADevice():

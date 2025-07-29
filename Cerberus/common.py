@@ -36,5 +36,5 @@ def dwellEvent(period: float, stopEvent: Event = None):
 
 def camel2Human(name: str) -> str:
     # Add spaces before uppercase letters and capitalize the first letter
-    human_name = re.sub(r'([a-z])([A-Z])', r'\1 \2', name).capitalize()
-    return human_name
+    humanReadable = re.sub(r'([a-z])([A-Z])', r'\1 \2', name).capitalize()
+    return humanReadable

@@ -13,8 +13,8 @@
       "name": "Python: Cerberus",
       "type": "debugpy",
       "request": "launch",
-      "cwd": "${workspaceFolder}\\cerberus",
-      "program": "cerberus.py",
+      "cwd": "${workspaceFolder}",
+      "program": "Cerberus\\cerberus.py",
       "console": "integratedTerminal"
     }
   ]
