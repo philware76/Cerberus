@@ -2,7 +2,7 @@ import sys
 import inspect
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QLineEdit, QSpinBox, QDoubleSpinBox,
-                               QCheckBox, QComboBox, QLabel, QScrollArea)
+                               QCheckBox, QLabel, QScrollArea)
 from PySide6.QtCore import Qt
 
 
@@ -113,7 +113,7 @@ class CommandWidgetGenerator:
             # Add parameter label
             label = QLabel(f"{param.name}:")
             label.setMinimumWidth(30)
-            label.setAlignment(Qt.AlignRight)
+            label.setAlignment(Qt.AlignmentFlag.AlignRight)
             layout.addWidget(label)
 
             # Infer type from default value if no annotation and has default
