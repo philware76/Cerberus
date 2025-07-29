@@ -146,6 +146,7 @@ class BaseParameters(dict[str, BaseParameter]):
 
     def addParameter(self, param: BaseParameter):
         self[param.name] = param
+        return self
 
     def to_dict(self) -> dict:
         return {

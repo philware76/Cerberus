@@ -32,15 +32,15 @@ class BasePlugin(ABC):
         self.init: Any | None = {}
         self.config: Any | None = None
 
-        self.parameters: Dict[str, BaseParameters] = {}
+        self._groupParams: Dict[str, BaseParameters] = {}
 
         logging.debug(f"__init__ {name}")
 
     def addParameterGroup(self, group: BaseParameters):
-        if group.groupName in self.parameters:
+        if group.groupName in self._groupParams:
             logging.warning(f"Parameter group '{group.groupName}' already exists. Overwriting.")
 
-        self.parameters[group.groupName] = group
+        self._groupParams[group.groupName] = group
 
     @abstractmethod
     def initialise(self, init: Any = None) -> bool:

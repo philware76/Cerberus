@@ -19,7 +19,7 @@ class BasePluginShell(BaseShell):
 
     def do_txtParams(self, arg):
         """Show the test parameters in a human readable way"""
-        for groupParams in self.plugin.parameters.values():
+        for groupParams in self.plugin._groupParams.values():
             print(groupParams.groupName)
             for value in list(groupParams.values()):
                 print(" - " + str(value))
@@ -28,15 +28,15 @@ class BasePluginShell(BaseShell):
 
     def do_listGroups(self, line):
         """List the parameter groups"""
-        for name in self.plugin.parameters.keys():
+        for name in self.plugin._groupParams.keys():
             print(name)
 
         print()
 
     def do_getGroupParams(self, group):
         """Show the test parameters for the specified group as json.dumps(params.to_dict()) string"""
-        if group in self.plugin.parameters.keys():
-            params = self.plugin.parameters[group].to_dict()["parameters"]
+        if group in self.plugin._groupParams.keys():
+            params = self.plugin._groupParams[group].to_dict()["parameters"]
             print(json.dumps(params))
         else:
             print(f"Parameter group '{group}' does not exist")
@@ -61,10 +61,10 @@ class BasePluginShell(BaseShell):
             params_dict = json.loads(json_str)
 
             # Ensure that the group exists in the test parameters
-            if groupName in self.plugin.parameters:
+            if groupName in self.plugin._groupParams:
                 # Convert the dictionary into a BaseParameters (or subclass) object
                 params = BaseParameters.from_dict(groupName, params_dict)
-                oldParams = self.plugin.parameters[groupName]
+                oldParams = self.plugin._groupParams[groupName]
                 oldParams = params
                 print(f"\nNew {groupName} parameters:")
                 for value in list(oldParams.values()):
@@ -91,7 +91,7 @@ class BasePluginShell(BaseShell):
         window = QWidget()
         layout = QVBoxLayout(window)
 
-        groups = self.plugin.parameters
+        groups = self.plugin._groupParams
 
         ui, widget_map = create_all_parameters_ui(groups)
         layout.addWidget(ui)
