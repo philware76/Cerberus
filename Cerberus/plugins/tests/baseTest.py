@@ -1,10 +1,10 @@
 import logging
 from typing import List, Optional, Type
 
-from plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.basePlugin import BasePlugin
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 
 from .baseTestResult import BaseTestResult
-from plugins.basePlugin import BasePlugin
 
 
 class BaseTest(BasePlugin):

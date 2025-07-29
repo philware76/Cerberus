@@ -1,12 +1,13 @@
-from typing import Dict, List, Tuple, Type, cast
-import pluggy
 import logging
+from typing import Dict, List, Tuple, Type, cast
 
+import pluggy
 from pluginDiscovery import PluginDiscovery
-from plugins.basePlugin import BasePlugin
-from plugins.equipment.baseEquipment import BaseEquipment
-from plugins.products.baseProduct import BaseProduct
-from plugins.tests.baseTest import BaseTest
+
+from Cerberus.plugins.basePlugin import BasePlugin
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.products.baseProduct import BaseProduct
+from Cerberus.plugins.tests.baseTest import BaseTest
 
 
 class TestManager:

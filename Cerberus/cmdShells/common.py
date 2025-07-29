@@ -1,6 +1,7 @@
 from typing import Dict
-from plugins.basePlugin import BasePlugin
-from testManager import TestManager
+
+from Cerberus.plugins.basePlugin import BasePlugin
+
 
 def displayPluginCategory(category_name, plugins: Dict[str, BasePlugin]):
     print(f"Available {category_name} plugins:")
@@ -14,5 +15,7 @@ def displayPluginCategory(category_name, plugins: Dict[str, BasePlugin]):
 def getInt(text:str) -> int:
     try:
         return int(text)
+    except ValueError:
+        return None
     except ValueError:
         return None

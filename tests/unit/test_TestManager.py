@@ -1,7 +1,6 @@
-from plugins.tests.baseTestResult import ResultStatus
-from testManager import TestManager
-from testRunner import TestRunner
-
+from Cerberus.plugins.tests.baseTestResult import ResultStatus
+from Cerberus.testManager import TestManager
+from Cerberus.testRunner import TestRunner
 
 manager: TestManager
 

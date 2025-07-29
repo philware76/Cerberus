@@ -1,15 +1,12 @@
 ### Use FastAPI run <cerberusWeb.py> to start the web service
 ### This file is the main entry point for the Cerberus Test Manager web service.
-
-
-
 import logging
 
-from logConfig import setupLogging
-from plugins.tests.baseTest import BaseTest
-from testManager import TestManager
-
 from fastapi import FastAPI
+from logConfig import setupLogging
+
+from Cerberus.plugins.tests.baseTest import BaseTest
+from Cerberus.testManager import TestManager
 
 setupLogging(logging.DEBUG)
 

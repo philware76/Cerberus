@@ -9,7 +9,8 @@
 ### The name of the Test plugins need to end with `Test.py` to be recognized by the PluginDiscovery for Tests class.
 ###
 
-from plugins.basePlugin import hookspec
+from Cerberus.plugins.basePlugin import hookspec
+
 
 class TestSpec:
     @hookspec

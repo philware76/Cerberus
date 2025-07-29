@@ -1,9 +1,10 @@
 import logging
 
 from exceptions import TestError
-from plugins.tests.baseTestResult import ResultStatus
-from testManager import TestManager
-from plugins.tests.baseTest import BaseTest
+
+from Cerberus.plugins.tests.baseTest import BaseTest
+from Cerberus.plugins.tests.baseTestResult import ResultStatus
+from Cerberus.testManager import TestManager
 
 
 class TestRunner:

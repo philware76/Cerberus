@@ -1,11 +1,12 @@
-import time
 import logging
+import time
 
-from plugins.baseParameters import BaseParameters, NumericParameter, OptionParameter
-from plugins.basePlugin import hookimpl, singleton
-from plugins.equipment.chambers.baseChamber import BaseChamber
-from plugins.tests.baseTest import BaseTest
-from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
+from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
+                                             OptionParameter)
+from Cerberus.plugins.basePlugin import hookimpl, singleton
+from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
+from Cerberus.plugins.tests.baseTest import BaseTest
+from Cerberus.plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 
 
 @hookimpl

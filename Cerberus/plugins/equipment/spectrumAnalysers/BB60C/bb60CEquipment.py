@@ -1,9 +1,11 @@
 import logging
 from typing import Any
-from plugins.basePlugin import hookimpl, singleton
-from plugins.equipment.baseEquipment import Identity
-from plugins.equipment.spectrumAnalysers.baseSpecAnalyser import BaseSpecAnalyser
-from plugins.equipment.visaDevice import VISADevice
+
+from Cerberus.plugins.basePlugin import hookimpl, singleton
+from Cerberus.plugins.equipment.baseEquipment import Identity
+from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
+    BaseSpecAnalyser
+from Cerberus.plugins.equipment.visaDevice import VISADevice
 
 
 @hookimpl

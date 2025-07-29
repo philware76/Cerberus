@@ -1,12 +1,15 @@
-from enum import Enum
-import time
 import logging
+import time
+from enum import Enum
 
-from plugins.baseParameters import BaseParameters, EnumParameter, NumericParameter, OptionParameter, StringParameter
-from plugins.basePlugin import hookimpl, singleton
-from plugins.equipment.simpleEquip.simple1Equipment import SimpleEquip1
-from plugins.tests.baseTestResult import BaseTestResult, ResultStatus
-from plugins.tests.baseTest import BaseTest
+from Cerberus.plugins.baseParameters import (BaseParameters, EnumParameter,
+                                             NumericParameter, OptionParameter,
+                                             StringParameter)
+from Cerberus.plugins.basePlugin import hookimpl, singleton
+from Cerberus.plugins.equipment.simpleEquip.simple1Equipment import \
+    SimpleEquip1
+from Cerberus.plugins.tests.baseTest import BaseTest
+from Cerberus.plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 
 
 @hookimpl
@@ -53,5 +56,8 @@ class SimpleTest1(BaseTest):
         for i in range(count):
             logging.info(f"Running {self.name} iteration {i + 1}")
             time.sleep(sleep)
+
+        self.result = SimpleTestResult(self.name, ResultStatus.PASSED)
+        time.sleep(sleep)
 
         self.result = SimpleTestResult(self.name, ResultStatus.PASSED)

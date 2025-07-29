@@ -1,13 +1,14 @@
 import logging
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QToolButton,
-    QLineEdit, QDoubleSpinBox, QCheckBox, QFrame)
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
-
-from PySide6.QtCore import Qt
 from typing import Dict, cast
 
-from plugins.baseParameters import BaseParameter, BaseParameters, EnumParameter, NumericParameter, OptionParameter, StringParameter
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QFrame,
+                               QHBoxLayout, QLabel, QLineEdit, QToolButton,
+                               QVBoxLayout, QWidget)
+
+from Cerberus.plugins.baseParameters import (BaseParameter, BaseParameters,
+                                             EnumParameter, NumericParameter,
+                                             OptionParameter, StringParameter)
 
 
 class CollapsibleGroupBox(QWidget):
@@ -222,4 +223,6 @@ def apply_parameters(groups: Dict[str, BaseParameters], widget_map: dict[str, di
             elif isinstance(widget, QCheckBox):
                 param.value = widget.isChecked()
             elif isinstance(widget, QComboBox):
+                param.value = cast(QComboBox, widget).currentData()
+                param.value = cast(QComboBox, widget).currentData()
                 param.value = cast(QComboBox, widget).currentData()

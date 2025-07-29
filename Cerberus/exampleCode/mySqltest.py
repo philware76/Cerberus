@@ -1,8 +1,11 @@
 import json
+
 import mysql.connector
 
-from plugins.baseParameters import BaseParameter, BaseParameters
-from plugins.tests.TxLevelTest.TxLevelTest import TxLevelTestParameters
+from Cerberus.plugins.baseParameters import BaseParameter, BaseParameters
+from Cerberus.plugins.tests.TxLevelTest.TxLevelTest import \
+    TxLevelTestParameters
+
 
 class ParameterDB:
     def __init__(self, host="localhost", user="root", password="5m1thMy3r5", database="cerberus"):
@@ -63,5 +66,7 @@ def main():
     for name, param in loaded.parameters.items():
         print(f"{name}: {param.value} {param.unit or ''}")
 
+if __name__ == "__main__":
+    main()
 if __name__ == "__main__":
     main()

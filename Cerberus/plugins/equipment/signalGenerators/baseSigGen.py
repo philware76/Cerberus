@@ -1,4 +1,5 @@
-from plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+
 
 class BaseSigGen(BaseEquipment):
     """
@@ -8,4 +9,4 @@ class BaseSigGen(BaseEquipment):
 
     def __init__(self, name: str):
         super().__init__(name)
-       
+              

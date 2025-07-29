@@ -3,7 +3,7 @@ import logging
 from typing import Any, Type, cast
 
 
-from plugins.baseParameters import BaseParameters, BaseParameter, NumericParameter, OptionParameter, StringParameter, EnumParameter
+from Cerberus.plugins.baseParameters import BaseParameters, BaseParameter, NumericParameter, OptionParameter, StringParameter, EnumParameter
 
 testCaseParameters: dict[str, tuple[dict[str, Any], str, str]] = {
     "NumericParameter": (

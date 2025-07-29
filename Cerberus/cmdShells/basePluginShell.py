@@ -1,15 +1,12 @@
 import json
 
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton
-
-
-from cmdShells.baseShell import BaseShell
 from gui.widgetGen import apply_parameters, create_all_parameters_ui
-from plugins.baseParameters import BaseParameters
-from plugins.basePlugin import BasePlugin
+from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 
-
-from testManager import TestManager
+from Cerberus.cmdShells.baseShell import BaseShell
+from Cerberus.plugins.baseParameters import BaseParameters
+from Cerberus.plugins.basePlugin import BasePlugin
+from Cerberus.testManager import TestManager
 
 
 class BasePluginShell(BaseShell):

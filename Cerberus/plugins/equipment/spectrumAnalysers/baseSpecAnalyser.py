@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from plugins.equipment.baseEquipment import BaseEquipment, Identity
+
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment, Identity
 
 
 class BaseSpecAnalyser(BaseEquipment, ABC):
