@@ -49,4 +49,4 @@ class PluginsShell(BaseShell):
             print(f"Unknown {self.plugin_type.lower()}: {name}")
 
         except Exception as e:
-            print(f"Failed to create plugin shell: {modName}.{className}")
+            print(f"Failed to create plugin shell: {modName}.{className} - {e}")
