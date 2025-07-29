@@ -1,19 +1,16 @@
 import logging
+import readline
 import sys
+
+from PySide6.QtWidgets import QApplication
 
 from cmdShells.baseShell import BaseShell
 from cmdShells.equipmentShell import EquipShell
 from cmdShells.productShell import ProductsShell
 from cmdShells.testShell import TestsShell
-
 from logConfig import setupLogging
-
 from testManager import TestManager
 from testRunner import TestRunner
-
-from PySide6.QtWidgets import QApplication
-
-import readline
 
 
 class Shell(BaseShell):
