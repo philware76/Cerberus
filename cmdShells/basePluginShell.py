@@ -1,11 +1,13 @@
 import json
-import shlex
+
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton
+
+
 from cmdShells.baseShell import BaseShell
 from gui.widgetGen import apply_parameters, create_all_parameters_ui
 from plugins.baseParameters import BaseParameters
 from plugins.basePlugin import BasePlugin
 
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton
 
 from testManager import TestManager
 

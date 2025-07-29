@@ -1,16 +1,31 @@
-from logConfig import setupLogging
+from plugins.tests.baseTestResult import ResultStatus
 from testManager import TestManager
 from testRunner import TestRunner
 
 
+manager: TestManager
+
+
 def test_TestManager():
-    setupLogging()
+    global manager
+
     manager = TestManager()
     assert len(manager.missingPlugins) == 0
 
+
+def test_TestRunner():
     testRunner = TestRunner(manager)
 
-    test = manager.findTest("Simple Test #1")
+    testName = "Simple Test #1"
+    test = manager.findTest(testName)
     assert test is not None
 
-    testRunner.runTest(test)
+    test.config["Count"] = 100
+    test.config["Sleep"] = 0.0
+
+    assert testRunner.runTest(test)
+
+    result = test.getResult()
+    assert result is not None
+    assert result.name == testName
+    assert result.status == ResultStatus.PASSED

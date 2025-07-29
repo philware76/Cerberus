@@ -38,4 +38,4 @@ class TestRunner:
         result = test.getResult()
         logging.info(f"Test {test.name} result: {result}")
 
-        return result.status == ResultStatus.PASSED  
+        return result.status == ResultStatus.PASSED

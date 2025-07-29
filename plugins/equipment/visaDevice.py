@@ -44,7 +44,7 @@ class VISADevice():
             return False
 
     def write(self, command) -> bool:
-        logging.trace(f"{self.resource} - Query {command}")
+        logging.debug(f"{self.resource} - Query {command}")
         if self.device is None:
             logging.warning("VISA Device is not open, can't write to device.")
             return False
@@ -53,7 +53,7 @@ class VISADevice():
         return True
 
     def query(self, command) -> str:
-        logging.trace(f"{self.resource} - Query {command}")
+        logging.debug(f"{self.resource} - Query {command}")
         if self.device is None:
             logging.warning("VISA Device is not open, can't query the device.")
             return None
@@ -61,14 +61,14 @@ class VISADevice():
         return self.device.query(command)
 
     def operationComplete(self) -> bool:
-        logging.trace(f"{self.resource} - *OPC?")
+        logging.debug(f"{self.resource} - *OPC?")
         resp = self.query("*OPC?")
         if resp is None:
             return False
 
         try:
             complete = int(resp)
-            logging.trace(f"{self.resource} - *OPC? => {complete}")
+            logging.debug(f"{self.resource} - *OPC? => {complete}")
             if complete != 0:
                 return True
             else:
