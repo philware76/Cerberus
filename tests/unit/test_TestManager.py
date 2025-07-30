@@ -5,14 +5,14 @@ from Cerberus.plugins.tests.baseTestResult import ResultStatus
 manager: CerberusManager
 
 
-def test_TestManager():
+def test_CerberusManager():
     global manager
 
     manager = CerberusManager()
     assert len(manager.missingPlugins) == 0
 
 
-def test_TestRunner():
+def test_Executor():
     testRunner = Executor(manager)
 
     testName = "Simple Test #1"
