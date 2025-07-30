@@ -1,16 +1,16 @@
 from importlib import import_module
 from typing import Dict, Type
 
+from Cerberus.cerberusManager import CerberusManager
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.cmdShells.common import displayPluginCategory, getInt
 from Cerberus.plugins.basePlugin import BasePlugin
-from Cerberus.testManager import TestManager
 
 
 class PluginsShell(BaseShell):
     """A base shell class for interacting with plugin dictionaries."""
 
-    def __init__(self, manager:TestManager, plugins: Dict[str, Type[BasePlugin]], plugin_type: str):
+    def __init__(self, manager:CerberusManager, plugins: Dict[str, Type[BasePlugin]], plugin_type: str):
         super().__init__()
         PluginsShell.intro = f"Welcome to Cerberus {plugin_type} System. Type help or ? to list commands.\n"
         PluginsShell.prompt = f'{plugin_type}> '

@@ -2,15 +2,15 @@ import json
 
 from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 
+from Cerberus.cerberusManager import CerberusManager
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.gui.widgetGen import apply_parameters, create_all_parameters_ui
 from Cerberus.plugins.baseParameters import BaseParameters
 from Cerberus.plugins.basePlugin import BasePlugin
-from Cerberus.testManager import TestManager
 
 
 class BasePluginShell(BaseShell):
-    def __init__(self, plugin: BasePlugin, manager: TestManager):
+    def __init__(self, plugin: BasePlugin, manager: CerberusManager):
         self.plugin = plugin
         self.manager = manager
 

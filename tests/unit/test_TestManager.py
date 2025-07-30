@@ -1,19 +1,19 @@
+from Cerberus.cerberusManager import CerberusManager
+from Cerberus.executor import Executor
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
-from Cerberus.testManager import TestManager
-from Cerberus.testRunner import TestRunner
 
-manager: TestManager
+manager: CerberusManager
 
 
 def test_TestManager():
     global manager
 
-    manager = TestManager()
+    manager = CerberusManager()
     assert len(manager.missingPlugins) == 0
 
 
 def test_TestRunner():
-    testRunner = TestRunner(manager)
+    testRunner = Executor(manager)
 
     testName = "Simple Test #1"
     test = manager.findTest(testName)

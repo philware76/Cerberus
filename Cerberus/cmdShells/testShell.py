@@ -1,19 +1,19 @@
 from typing import Type, cast
 
+from Cerberus.cerberusManager import CerberusManager
 from Cerberus.cmdShells.basePluginShell import BasePluginShell
 from Cerberus.cmdShells.pluginsShell import PluginsShell
+from Cerberus.executor import Executor
 from Cerberus.plugins.tests.baseTest import BaseTest
-from Cerberus.testManager import TestManager
-from Cerberus.testRunner import TestRunner
 
 
 class TestsShell(PluginsShell):
-    def __init__(self, manager:TestManager):
+    def __init__(self, manager:CerberusManager):
         super().__init__(manager, manager.testPlugins, "Test")
 
 
 class TestShell(BasePluginShell):
-    def __init__(self, test: BaseTest, manager: TestManager):
+    def __init__(self, test: BaseTest, manager: CerberusManager):
         TestShell.intro = f"Welcome to Cerberus {test.name} Test System. Type help or ? to list commands.\n"
         TestShell.prompt = f"{test.name}> "
 
@@ -21,6 +21,6 @@ class TestShell(BasePluginShell):
         
     def do_run(self, arg):
         """Run the loaded test"""
-        testRunner = TestRunner(self.manager)
+        testRunner = Executor(self.manager)
         testRunner.runTest(cast(Type[BaseTest], self.plugin))
         

@@ -5,8 +5,8 @@ import logging
 from fastapi import FastAPI
 from logConfig import setupLogging
 
+from Cerberus.cerberusManager import CerberusManager
 from Cerberus.plugins.tests.baseTest import BaseTest
-from Cerberus.testManager import TestManager
 
 setupLogging(logging.DEBUG)
 
@@ -14,7 +14,7 @@ logging.info("Starting Web Service...")
 app = FastAPI()
 
 logging.info("Starting Cerberus Test Manager...")
-manager = TestManager()
+manager = CerberusManager()
 
 
 @app.get("/")

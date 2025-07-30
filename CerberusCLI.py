@@ -1,6 +1,6 @@
 import sys
 
-from Cerberus.cerberus import runCLI
+from Cerberus.cmdShells.mainShell import runShell
 
 if __name__ == "__main__":
-    runCLI(sys.argv)
+    runShell(sys.argv)
