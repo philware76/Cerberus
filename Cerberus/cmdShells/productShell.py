@@ -1,16 +1,16 @@
+from Cerberus.cerberusManager import CerberusManager
 from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
 from Cerberus.plugins.products.baseProduct import BaseProduct
-from Cerberus.testManager import TestManager
 
 
 class ProductsShell(PluginsShell):
-    def __init__(self, manager:TestManager):
+    def __init__(self, manager:CerberusManager):
         super().__init__(manager, manager.productPlugins, "Product")
 
 
 class ProductShell(RunCommandShell):
-    def __init__(self, product:BaseProduct, manager: TestManager):
+    def __init__(self, product:BaseProduct, manager: CerberusManager):
         ProductShell.intro = f"Welcome to Cerberus {product.name} Product System. Type help or ? to list commands.\n"
         ProductShell.prompt = f"{product.name}> "
 

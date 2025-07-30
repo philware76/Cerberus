@@ -1,16 +1,18 @@
 import logging
 
+from Cerberus.cerberusManager import CerberusManager
 from Cerberus.exceptions import TestError
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
-from Cerberus.testManager import TestManager
 
 
-class TestRunner:
+class Executor:
+    """Class that handles executing a single test"""
     def __init__(self, testManager):
-        self.testManager: TestManager = testManager
+        self.testManager: CerberusManager = testManager
 
     def runTest(self, test: BaseTest) -> bool:
+        """Run a single test"""
         logging.warning(f"Running test: {test.name}")
 
         # Check if the test can be initialized

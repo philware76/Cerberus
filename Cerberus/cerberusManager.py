@@ -10,7 +10,7 @@ from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 
 
-class TestManager:
+class CerberusManager:
     def __init__(self):
         logging.info("Starting TestManager...")
         self.pm = pluggy.PluginManager("cerberus")

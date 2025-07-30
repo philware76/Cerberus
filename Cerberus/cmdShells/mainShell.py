@@ -2,19 +2,19 @@ import logging
 
 from PySide6.QtWidgets import QApplication
 
+from Cerberus.cerberusManager import CerberusManager
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.cmdShells.equipmentShell import EquipShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.logConfig import setupLogging
-from Cerberus.testManager import TestManager
 
 
-class Shell(BaseShell):
-    intro = "Welcome to Cerberus Test System. Type help or ? to list commands.\n"
+class MainShell(BaseShell):
+    intro = "Welcome to Cerberus Shell. Type help or ? to list commands.\n"
     prompt = 'Cerberus> '
 
-    def __init__(self, manager:TestManager):
+    def __init__(self, manager:CerberusManager):
         self.manager = manager
         super().__init__()
 
@@ -31,14 +31,14 @@ class Shell(BaseShell):
         TestsShell(self.manager).cmdloop()
 
 
-def runCLI(argv):
+def runShell(argv):
     setupLogging(logging.DEBUG)
 
     app = QApplication(argv)
-    manager = TestManager()
+    manager = CerberusManager()
     
     try:
-        Shell(manager).cmdloop()
+        MainShell(manager).cmdloop()
     except KeyboardInterrupt:
         pass
     except Exception as e:
