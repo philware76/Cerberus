@@ -34,7 +34,7 @@ class PluginsShell(BaseShell):
 
             # Create the shell class name dynamically
             className = self.plugin_type + "Shell"
-            modName = "cmdShells." + className[0].lower() + className[1:]
+            modName = "Cerberus.cmdShells." + className[0].lower() + className[1:]
             module = import_module(modName)
             pluginsClass = getattr(module, className) 
 
