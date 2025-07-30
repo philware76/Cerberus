@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDoubleSpinBox,
                                QHBoxLayout, QLabel, QLineEdit, QPushButton,
                                QScrollArea, QSpinBox, QVBoxLayout, QWidget)
 
-from gui.widgetGen import CollapsibleGroupBox
+from Cerberus.gui.widgetGen import CollapsibleGroupBox
 
 
 class CommandWidgetGenerator:

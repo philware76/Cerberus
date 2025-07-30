@@ -1,9 +1,9 @@
 import json
 
-from gui.widgetGen import apply_parameters, create_all_parameters_ui
 from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 
 from Cerberus.cmdShells.baseShell import BaseShell
+from Cerberus.gui.widgetGen import apply_parameters, create_all_parameters_ui
 from Cerberus.plugins.baseParameters import BaseParameters
 from Cerberus.plugins.basePlugin import BasePlugin
 from Cerberus.testManager import TestManager
