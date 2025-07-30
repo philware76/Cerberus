@@ -1,8 +1,10 @@
-import sys
 import random
-from PySide6.QtWidgets import QApplication, QMainWindow
+import sys
+
 from PySide6.QtCore import QTimer
-from gui.matplotWidget import MatplotWidget
+from PySide6.QtWidgets import QApplication, QMainWindow
+
+from Cerberus.guimatplotWidget import MatplotWidget
 
 
 class GraphTestApp(QMainWindow):

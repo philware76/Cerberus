@@ -1,8 +1,8 @@
 import logging
 
-import common
 import pyvisa as visa
 
+from Cerberus import common
 from Cerberus.plugins.equipment.baseEquipment import Identity
 
 
