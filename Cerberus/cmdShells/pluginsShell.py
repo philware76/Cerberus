@@ -15,38 +15,49 @@ class PluginsShell(BaseShell):
         PluginsShell.intro = f"Welcome to Cerberus {plugin_type} System. Type help or ? to list commands.\n"
         PluginsShell.prompt = f'{plugin_type}> '
       
-        self.manager = manager
-        self.plugins = plugins
-        self.plugin_type = plugin_type
+        self._manager = manager
+        self._plugins = plugins
+        self._plugin_type = plugin_type
+        self._shell: BaseShell | None = None
+
+    def getShell(self) -> BaseShell | None:
+        return self._shell
 
     def do_list(self, arg):
         """List all available plugins."""
-        displayPluginCategory(self.plugin_type, self.plugins)
+        displayPluginCategory(self._plugin_type, self._plugins)
 
     def do_load(self, name):
         """Load a specific plugin."""
         try:
             idx = getInt(name)
             if idx is not None:
-                name = list(self.plugins.keys())[idx]
+                name = list(self._plugins.keys())[idx]
 
-            plugin = self.plugins[name]
+            plugin = self._plugins[name]
 
             # Create the shell class name dynamically
-            className = self.plugin_type + "Shell"
+            className = self._plugin_type + "Shell"
             modName = "Cerberus.cmdShells." + className[0].lower() + className[1:]
             module = import_module(modName)
             pluginsClass = getattr(module, className) 
 
             if pluginsClass:
                 # Instantiate the shell and start the command loop
-                shell = pluginsClass(plugin, self.manager)
-                shell.cmdloop()
+                self._shell = pluginsClass(plugin, self._manager)
             else:
-                print(f"No shell found for plugin type: {self.plugin_type}")
+                print(f"No shell found for plugin type: {self._plugin_type}")
             
         except KeyError:
-            print(f"Unknown {self.plugin_type.lower()}: {name}")
+            print(f"Unknown {self._plugin_type.lower()}: {name}")
 
         except Exception as e:
             print(f"Failed to create plugin shell: {modName}.{className} - {e}")
+
+    def do_open(self, arg):
+        """Opens the loaded shell"""
+        if self._shell is not None:
+            self._shell.cmdloop()
+            self._shell = None
+        else:
+            print("You need to load a shell first")

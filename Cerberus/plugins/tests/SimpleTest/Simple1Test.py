@@ -59,5 +59,3 @@ class SimpleTest1(BaseTest):
 
         self.result = SimpleTestResult(self.name, ResultStatus.PASSED)
         time.sleep(sleep)
-
-        self.result = SimpleTestResult(self.name, ResultStatus.PASSED)
