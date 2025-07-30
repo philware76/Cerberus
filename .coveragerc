@@ -19,3 +19,4 @@ omit =
     */shibokensupport/*
     */pyscript
     */signature_bootstrap.py
+    */exampleCode/*
