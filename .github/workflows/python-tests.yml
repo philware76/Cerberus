@@ -57,7 +57,9 @@ jobs:
       - name: Show Coverage in GitHub Summary
         run: |
           echo '### Coverage Summary' >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
           coverage report >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload HTML Coverage Report
         uses: actions/upload-artifact@v4
