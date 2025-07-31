@@ -24,18 +24,23 @@ async def read_root():
 
 @app.get("/tests")
 async def read_tests():
-    return {"Tests": [test.name for test in manager.tests]}
+    return {"Tests": [test.name for test in manager.testPlugins.keys()]}
 
 
 @app.get("/equipment")
 async def read_equipment():
-    return {"Equipment": [equip.name for equip in manager.equipment]}
+    return {"Equipment": [equip.name for equip in manager.equipPlugins.keys()]}
 
+
+@app.get("/product")
+async def read_equipment():
+    return {"Products": [product.name for product in manager.productPlugins.keys()]}
 
 @app.get("/test/{test_name}")
 async def run_test(test_name: str):
+    test: BaseTest
     try:
-        test: BaseTest = manager._testPlugins.getPlugin(test_name)
+        test = manager.findTest(test_name)
         if not test:
             return {"Error": f"Test plugin '{test_name}' not found."}
 
@@ -48,7 +53,7 @@ async def run_test(test_name: str):
         return {"Error": str(e)}
 
     logging.info(f"All required equipment for {test.name} is available.")
-    test.Initialise()
+    test.initialise()
     await test.run()
     result = test.getResult()
 
