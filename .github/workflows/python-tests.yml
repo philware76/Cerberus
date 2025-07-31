@@ -36,16 +36,16 @@ jobs:
       - name: Run Unit Tests
         run: |
           pytest tests/unit --cov=. --cov-report=term --cov-report=xml
-          mv .coverage .coverage.unit
+          mv .coverage coverage.unit
 
       - name: Run GUI Tests
         run: |
           xvfb-run pytest tests/gui --cov=. --cov-report=xml
-          mv .coverage .coverage.gui
+          mv .coverage coverage.gui
 
       - name: Combine Coverage Reports
         run: |
-          coverage combine .coverage.unit .coverage.gui
+          coverage combine coverage.unit coverage.gui
           coverage report
           coverage html
 
