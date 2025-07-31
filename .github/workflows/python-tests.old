@@ -1,0 +1,55 @@
+name: Run tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  all-tests:
+    name: Unit + GUI Tests
+    runs-on: ubuntu-latest
+
+    env:
+      QT_QPA_PLATFORM: offscreen
+      DISPLAY: ":99"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Qt dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libxcb-cursor0 xvfb
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov coverage
+
+      - name: Run Unit Tests
+        run: |
+          pytest tests/unit --cov=. --cov-report=term --cov-report=xml
+          mv .coverage .coverage.unit
+
+      - name: Run GUI Tests
+        run: |
+          xvfb-run pytest tests/gui --cov=. --cov-report=xml
+          mv .coverage .coverage.gui
+
+      - name: Combine Coverage Reports
+        run: |
+          coverage combine .coverage.unit .coverage.gui
+          coverage report
+          coverage html
+
+      - name: Upload HTML Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-coverage-report
+          path: htmlcov/
