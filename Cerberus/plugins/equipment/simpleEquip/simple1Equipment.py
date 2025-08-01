@@ -20,5 +20,5 @@ class SimpleEquip1(BaseEquipment):
         self.identity: Identity | None = None
         # self.visa: VISADevice
 
-        self.init = {"Port": 5025, "IPAddress": "127.0.0.1"}
+        self._init = {"Port": 5025, "IPAddress": "127.0.0.1"}
         

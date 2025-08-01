@@ -16,7 +16,7 @@ class BaseTest(BasePlugin):
     def initialise(self, init=None) -> bool:
         logging.debug("Initialise")
         if init is not None:
-            self.init = init
+            self._init = init
 
         self.initialised = True
         return True

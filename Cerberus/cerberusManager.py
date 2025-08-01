@@ -37,27 +37,27 @@ class CerberusManager:
 
         return plugins
 
-    def checkRequirements(self, test: BaseTest) -> Tuple[bool, List[BaseEquipment]]:
-        foundAll = True
-        missingEquipment = []
+    def checkRequirements(self, test: BaseTest) -> Tuple[List[BaseEquipment], List[BaseEquipment]]:
+        missingEquipmentTypes = []
+        foundEquipment = []
 
         logging.warning(f"Checking requirements for test: {test.name}")
         equipmentRequirements: List[Type[BaseEquipment]] = test.requiredEquipment
         equipmentList = self.equipPlugins.values()
 
-        for equipment in equipmentRequirements:
-            logging.debug(" - Required equipment: %s", equipment.__name__)
+        for equipType in equipmentRequirements:
+            logging.debug(" - Required equipment: %s", equipType.__name__)
 
             # Find all equipment instances matching this required type
-            matching_equips = [equip for equip in equipmentList if isinstance(equip, equipment)]
+            matching_equips = [equip for equip in equipmentList if isinstance(equip, equipType)]
 
             if matching_equips:
                 for equip in matching_equips:
                     logging.debug(f"   - Found: {equip.name}")
+                    foundEquipment.append(equip)
 
             else:
-                logging.debug(f"   - Missing: {equipment.__name__}")
-                missingEquipment.append(equipment.__name__)
-                foundAll = False
+                logging.debug(f"   - Missing: {equipType.__name__}")
+                missingEquipmentTypes.append(equipType.__name__)
 
-        return foundAll, missingEquipment
+        return foundEquipment, missingEquipmentTypes

@@ -5,6 +5,9 @@ from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
                                              OptionParameter)
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
+from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
+from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
+    BaseSpecAnalyser
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 
@@ -32,7 +35,7 @@ class TxLevelTestParameters(BaseParameters):
 class TxLevelTest(BaseTest):
     def __init__(self):
         super().__init__("Tx Level")
-        self._addRequirements([BaseChamber])
+        self._addRequirements([BaseChamber, BaseSpecAnalyser, BaseSigGen])
 
         self.addParameterGroup(TxLevelTestParameters())
 
