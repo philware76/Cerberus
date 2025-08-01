@@ -32,6 +32,10 @@ class PluginsShell(BaseShell):
         try:
             idx = getInt(name)
             if idx is not None:
+                if idx >= len(self._plugins):
+                    print("Index not valid.")
+                    return
+                
                 name = list(self._plugins.keys())[idx]
 
             plugin = self._plugins[name]
@@ -55,7 +59,12 @@ class PluginsShell(BaseShell):
             print(f"Failed to create plugin shell: {modName}.{className} - {e}")
 
     def do_open(self, arg):
-        """Opens the loaded shell"""
+        """Opens a new shell or the currently loaded shell"""
+        if self._shell is None and arg is not '':
+            self.do_load(arg)
+            if self._shell is None:
+                return
+        
         if self._shell is not None:
             self._shell.cmdloop()
             self._shell = None

@@ -9,3 +9,6 @@ class BaseShell(cmd.Cmd):
     def do_exit(self, arg):
         """Exit the Cerberus Test shell"""
         return True
+    
+    def emptyline(self):
+        pass
