@@ -1,10 +1,8 @@
 import json
 
-from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
-
 from Cerberus.cerberusManager import CerberusManager
 from Cerberus.cmdShells.baseShell import BaseShell
-from Cerberus.gui.widgetGen import apply_parameters, create_all_parameters_ui
+from Cerberus.gui.helpers import displayParametersUI
 from Cerberus.plugins.baseParameters import BaseParameters
 from Cerberus.plugins.basePlugin import BasePlugin
 
@@ -72,39 +70,15 @@ class BasePluginShell(BaseShell):
             print(f"Missing expected key in parameters: {e}")
         except Exception as e:
             print("Error setting parameters:", e)
-
+        
     def do_uiParams(self, arg):
         """Show a GUI for the parameters to edit"""
-        # Make sure QApplication exists; create one if it doesn't
-        paramApp = QApplication.instance()
-        if paramApp is None:
-            paramApp = QApplication([])
-
-        window = QWidget()
-        layout = QVBoxLayout(window)
-
-        groups = self.plugin._groupParams
-
-        ui, widget_map = create_all_parameters_ui(groups)
-        layout.addWidget(ui)
-
-        apply_btn = QPushButton("Apply")
-        layout.addWidget(apply_btn)
-
-        def on_apply():
-            apply_parameters(groups, widget_map)
-            print("Updated parameters:")
-            for group in groups.values():
-                for param in group.values():
-                    print(f"{group.groupName} -> {param.name}: {param.value} {param.units}")
-
-        apply_btn.clicked.connect(on_apply)
-
-        window.setWindowTitle(f"{self.plugin.name} Parameters")
-        window.resize(400, 300)
-        window.show()
-
-        paramApp.exec()
+        try:
+            import importlib
+            gui_module = importlib.import_module("Cerberus.gui.display_ui")
+            gui_module.displayParametersUI(self.plugin._groupParams)
+        except ImportError as e:
+            print("GUI not available (PySide6 not installed?)")
 
     def do_init(self, arg):
         """Initialises the plugin"""
