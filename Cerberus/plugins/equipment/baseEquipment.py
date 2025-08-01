@@ -43,7 +43,7 @@ class BaseEquipment(BasePlugin):
 
     def initialise(self, init: Any | None = None) -> bool:
         logging.debug("Initialise")
-        self.init = init
+        self._init = init
         self.initialised = True
         return True
 

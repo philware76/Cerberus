@@ -30,7 +30,7 @@ class BasePlugin(ABC):
         self.configured = False
         self.finalised = False
 
-        self.init: Dict[str, Any] = {}
+        self._init: Dict[str, Any] = {}
         self.config: Dict[str, Any] = {}
 
         self._groupParams: Dict[str, BaseParameters] = {}

@@ -44,8 +44,8 @@ async def run_test(test_name: str):
         if not test:
             return {"Error": f"Test plugin '{test_name}' not found."}
 
-        equipment = manager.checkRequirements(test)
-        if not equipment:
+        found, missing = manager.checkRequirements(test)
+        if len(missing) > 0:
             logging.error(f"Current equipment does not meet the requirements for {test.name}")
             return {"Error": f"Current equipment does not meet the requirements for {test.name}"}
     except Exception as e:

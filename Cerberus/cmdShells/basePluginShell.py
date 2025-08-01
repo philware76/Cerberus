@@ -82,8 +82,10 @@ class BasePluginShell(BaseShell):
 
     def do_init(self, arg):
         """Initialises the plugin"""
-        if self.plugin.initialise(self.config):
-            print(f"Identity: {self.plugin.identity}")
+        if self.plugin.initialise():
+            print("Initialised\n")
+        else:
+            print("Not initialised\n")
 
     def do_finalise(self, arg):
         """Finalises and closes the equipment"""

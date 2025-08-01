@@ -20,16 +20,17 @@ class BB60CEquipment(BaseSpecAnalyser):
         self.identity: Identity | None
         self.visa: VISADevice
 
-        self.init = {"Port": 5025, "IPAddress": "127.0.0.1"}
+        self._init = {"Port": 5025, "IPAddress": "127.0.0.1"}
 
     def initialise(self, init: Any | None = None) -> bool:
         if self.initialised:
+            logging.debug(f"{self.name} is already initialised.")
             return True
 
         if init is not None:
             super().initialise(init)
 
-        self.visa = VISADevice(self.init["Port"], self.init["IPAddress"])
+        self.visa = VISADevice(self._init["Port"], self._init["IPAddress"])
         if self.visa.open() is None:
             logging.error("Failed to open the BB60C Spectrum Analyser")
             return False

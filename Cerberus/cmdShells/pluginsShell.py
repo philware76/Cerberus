@@ -60,7 +60,7 @@ class PluginsShell(BaseShell):
 
     def do_open(self, arg):
         """Opens a new shell or the currently loaded shell"""
-        if self._shell is None and arg is not '':
+        if self._shell is None and arg != '':
             self.do_load(arg)
             if self._shell is None:
                 return
