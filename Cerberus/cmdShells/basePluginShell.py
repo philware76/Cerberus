@@ -1,6 +1,6 @@
 import json
 
-from Cerberus.cerberusManager import CerberusManager
+from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.gui.helpers import displayParametersUI
 from Cerberus.plugins.baseParameters import BaseParameters
@@ -8,7 +8,7 @@ from Cerberus.plugins.basePlugin import BasePlugin
 
 
 class BasePluginShell(BaseShell):
-    def __init__(self, plugin: BasePlugin, manager: CerberusManager):
+    def __init__(self, plugin: BasePlugin, manager: Manager):
         self.plugin = plugin
         self.manager = manager
 

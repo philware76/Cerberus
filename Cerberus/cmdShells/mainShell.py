@@ -2,7 +2,7 @@ import logging
 
 from PySide6.QtWidgets import QApplication
 
-from Cerberus.cerberusManager import CerberusManager
+from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.cmdShells.equipmentShell import EquipShell
 from Cerberus.cmdShells.productShell import ProductsShell
@@ -14,7 +14,7 @@ class MainShell(BaseShell):
     intro = "Welcome to Cerberus Shell. Type help or ? to list commands.\n"
     prompt = 'Cerberus> '
 
-    def __init__(self, manager:CerberusManager):
+    def __init__(self, manager:Manager):
         self.manager = manager
         super().__init__()
 
@@ -35,7 +35,7 @@ def runShell(argv):
     setupLogging(logging.DEBUG)
 
     app = QApplication(argv)
-    manager = CerberusManager()
+    manager = Manager()
     
     try:
         MainShell(manager).cmdloop()

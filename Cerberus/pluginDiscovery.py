@@ -77,7 +77,7 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             if plugin is not None:
                 self[plugin.name] = plugin
         else:
-            logging.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
+            pass # logging.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
 
     def __getitem__(self, key: str) -> BasePlugin:
         if key is None or key == "":
@@ -129,9 +129,9 @@ class PluginDiscovery(Dict[str, BasePlugin]):
                         self.registeredPlugins += 1
                         pluginCount += 1
                     else:
-                        logging.debug(f"Skipped {entry.name} - module doesn't end in {self.pluginType}.py")
+                        pass #logging.debug(f"Skipped {entry.name} - module doesn't end in {self.pluginType}.py")
                 else:
-                    logging.debug(f"Skipped {entry.name} - not a valid {self.pluginType}.py plugin file.")
+                    pass #logging.debug(f"Skipped {entry.name} - not a valid {self.pluginType}.py plugin file.")
 
             if pluginCount == 0:
                 logging.warning(f"No {self.pluginType} plugins found in {pluginFolder}. Ensure plugins are correctly implemented and named.")

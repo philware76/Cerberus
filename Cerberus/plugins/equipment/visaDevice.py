@@ -18,7 +18,7 @@ class VISADevice():
         self.resource = f'TCPIP::{self.ipAddress}::5025::SOCKET'
 
         self.rm = visa.ResourceManager()
-        self.instrument = None
+        self.instrument: visa.resources.TCPIPInstrument
 
     def open(self):
         try:

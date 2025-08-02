@@ -4,7 +4,7 @@ from io import StringIO
 
 import pytest
 
-from Cerberus.cerberusManager import CerberusManager
+from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.equipmentShell import EquipShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestShell, TestsShell

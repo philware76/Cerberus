@@ -4,7 +4,7 @@ import inspect
 import shlex
 from typing import Dict, Union
 
-from Cerberus.cerberusManager import CerberusManager
+from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.basePluginShell import BasePluginShell
 from Cerberus.plugins.basePlugin import BasePlugin
 
@@ -27,7 +27,7 @@ class SilentArgParser(argparse.ArgumentParser):
 
 
 class RunCommandShell(BasePluginShell):
-    def __init__(self, plugin: BasePlugin, manager: CerberusManager):
+    def __init__(self, plugin: BasePlugin, manager: Manager):
         super().__init__(plugin, manager)
 
         self.base_cls = plugin.__class__.__bases__[0]
