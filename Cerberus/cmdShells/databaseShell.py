@@ -9,34 +9,18 @@ class DatabaseShell(BaseShell):
 
     def __init__(self, manager:Manager):
         super().__init__(manager)
-        self.db = None
-
-    def do_open(self, arg):
-        "Open the Cerberus database using cerberus.ini"
-        try:
-            self.db = Database()
-            print("Database connection opened.")
-        except Exception as e:
-            print(f"Failed to open database: {e}")
-
-    def do_exit(self, arg):
-        "Exit the database shell and close the database connection"
-        if self.db:
-            self.db.close()
-            print("Database connection closed.")
-        return True
 
     def do_get_chamber(self, arg):
         "Get the chamber class name for this station from the database"
-        if not self.db:
+        if not self.manager or not hasattr(self.manager, 'database') or not self.manager.database:
             print("Database not open. Use 'open' first.")
             return
-        chamber = self.db.get_station_chamber_type()
+        chamber = self.manager.database.get_station_chamber_type()
         print(f"Chamber class: {chamber}")
 
     def do_set_chamber(self, arg):
         "Set the chamber class name for this station in the database. Usage: set_chamber <ClassName>"
-        if not self.db:
+        if not self.manager or not hasattr(self.manager, 'database') or not self.manager.database:
             print("Database not open. Use 'open' first.")
             return
         if not arg:
