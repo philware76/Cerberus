@@ -4,6 +4,8 @@ from typing import Dict, List, Tuple, Type, cast
 import iniconfig
 import pluggy
 
+from Cerberus.database import Database
+from Cerberus.plan import Plan
 from Cerberus.pluginDiscovery import PluginDiscovery
 from Cerberus.plugins.basePlugin import BasePlugin
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
@@ -17,7 +19,10 @@ class Manager:
         self.pm = pluggy.PluginManager("cerberus")
 
         self.loadIni()
-        logging.info(f"Cerberus: {self.stationId}")
+        logging.info(f"Cerberus:{self.stationId}")
+
+        self.database = Database()
+        self.plan = None  # Plan will be loaded from the database or created as needed 
 
         self.equipPlugins: Dict[str, BaseEquipment] = cast(Dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
         self.productPlugins: Dict[str, BaseProduct] = cast(Dict[str, BaseProduct], self._discover_plugins("Product", "products"))
@@ -112,3 +117,15 @@ class Manager:
             requirement_matches[type_name] = list(matching_equips.values())
 
         return requirement_matches
+    
+    def finalize(self):
+        """Final cleanup before exiting the application."""
+        logging.debug("Finalizing Cerberus manager...")
+        
+        # Close the database connection if it exists
+        if hasattr(self, 'database') and self.database:
+            self.database.close()
+            logging.debug("Database connection closed.")
+        
+        # Any other cleanup tasks can be added here
+        logging.debug("Cerberus manager finalized.")

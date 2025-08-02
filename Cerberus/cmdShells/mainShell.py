@@ -17,8 +17,7 @@ class MainShell(BaseShell):
     prompt = 'Cerberus> '
 
     def __init__(self, manager:Manager):
-        self.manager = manager
-        super().__init__()
+        super().__init__(manager)
 
     def do_equip(self, arg):
         """Go into the Equipment shell subsystem"""
@@ -34,11 +33,17 @@ class MainShell(BaseShell):
 
     def do_database(self, arg):
         """Go into the Database shell subsystem"""
-        DatabaseShell().cmdloop()
+        DatabaseShell(self.manager).cmdloop()
 
     def do_plan(self, arg):
         """Go into the Plan shell subsystem"""
-        PlanShell().cmdloop()
+        PlanShell(self.manager).cmdloop()
+
+    def do_quit(self, arg):
+        """Quits the shell immediately"""
+        print("Exiting Cerberus shell...")
+        self.manager.finalize()
+        super().do_quit(arg)
 
 def runShell(argv):
     setupLogging(logging.DEBUG)

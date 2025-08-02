@@ -1,4 +1,5 @@
 import configparser
+import logging
 
 import mysql.connector
 
@@ -9,12 +10,15 @@ class Database:
         config.read(ini_path)
         db_cfg = config["database"]
         self.station_identity = config["cerberus"]["identity"]
+        
+        logging.debug(f"Connecting to database with config: {db_cfg}")
         self.conn = mysql.connector.connect(
             host=db_cfg.get("host", "localhost"),
             user=db_cfg.get("username", "root"),
             password=db_cfg.get("password", ""),
             database=db_cfg.get("database", "cerberus")
         )
+        
         self.ensure_station_table()
 
     def close(self):
