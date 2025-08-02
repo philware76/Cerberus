@@ -5,9 +5,9 @@ from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
 @hookimpl
 @singleton
 def createEquipmentPlugin():
-    return CT200Equipment()
+    return CT200()
 
-class CT200Equipment(BaseChamber):
+class CT200(BaseChamber):
     def __init__(self):
         super().__init__("CT200 Chamber")
         
