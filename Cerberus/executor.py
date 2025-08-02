@@ -1,7 +1,7 @@
 import logging
 
-from Cerberus.cerberusManager import Manager
 from Cerberus.exceptions import TestError
+from Cerberus.manager import Manager
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
 

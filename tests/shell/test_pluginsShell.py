@@ -4,10 +4,10 @@ from io import StringIO
 
 import pytest
 
-from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.equipmentShell import EquipShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestShell, TestsShell
+from Cerberus.manager import Manager
 from Cerberus.plugins.basePlugin import BasePlugin
 
 

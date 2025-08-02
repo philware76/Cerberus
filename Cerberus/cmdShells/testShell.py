@@ -1,9 +1,9 @@
 from typing import Type, cast
 
-from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.basePluginShell import BasePluginShell
 from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.executor import Executor
+from Cerberus.manager import Manager
 from Cerberus.plugins.tests.baseTest import BaseTest
 
 

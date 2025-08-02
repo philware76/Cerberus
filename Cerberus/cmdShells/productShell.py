@@ -1,6 +1,6 @@
-from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
+from Cerberus.manager import Manager
 from Cerberus.plugins.products.baseProduct import BaseProduct
 
 

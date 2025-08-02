@@ -4,8 +4,8 @@ import inspect
 import shlex
 from typing import Dict, Union
 
-from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.basePluginShell import BasePluginShell
+from Cerberus.manager import Manager
 from Cerberus.plugins.basePlugin import BasePlugin
 
 

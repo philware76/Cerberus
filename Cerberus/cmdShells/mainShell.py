@@ -2,12 +2,12 @@ import logging
 
 from PySide6.QtWidgets import QApplication
 
-from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.cmdShells.equipmentShell import EquipShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.logConfig import setupLogging
+from Cerberus.manager import Manager
 
 
 class MainShell(BaseShell):

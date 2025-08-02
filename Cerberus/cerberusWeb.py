@@ -5,7 +5,7 @@ import logging
 from fastapi import FastAPI
 from logConfig import setupLogging
 
-from Cerberus.cerberusManager import Manager
+from Cerberus.manager import Manager
 from Cerberus.plugins.tests.baseTest import BaseTest
 
 setupLogging(logging.DEBUG)
