@@ -1,5 +1,5 @@
-from Cerberus.cerberusManager import Manager
 from Cerberus.executor import Executor
+from Cerberus.manager import Manager
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
 
 manager: Manager

@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from Cerberus.cerberusManager import Manager
+from Cerberus.manager import Manager
 
 
 def pytest_addoption(parser):

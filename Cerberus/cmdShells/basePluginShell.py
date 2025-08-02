@@ -1,8 +1,8 @@
 import json
 
-from Cerberus.cerberusManager import Manager
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.gui.helpers import displayParametersUI
+from Cerberus.manager import Manager
 from Cerberus.plugins.baseParameters import BaseParameters
 from Cerberus.plugins.basePlugin import BasePlugin
 
