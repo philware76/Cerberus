@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from Cerberus.cerberusManager import CerberusManager
+from Cerberus.cerberusManager import Manager
 
 
 def pytest_addoption(parser):
@@ -34,4 +34,4 @@ import pytest
 
 @pytest.fixture(scope="module")
 def manager():
-    return CerberusManager()
+    return Manager()

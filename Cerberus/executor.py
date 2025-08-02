@@ -1,6 +1,6 @@
 import logging
 
-from Cerberus.cerberusManager import CerberusManager
+from Cerberus.cerberusManager import Manager
 from Cerberus.exceptions import TestError
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
@@ -9,7 +9,7 @@ from Cerberus.plugins.tests.baseTestResult import ResultStatus
 class Executor:
     """Class that handles executing a single test"""
     def __init__(self, manager):
-        self.manager: CerberusManager = manager
+        self.manager: Manager = manager
 
     def runTest(self, test: BaseTest) -> bool:
         """Run a single test"""
