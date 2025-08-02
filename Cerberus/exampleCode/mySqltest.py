@@ -2,7 +2,7 @@ import json
 
 import mysql.connector
 
-from Cerberus.plugins.baseParameters import BaseParameter, BaseParameters
+from Cerberus.plugins.baseParameters import BaseParameters
 from Cerberus.plugins.tests.TxLevelTest.TxLevelTest import \
     TxLevelTestParameters
 

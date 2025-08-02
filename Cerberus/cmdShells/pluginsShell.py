@@ -11,11 +11,10 @@ class PluginsShell(BaseShell):
     """A base shell class for interacting with plugin dictionaries."""
 
     def __init__(self, manager:Manager, plugins: Dict[str, Type[BasePlugin]], plugin_type: str):
-        super().__init__()
+        super().__init__(manager)
         PluginsShell.intro = f"Welcome to Cerberus {plugin_type} System. Type help or ? to list commands.\n"
         PluginsShell.prompt = f'{plugin_type}> '
       
-        self._manager = manager
         self._plugins = plugins
         self._plugin_type = plugin_type
         self._shell: BaseShell | None = None
@@ -48,7 +47,7 @@ class PluginsShell(BaseShell):
 
             if pluginsClass:
                 # Instantiate the shell and start the command loop
-                self._shell = pluginsClass(plugin, self._manager)
+                self._shell = pluginsClass(plugin, self.manager)
             else:
                 print(f"No shell found for plugin type: {self._plugin_type}")
             

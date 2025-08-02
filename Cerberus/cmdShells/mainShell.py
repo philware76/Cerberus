@@ -3,7 +3,9 @@ import logging
 from PySide6.QtWidgets import QApplication
 
 from Cerberus.cmdShells.baseShell import BaseShell
+from Cerberus.cmdShells.databaseShell import DatabaseShell
 from Cerberus.cmdShells.equipmentShell import EquipShell
+from Cerberus.cmdShells.planShell import PlanShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.logConfig import setupLogging
@@ -30,6 +32,13 @@ class MainShell(BaseShell):
         """Go into the Test shell subsystem"""
         TestsShell(self.manager).cmdloop()
 
+    def do_database(self, arg):
+        """Go into the Database shell subsystem"""
+        DatabaseShell().cmdloop()
+
+    def do_plan(self, arg):
+        """Go into the Plan shell subsystem"""
+        PlanShell().cmdloop()
 
 def runShell(argv):
     setupLogging(logging.DEBUG)

@@ -5,8 +5,8 @@ from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
 @hookimpl
 @singleton
 def createEquipmentPlugin():
-    return NanoDacEquipment()
+    return NanoDAC()
 
-class NanoDacEquipment(BaseChamber):
+class NanoDAC(BaseChamber):
     def __init__(self):
         super().__init__("NanoDAC Chamber")

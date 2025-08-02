@@ -9,10 +9,8 @@ from Cerberus.plugins.basePlugin import BasePlugin
 
 class BasePluginShell(BaseShell):
     def __init__(self, plugin: BasePlugin, manager: Manager):
+        super().__init__(manager)
         self.plugin = plugin
-        self.manager = manager
-
-        super().__init__()
 
     def do_txtParams(self, arg):
         """Show the test parameters in a human readable way"""
