@@ -1,6 +1,6 @@
 import getpass
 from datetime import datetime
-from typing import List
+from typing import Dict, List, Self
 
 
 class Plan(List[str]):
@@ -8,20 +8,24 @@ class Plan(List[str]):
         self.name = name
         self.user = getpass.getuser()
         self.date = datetime.now()
-        self.tests: list[str] = []
 
-    def to_dict(self):
+    @classmethod
+    def EmptyPlan(cls):
+        return cls("New1")
+
+    def to_dict(self) -> Dict[str, str]:
         return {
             "name": self.name,
             "user": self.user,
             "date": self.date.isoformat(),
-            "tests": self.tests
+            "tests": list(self)
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> Self:
         plan = cls(data["name"])
         plan.user = data["user"]
         plan.date = datetime.fromisoformat(data["date"])
-        plan.tests = list(data["tests"])
+        plan.extend(data.get("tests", []))
+        
         return plan
