@@ -25,10 +25,12 @@ class PlanShell(BaseShell):
         if self.manager.plan is None:
             print("No plan created. Use 'new' first.")
             return
+        
         if not arg:
             print("Please provide a test name.")
             return
-        self.manager.plan.add_test(arg)
+        
+        self.manager.plan.append(arg)
         print(f"Test '{arg}' added to plan.")
 
     def do_show(self, arg):
