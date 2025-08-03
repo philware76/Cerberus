@@ -4,10 +4,10 @@ from typing import Dict, List, Self
 
 
 class Plan(List[str]):
-    def __init__(self, name: str):
+    def __init__(self, name: str, user: str = None, date: datetime = None):
         self.name = name
-        self.user = getpass.getuser()
-        self.date = datetime.now()
+        self.user = user or getpass.getuser()
+        self.date = date or datetime.now()
 
     @classmethod
     def EmptyPlan(cls):

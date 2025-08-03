@@ -74,13 +74,18 @@ class Database:
         return plan_id
 
     def set_TestPlanForStation(self, plan_id:int) -> bool:
-        """Set the test plan for this station in the database."""
+        """Set the test plan for this station in the database, only if plan_id exists."""
+        cursor = self.conn.cursor()
         try:
-            cursor = self.conn.cursor()
+            # Check if plan_id exists
+            cursor.execute("SELECT id FROM testplans WHERE id = %s", (plan_id,))
+            exists = cursor.fetchone()
+            if not exists:
+                logging.error(f"Test plan ID {plan_id} does not exist in testplans table.")
+                return False
             cursor.execute("""
                 UPDATE station SET testplan_id = %s WHERE identity = %s
             """, (plan_id, self.stationId))
-        
             self.conn.commit()
             return True
         except mysql.connector.Error as err:
@@ -103,7 +108,7 @@ class Database:
         plan = Plan.EmptyPlan()
         try:
             if row and row[0]:
-                logging.debug(f"Found test plan for station {self.stationId}: #{row[1]}")
+                logging.debug(f"Laoding test plan for station {self.stationId}: #{row[1]}")
                 plan = Plan.from_dict(json.loads(row[0]))
             else:
                 logging.warning(f"No test plan found for station {self.stationId}. Returning empty plan.")
@@ -138,3 +143,17 @@ class Database:
             return False
         finally:
             cursor.close()
+
+    def listTestPlans(self) -> list[Plan]:
+        """List all test plans in the database."""
+        plans = []
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT id, name, created_at, user FROM testplans")
+            for row in cursor.fetchall():
+                plan = Plan(name=row[1], date=row[2], user=row[3])
+                plans.append(plan)
+        finally:
+           cursor.close()
+    
+        return plans
