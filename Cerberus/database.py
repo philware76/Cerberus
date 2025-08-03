@@ -35,42 +35,64 @@ class Database:
             self.conn.close()
 
     def ensure_station_table(self):
-        cursor = self.conn.cursor()
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS station (
-            identity VARCHAR(100) PRIMARY KEY,
-            chamber_type VARCHAR(100),
-            testplan_id INT
-        )
-        """)
-        self.conn.commit()
-        cursor.close()
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS station (
+                identity VARCHAR(100) PRIMARY KEY,
+                chamber_type VARCHAR(100),
+                testplan_id INT
+            )
+            """)
+            self.conn.commit()
+        
+        except mysql.connector.Error as err:
+            logging.error(f"Error creating station table: {err}")
+        
+        finally:
+            if cursor:
+                cursor.close()
 
     def ensure_testplans_table(self):
-        cursor = self.conn.cursor()
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS testplans (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(100),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            user VARCHAR(100),
-            plan_json TEXT NOT NULL
-        )
-        """)
-        self.conn.commit()
-        cursor.close()
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS testplans (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                user VARCHAR(100),
+                plan_json TEXT NOT NULL
+            )
+            """)
+            self.conn.commit()
+        except mysql.connector.Error as err:
+            logging.error(f"Error creating testplans table: {err}")
+
+        finally:
+            if cursor:
+                cursor.close()
 
     def saveTestPlan(self, plan: Plan) -> int:
         """Save a test plan to the database and return its ID."""
-        cursor = self.conn.cursor()
-        plan_json = json.dumps(plan.to_dict())
-        cursor.execute("""
-            INSERT INTO testplans (name, user, plan_json)
-            VALUES (%s, %s, %s)
-        """, (plan.name, plan.user, plan_json))
-        self.conn.commit()
-        plan_id = cursor.lastrowid
-        cursor.close()
+        try:
+            cursor = self.conn.cursor()
+            plan_json = json.dumps(plan.to_dict())
+            cursor.execute("""
+                INSERT INTO testplans (name, user, plan_json)
+                VALUES (%s, %s, %s)
+            """, (plan.name, plan.user, plan_json))
+            self.conn.commit()
+            plan_id = cursor.lastrowid
+        
+        except mysql.connector.Error as err:
+            logging.error(f"Error saving test plan: {err}")
+            plan_id = -1
+        
+        finally:
+            if cursor:
+                cursor.close()
+
         return plan_id
 
     def set_TestPlanForStation(self, plan_id:int) -> bool:
@@ -88,11 +110,14 @@ class Database:
             """, (plan_id, self.stationId))
             self.conn.commit()
             return True
+        
         except mysql.connector.Error as err:
             logging.error(f"Error setting test plan for station {self.stationId}: {err}")
             return False
+        
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
 
     def get_TestPlanForStation(self) -> Plan:
         """Get the test plan for this station from the database using a JOIN."""
@@ -112,9 +137,14 @@ class Database:
                 plan = Plan.from_dict(json.loads(row[0]))
             else:
                 logging.warning(f"No test plan found for station {self.stationId}. Returning empty plan.")
+
+        except mysql.connector.Error as err:
+            logging.error(f"Error fetching test plan for station {self.stationId}: {err}") 
+                          
         finally:
-            cursor.close()
-        
+            if cursor:
+                cursor.close()
+
         return plan
 
     def get_ChamberForStation(self) -> str | None:
@@ -125,9 +155,11 @@ class Database:
             row = cursor.fetchone()
             if row and row[0]:
                 return row[0]
+        
         except mysql.connector.Error as err:
             logging.error(f"Error fetching chamber for station {self.stationId}: {err}")
             return None
+        
         finally:
             cursor.close()
 
@@ -138,11 +170,14 @@ class Database:
             cursor.execute(query, (chamber_type, self.stationId))
             self.conn.commit()
             return True
+        
         except mysql.connector.Error as err:
             logging.error(f"Error saving chamber for station {self.stationId}: {err}")
             return False
+        
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
 
     def listTestPlans(self) -> list[Plan]:
         """List all test plans in the database."""
@@ -153,7 +188,12 @@ class Database:
             for row in cursor.fetchall():
                 plan = Plan(name=row[1], date=row[2], user=row[3])
                 plans.append(plan)
+        
+        except mysql.connector.Error as err:
+            logging.error(f"Error fetching test plans: {err}")
+
         finally:
-           cursor.close()
-    
+           if cursor:
+               cursor.close()
+
         return plans

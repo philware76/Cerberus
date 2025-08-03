@@ -20,18 +20,19 @@ class PlanShell(BaseShell):
         self.manager.plan = Plan(plan_name)
         print(f"New plan '{plan_name}' created.")
 
-    def do_add(self, arg):
+    def do_add(self, testName):
         "Add a test name to the current plan. Usage: add <test_name>"
-        if self.manager.plan is None:
-            print("No plan created. Use 'new' first.")
-            return
-        
-        if not arg:
-            print("Please provide a test name.")
-            return
-        
-        self.manager.plan.append(arg)
-        print(f"Test '{arg}' added to plan.")
+        if self.manager.addTestToPlan(testName):
+            print(f"Test '{testName}' added to the current plan.")
+        else:
+            print(f"Failed to add test '{testName}' to the current plan. Ensure a plan is created first.")
+    
+    def do_remove(self, testName):
+        "Remove a test name from the current plan. Usage: remove <test_name>"
+        if self.manager.removeTestFromPlan(testName):
+            print(f"Test '{testName}' removed from the current plan.")
+        else:
+            print(f"Failed to remove test '{testName}' from the current plan. Ensure the test exists in the plan.")
 
     def do_show(self, arg):
         "Show the current plan details."

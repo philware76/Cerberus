@@ -86,6 +86,36 @@ class Manager():
         else:
             logging.error(f"Failed to set chamber class to: {chamberName}")
             return False
+        
+    def addTestToPlan(self, testName: str) -> bool:
+        """Add a test to the current plan."""
+        if not self.plan:
+            logging.error("No test plan loaded.")
+            return False
+
+        # Check if testPlugin is a valid BaseTest subclass
+        testPlugin = self.findTest(testName)
+        if not testPlugin or not isinstance(testPlugin, BaseTest):
+            logging.error(f"Test '{testName}' is not a valid BaseTest subclass.")
+            return False
+        
+        self.plan.append(testName)
+        logging.info(f"Test '{testName}' added to the current plan.")
+        return True
+    
+    def removeTestFromPlan(self, testName: str) -> bool:
+        """Remove a test from the current plan."""
+        if not self.plan:
+            logging.error("No test plan loaded.")
+            return False
+
+        if testName in self.plan:
+            self.plan.remove(testName)
+            logging.info(f"Test '{testName}' removed from the current plan.")
+            return True
+        else:
+            logging.error(f"Test '{testName}' not found in the current plan.")
+            return False
 
     def loadIni(self):
         ini = iniconfig.IniConfig("cerberus.ini")
