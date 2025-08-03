@@ -7,7 +7,7 @@ def displayPluginCategory(category_name, plugins: Dict[str, BasePlugin]):
     print(f"Available {category_name} plugins:")
     idx = 0
     for plugin in list(plugins.values()):
-        print(f" #{idx}: '{plugin.name}'")
+        print(f" #{idx}: '{plugin.name}' [{plugin.__class__.__base__.__name__.replace('Base', '')}]")
         idx += 1
 
     print("")
