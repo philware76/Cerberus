@@ -51,7 +51,8 @@ class Manager():
             return False
 
         if self.database.set_TestPlanForStation(planId):
-            logging.debug(f"Test plan set to: {planId}")
+            self.loadPlan()
+            logging.debug(f"Test plan {planId} set and loaded successfully.")
             return True
         else:
             logging.error(f"Failed to set test plan to: {planId}")

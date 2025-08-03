@@ -43,3 +43,14 @@ class ManagerShell(BaseShell):
             print(f"Test plan set to: {arg}")
         else:
             print(f"Failed to set test plan to: {arg}")
+
+    def do_listPlans(self, arg):
+        """List all available test plans."""
+        plans = self.manager.database.listTestPlans()
+        if not plans:
+            print("No test plans available.")
+            return
+        
+        print("Available test plans:")
+        for plan in plans:
+            print(f" - {plan.name}: {plan.user} on {plan.date}")
