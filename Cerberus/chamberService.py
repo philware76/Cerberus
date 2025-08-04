@@ -1,6 +1,6 @@
 import logging
 
-from Cerberus.database import Database
+from Cerberus.database.database import Database
 from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
 
 

@@ -1,9 +1,10 @@
 import json
 import logging
 
-from Cerberus.database import StorageInterface
+from Cerberus.database.database import StorageInterface
 from Cerberus.plan import Plan
 
+# NOT SURE IF THIS WORKS YET - UNTESTED!
 
 class FileDatabase(StorageInterface):
     """File-based implementation of the StorageInterface."""

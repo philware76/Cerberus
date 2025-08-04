@@ -1,7 +1,7 @@
 import logging
 
 from Cerberus.chamberService import ChamberService
-from Cerberus.database import StorageInterface
+from Cerberus.database.storeageInterface import StorageInterface
 from Cerberus.planService import PlanService
 from Cerberus.pluginService import PluginService
 
