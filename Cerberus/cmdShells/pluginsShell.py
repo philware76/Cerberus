@@ -12,6 +12,8 @@ class PluginsShell(BaseShell):
 
     def __init__(self, manager:Manager, plugins: Dict[str, Type[BasePlugin]], plugin_type: str):
         super().__init__(manager)
+        self.pluginService = manager.pluginService
+
         PluginsShell.intro = f"Welcome to Cerberus {plugin_type} System. Type help or ? to list commands.\n"
         PluginsShell.prompt = f'{plugin_type}> '
       

@@ -8,7 +8,7 @@ class DatabaseShell(BaseShell):
 
     def __init__(self, manager:Manager):
         super().__init__(manager)
-        self.db = manager.database
+        self.db = manager.db
 
     def do_get_chamber(self, arg):
         "Get the chamber class name for this station from the database"

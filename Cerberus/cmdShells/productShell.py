@@ -6,7 +6,8 @@ from Cerberus.plugins.products.baseProduct import BaseProduct
 
 class ProductsShell(PluginsShell):
     def __init__(self, manager:Manager):
-        super().__init__(manager, manager.productPlugins, "Product")
+        pluginService = manager.pluginService
+        super().__init__(manager, pluginService.productPlugins, "Product")
 
 
 class ProductShell(RunCommandShell):

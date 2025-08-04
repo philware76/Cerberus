@@ -8,21 +8,23 @@ class ManagerShell(BaseShell):
 
     def __init__(self, manager:Manager):
         super().__init__(manager)
+        self.chamberService = manager.chamberService
+        self.planService = manager.planService
 
     def do_setChamber(self, arg):
         """Sets the chamber class name for this station in the database. Usage: set_chamber <ClassName>"""
         if not arg:
             print("Please provide a chamber class name.")
             return
-        
-        if self.manager.saveChamber(arg):
+
+        if self.chamberService.saveChamber(arg):
             print(f"Chamber class set to: {arg}")
         else:
             print(f"Failed to set chamber class to: {arg}")
 
     def do_getChamber(self, arg):
         """Get the chamber class name for this station from the database"""
-        chamber = self.manager.loadChamber()
+        chamber = self.chamberService.loadChamber()
         if chamber:
             print(f"Chamber class: {chamber}")
         else:
@@ -30,7 +32,7 @@ class ManagerShell(BaseShell):
 
     def do_savePlan(self, arg):
         """Save the current test plan for this station to the database."""
-        self.manager.savePlan()
+        self.planService.savePlan()
         print("Test plan saved successfully.")
 
     def do_setTestPlan(self, arg):
@@ -39,14 +41,14 @@ class ManagerShell(BaseShell):
             print("Please provide a test plan ID.")
             return
 
-        if self.manager.setTestPlan(arg):
+        if self.planService.setTestPlan(arg):
             print(f"Test plan set to: {arg}")
         else:
             print(f"Failed to set test plan to: {arg}")
 
     def do_listPlans(self, arg):
         """List all available test plans."""
-        plans = self.manager.database.listTestPlans()
+        plans = self.manager.db.listTestPlans()
         if not plans:
             print("No test plans available.")
             return

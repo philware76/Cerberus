@@ -6,7 +6,8 @@ from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 
 class EquipShell(PluginsShell):
     def __init__(self, manager:Manager):
-        super().__init__(manager, manager.equipPlugins, "Equipment")
+        pluginService = manager.pluginService
+        super().__init__(manager, pluginService.equipPlugins, "Equipment")
 
 
 class EquipmentShell(RunCommandShell):

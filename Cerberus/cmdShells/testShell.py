@@ -9,7 +9,8 @@ from Cerberus.plugins.tests.baseTest import BaseTest
 
 class TestsShell(PluginsShell):
     def __init__(self, manager:Manager):
-        super().__init__(manager, manager.testPlugins, "Test")
+        pluginService = manager.pluginService
+        super().__init__(manager, pluginService.testPlugins, "Test")
 
 
 class TestShell(BasePluginShell):

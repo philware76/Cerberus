@@ -5,6 +5,7 @@ from io import StringIO
 import pytest
 
 from Cerberus.cmdShells.equipmentShell import EquipShell
+from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestShell, TestsShell
 from Cerberus.manager import Manager
@@ -14,23 +15,25 @@ from Cerberus.plugins.basePlugin import BasePlugin
 def test_cerberus_manager_created(manager):
     assert manager is not None
 
-def test_no_missing_plugins(manager):
-    assert len(manager.missingPlugins) == 0
+def test_no_missing_plugins(manager:Manager):
+    pluginService = manager.pluginService
+    assert len(pluginService.missingPlugins) == 0
 
 @pytest.mark.parametrize("shell_class, plugin_type", [
     (TestsShell, "Test"),
     (EquipShell, "Equip"),
     (ProductsShell, "Product"),
 ])
-def test_getPluginShell(shell_class, plugin_type, manager):
-    shell = shell_class(manager)
+def test_getPluginShell(shell_class, plugin_type, manager: Manager):
+    shell: PluginsShell = shell_class(manager)
 
     with StringIO() as buf, redirect_stdout(buf):
         shell.do_list(None)
         output = buf.getvalue()
 
     # Dynamically access the correct plugin dictionary from the manager
-    plugin_dict = getattr(manager, plugin_type.lower() + "Plugins")
+    pluginService = manager.pluginService
+    plugin_dict = getattr(pluginService, f"{plugin_type.lower()}Plugins")
     for p in plugin_dict.values():
         plugin: BasePlugin = p
         assert plugin.name in output
