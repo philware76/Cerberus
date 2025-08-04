@@ -9,14 +9,16 @@ def test_CerberusManager():
     global manager
 
     manager = Manager()
-    assert len(manager.missingPlugins) == 0
+    pluginService = manager.pluginService
+    assert len(pluginService.missingPlugins) == 0
 
 
-def test_Executor():
-    testRunner = Executor(manager)
+def test_Executor(manager: Manager):
+    pluginService = manager.pluginService
+    testRunner = Executor(pluginService)
 
     testName = "Simple Test #1"
-    test = manager.findTest(testName)
+    test = pluginService.findTest(testName)
     assert test is not None
 
     test.config["Count"] = 100

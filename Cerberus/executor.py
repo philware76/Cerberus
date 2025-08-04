@@ -1,15 +1,15 @@
 import logging
 
 from Cerberus.exceptions import TestError
-from Cerberus.manager import Manager
+from Cerberus.manager import Manager, PluginService
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
 
 
 class Executor:
     """Class that handles executing a single test"""
-    def __init__(self, manager):
-        self.manager: Manager = manager
+    def __init__(self, pluginService: PluginService):
+        self.pluginService = pluginService
 
     def runTest(self, test: BaseTest) -> bool:
         """Run a single test"""
@@ -21,7 +21,7 @@ class Executor:
             return False
 
         # Check for required equipment
-        foundEquip, missingEquipTypes = self.manager.checkRequirements(test)
+        foundEquip, missingEquipTypes = self.pluginService.checkRequirements(test)
         if len(missingEquipTypes) > 0:
             logging.error(f"Missing required equipment for test: {test.name}. Missing: {missingEquipTypes}")
             return False
