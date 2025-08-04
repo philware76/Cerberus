@@ -1,6 +1,6 @@
 import logging
 
-from Cerberus.database import Database
+from Cerberus.database.database import Database
 from Cerberus.plan import Plan
 from Cerberus.plugins.tests.baseTest import BaseTest
 

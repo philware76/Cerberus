@@ -13,7 +13,7 @@ from Cerberus.cmdShells.planShell import PlanShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo
-from Cerberus.database import Database
+from Cerberus.database.database import Database
 from Cerberus.logConfig import setupLogging
 from Cerberus.manager import Manager
 
@@ -77,7 +77,7 @@ def runShell(argv):
 
     parser = argparse.ArgumentParser(description="Cerberus Shell")
     parser.add_argument('-f', '--filedb', type=str, help='Use FileDatabase with the given filename')
-    parser.add_argument('-i', '--inifile', type=str, default='cerberus.ini', help='INI filename (default: cerberus.ini)')
+    parser.add_argument('-i', '--inifile', type=str, default='cerberus.ini', help='configuration filename (default: cerberus.ini)')
     args, unknown = parser.parse_known_args(argv)
 
     app = QApplication(argv)
@@ -85,7 +85,7 @@ def runShell(argv):
     logging.info(f"Cerberus:{stationId}")
 
     if args.filedb:
-        from Cerberus.fileDatabase import FileDatabase
+        from Cerberus.database.fileDatabase import FileDatabase
         db = FileDatabase(args.filedb)
         logging.info(f"Using FileDatabase: {args.filedb}")
     else:

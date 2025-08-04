@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from Cerberus.fileDatabase import FileDatabase
+from Cerberus.database.fileDatabase import FileDatabase
 from Cerberus.manager import Manager
 
 
