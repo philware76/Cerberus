@@ -1,40 +1,19 @@
 import logging
 
-import iniconfig
-
 from Cerberus.chamberService import ChamberService
-from Cerberus.database import Database, dbInfo
+from Cerberus.database import StorageInterface
 from Cerberus.planService import PlanService
 from Cerberus.pluginService import PluginService
 
 
 class Manager():
-    def __init__(self):
+    def __init__(self, db: StorageInterface):
         logging.info("Starting TestManager...")
-
-        self.loadIni()
-        logging.info(f"Cerberus:{self.stationId}")
-
-        self.db = Database(self.stationId, self.dbInfo)
+        self.db = db
 
         self.pluginService = PluginService()
         self.planService = PlanService(self.db)
         self.chamberService = ChamberService(self.db)
-
-    def loadIni(self):
-        ini = iniconfig.IniConfig("cerberus.ini")
-        if ini is None:
-            logging.error("Failed to load cerberus.ini file!")
-            exit(1)
-
-        self.stationId = ini["cerberus"]["identity"]
-        self.dbInfo = dbInfo(
-            host=ini["database"]["host"],
-            username=ini["database"]["username"],
-            password=ini["database"]["password"],
-            database=ini["database"]["database"]
-        )
-
     
     def finalize(self):
         """Final cleanup before exiting the application."""

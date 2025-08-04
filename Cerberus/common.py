@@ -1,7 +1,16 @@
 
 import re
 import time
+from dataclasses import dataclass
 from threading import Event
+
+
+@dataclass
+class DBInfo:
+    host: str = "localhost"
+    username: str = "root"
+    password: str = ""
+    database: str = "cerberus"
 
 
 def dwell(period: float):

@@ -2,6 +2,7 @@ import logging
 
 import pytest
 
+from Cerberus.fileDatabase import FileDatabase
 from Cerberus.manager import Manager
 
 
@@ -34,4 +35,5 @@ import pytest
 
 @pytest.fixture(scope="module")
 def manager():
-    return Manager()
+    fileDB = FileDatabase("test.db")
+    return Manager(fileDB)
