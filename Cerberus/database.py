@@ -1,21 +1,47 @@
 import json
 import logging
-from dataclasses import dataclass
+from abc import ABC, abstractmethod
 
 import mysql.connector
 
+from Cerberus.common import DBInfo
 from Cerberus.plan import Plan
 
 
-@dataclass
-class dbInfo:
-    host: str = "localhost"
-    username: str = "root"
-    password: str = ""
-    database: str = "cerberus"
+class StorageInterface(ABC):
+    """Abstract base class for the storage interface required for Cerberus."""
+    @abstractmethod
+    def saveTestPlan(self, plan: Plan) -> int:
+        """Save a test plan to the database and return its ID."""
+        raise NotImplementedError("This method should be overridden by subclasses.")
 
-class Database:
-    def __init__(self, stationId, dbInfo: dbInfo = dbInfo()):
+    @abstractmethod    
+    def set_TestPlanForStation(self, plan_id: int) -> bool:
+        """Set the test plan for this station in the database, only if plan_id exists."""
+        raise NotImplementedError("This method should be overridden by subclasses.")
+
+    @abstractmethod
+    def get_TestPlanForStation(self) -> Plan:
+        """Get the test plan for this station from the database using a JOIN."""
+        raise NotImplementedError("This method should be overridden by subclasses.")
+
+    @abstractmethod
+    def get_ChamberForStation(self) -> str | None:
+        """Get the chamber class name for this station from the database."""
+        raise NotImplementedError("This method should be overridden by subclasses.")
+    
+    @abstractmethod
+    def set_ChamberForStation(self, chamberType) -> bool:
+        """Set the chamber class name for this station in the database."""
+        raise NotImplementedError("This method should be overridden by subclasses.")
+    
+    @abstractmethod    
+    def listTestPlans(self) -> list[Plan]:
+        """List all test plans in the database."""
+        raise NotImplementedError("This method should be overridden by subclasses.")
+        
+class Database(StorageInterface):
+    def __init__(self, stationId, dbInfo: DBInfo = DBInfo()):
         self.stationId = stationId
         self.db_info = dbInfo
 
@@ -27,14 +53,14 @@ class Database:
             database=dbInfo.database
         )
 
-        self.ensure_station_table()
-        self.ensure_testplans_table()
+        self._ensure_station_table()
+        self._ensure_testplans_table()
 
     def close(self):
         if self.conn:
             self.conn.close()
 
-    def ensure_station_table(self):
+    def _ensure_station_table(self):
         try:
             cursor = self.conn.cursor()
             cursor.execute("""
@@ -53,7 +79,7 @@ class Database:
             if cursor:
                 cursor.close()
 
-    def ensure_testplans_table(self):
+    def _ensure_testplans_table(self):
         try:
             cursor = self.conn.cursor()
             cursor.execute("""
