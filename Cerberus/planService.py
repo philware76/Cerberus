@@ -73,7 +73,7 @@ class PlanService:
                 
     def addTestToPlan(self, testName: str) -> bool:
         """Add a test to the current plan."""
-        if not self._plan:
+        if self._plan is None:
             logging.error("No test plan loaded.")
             return False
 
