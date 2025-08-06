@@ -36,6 +36,14 @@ class PlanService:
         """Load the current test plan for this station from the database."""
         self._plan = self._database.get_TestPlanForStation()
 
+    def getPlan(self) -> Plan:
+        """Get the current test plan."""
+        if self._plan is None:
+            logging.error("No test plan loaded.")
+            return None
+        
+        return self._plan
+
     def savePlan(self) -> int | None:
         """Save the current test plan for this station to the database."""
         if self._plan is not None:
