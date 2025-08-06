@@ -9,4 +9,4 @@ def createEquipmentPlugin():
 
 class NanoDAC(BaseChamber):
     def __init__(self):
-        super().__init__("NanoDAC Chamber")
+        super().__init__("NanoDAC")

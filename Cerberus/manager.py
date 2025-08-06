@@ -12,8 +12,8 @@ class Manager():
         self.db = db
 
         self.pluginService = PluginService()
-        self.planService = PlanService(self.db)
-        self.chamberService = ChamberService(self.db)
+        self.planService = PlanService(self.pluginService, self.db)
+        self.chamberService = ChamberService(self.pluginService, self.db)
     
     def finalize(self):
         """Final cleanup before exiting the application."""

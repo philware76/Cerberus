@@ -9,5 +9,5 @@ def createEquipmentPlugin():
 
 class CT200(BaseChamber):
     def __init__(self):
-        super().__init__("CT200 Chamber")
+        super().__init__("CT200")
         
