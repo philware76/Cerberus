@@ -1,0 +1,33 @@
+{
+    "chamber_type": "CT200",
+    "test_plans": [
+        {
+            "id": 1,
+            "plan": {
+                "name": "Test Plan 1",
+                "user": "phil",
+                "date": "2025-08-06T13:20:35.355703",
+                "tests": []
+            }
+        },
+        {
+            "id": 2,
+            "plan": {
+                "name": "Test Plan",
+                "user": "phil",
+                "date": "2025-08-06T13:20:35.359704",
+                "tests": []
+            }
+        },
+        {
+            "id": 3,
+            "plan": {
+                "name": "Test Plan",
+                "user": "phil",
+                "date": "2025-08-06T13:20:35.359704",
+                "tests": []
+            }
+        }
+    ],
+    "testPlanId": 3
+}

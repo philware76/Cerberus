@@ -2,12 +2,14 @@ import logging
 
 from Cerberus.database.database import Database
 from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
+from Cerberus.pluginService import PluginService
 
 
 class ChamberService:
-    def __init__(self, db: Database):
+    def __init__(self, pluginService: PluginService, db: Database):
         self.chamber: BaseChamber
         self.database = db
+        self.pluginService = pluginService
         self.loadChamber()
 
     def loadChamber(self):
@@ -18,6 +20,8 @@ class ChamberService:
         else:
             logging.warning("No chamber class found for this station.")
 
+        return self.chamber
+
     def saveChamber(self, chamberName: str) -> bool:
         """Save the chamber class for this station in the database.
         Returns True if set successfully, False otherwise.
@@ -27,7 +31,7 @@ class ChamberService:
             return False
 
         # Check if chamber_class is a valid BaseChamber subclass
-        chamber_plugin = self.findEquipment(chamberName)
+        chamber_plugin = self.pluginService.findEquipment(chamberName)
         if not chamber_plugin or not isinstance(chamber_plugin, BaseChamber):
             logging.error(f"Chamber class '{chamberName}' is not a valid BaseChamber subclass.")
             return False

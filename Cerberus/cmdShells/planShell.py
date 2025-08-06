@@ -18,7 +18,7 @@ class PlanShell(BaseShell):
             print("Please provide a plan name.")
             return
         from Cerberus.plan import Plan
-        self.planService.plan = Plan(plan_name)
+        self.planService.newPlan(plan_name)
         print(f"New plan '{plan_name}' created.")
 
     def do_add(self, testName):
@@ -37,10 +37,10 @@ class PlanShell(BaseShell):
 
     def do_show(self, arg):
         "Show the current plan details."
-        if self.planService.plan is None:
+        if self.planService._plan is None:
             print("No plan created.")
             return
-        plan = self.planService.plan
+        plan = self.planService._plan
         print(f"Plan name: {plan.name}")
         print(f"User: {plan.user}")
         print(f"Date: {plan.date}")

@@ -11,7 +11,7 @@ class Plan(List[str]):
 
     @classmethod
     def EmptyPlan(cls):
-        return cls("New1")
+        return cls("Empty plan")
 
     def to_dict(self) -> Dict[str, str]:
         return {
