@@ -8,6 +8,7 @@ class Plan(List[str]):
         self.name = name
         self.user = user or getpass.getuser()
         self.date = date or datetime.now()
+        self._dirty = False
 
     @classmethod
     def EmptyPlan(cls):

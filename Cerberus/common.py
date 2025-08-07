@@ -12,6 +12,9 @@ class DBInfo:
     password: str = ""
     database: str = "cerberus"
 
+def calcCRC(obj: object):
+    return 0
+
 
 def dwell(period: float):
     period = time.perf_counter() + period
