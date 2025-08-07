@@ -65,7 +65,7 @@ class FileDatabase(StorageInterface):
         self._save_data()
         return True
 
-    def saveTestPlan(self, plan: Plan) -> int:
+    def saveTestPlan(self, plan: Plan) -> int | None:
         """Save a new test plan for this station, assigning a new ID."""
         test_plans: List[Dict[str, str]] = self._data.get('test_plans', [])
         new_id = len(test_plans) + 1

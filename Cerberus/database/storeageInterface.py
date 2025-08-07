@@ -7,7 +7,7 @@ from Cerberus.plan import Plan
 class StorageInterface(ABC):
     """Abstract base class for the storage interface required for Cerberus."""
     @abstractmethod
-    def saveTestPlan(self, plan: Plan) -> int:
+    def saveTestPlan(self, plan: Plan) -> int | None:
         """Save a test plan to the database and return its ID."""
 
     @abstractmethod
