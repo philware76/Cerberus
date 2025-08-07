@@ -199,3 +199,24 @@ class Database(StorageInterface):
                 cursor.close()
 
         return plans
+
+    def deleteTestPlan(self, plan_id: int) -> bool:
+        """Delete a test plan by ID."""
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("DELETE FROM testplans WHERE id = %s", (plan_id,))
+            self.conn.commit()
+            if cursor.rowcount > 0:
+                logging.info(f"Test plan {plan_id} deleted successfully.")
+                return True
+            else:
+                logging.warning(f"Test plan {plan_id} not found.")
+                return False
+
+        except mysql.connector.Error as err:
+            logging.error(f"Error deleting test plan {plan_id}: {err}")
+            return False
+
+        finally:
+            if cursor is not None:
+                cursor.close()
