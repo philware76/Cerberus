@@ -29,3 +29,7 @@ class StorageInterface(ABC):
     @abstractmethod
     def listTestPlans(self) -> list[Tuple[int, Plan]]:
         """List all test plans in the database."""
+
+    @abstractmethod
+    def deleteTestPlan(self, plan_id: int) -> bool:
+        """Delete a test plan by ID."""
