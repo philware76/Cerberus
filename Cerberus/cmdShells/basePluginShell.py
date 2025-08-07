@@ -72,7 +72,7 @@ class BasePluginShell(BaseShell):
     def do_uiParams(self, arg):
         """Show a GUI for the parameters to edit"""
         try:
-            displayParametersUI(self.plugin._groupParams)
+            displayParametersUI(self.plugin.name, self.plugin._groupParams)
         except ImportError as e:
             print("GUI not available (PySide6 not installed?)")
 
