@@ -5,8 +5,8 @@
             "id": 1,
             "plan": {
                 "name": "Test Plan 1",
-                "user": "philw",
-                "date": "2025-08-07T21:30:47.988323",
+                "user": "phil",
+                "date": "2025-08-07T23:01:23.740471",
                 "tests": []
             }
         },
@@ -14,8 +14,8 @@
             "id": 2,
             "plan": {
                 "name": "Test Plan",
-                "user": "philw",
-                "date": "2025-08-07T21:30:47.996853",
+                "user": "phil",
+                "date": "2025-08-07T23:01:23.743471",
                 "tests": [
                     "Simple Test #1"
                 ]
