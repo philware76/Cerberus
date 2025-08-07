@@ -6,7 +6,7 @@
             "plan": {
                 "name": "Test Plan 1",
                 "user": "phil",
-                "date": "2025-08-06T16:12:12.037463",
+                "date": "2025-08-06T17:08:33.803085",
                 "tests": []
             }
         },
@@ -15,21 +15,12 @@
             "plan": {
                 "name": "Test Plan",
                 "user": "phil",
-                "date": "2025-08-06T16:12:12.040479",
-                "tests": []
-            }
-        },
-        {
-            "id": 3,
-            "plan": {
-                "name": "Test Plan",
-                "user": "phil",
-                "date": "2025-08-06T16:12:12.040479",
+                "date": "2025-08-06T17:08:33.807085",
                 "tests": [
                     "Simple Test #1"
                 ]
             }
         }
     ],
-    "testPlanId": 3
+    "testPlanId": 2
 }

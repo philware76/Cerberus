@@ -1,7 +1,8 @@
 import logging
-from typing import List
+from typing import List, Tuple
 
-from Cerberus.database.database import Database
+from Cerberus.common import calcCRC
+from Cerberus.database.storeageInterface import StorageInterface
 from Cerberus.plan import Plan
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.pluginService import PluginService
@@ -13,31 +14,37 @@ class PlanService:
     This service handles creating, saving, and loading test plans,
     as well as adding and removing tests from plans.
     """
-    def __init__(self, pluginService: PluginService, db: Database):
+    def __init__(self, pluginService: PluginService, db: StorageInterface):
         self._plan: Plan
+        self._planCRC = -1
+        self._planId = -1
+
         self._database = db
         self._pluginService = pluginService
         self.loadPlan()
 
-    def newPlan(self, name:str) -> int | None:
+    def newPlan(self, name:str):
         """Create a new test plan, save to the database and returns the ID."""
         if name is None or name == "":
             logging.error("Plan name cannot be empty or none.")
             return
 
         self._plan = Plan(name)
-        logging.debug(f"New plan created: {self._plan.name}")
-        return self.savePlan()
+        self._planCRC = -1
+        self._planId = -1
         
-    def listTestPlans(self) -> List[Plan]:
+        logging.debug(f"New plan created: {self._plan.name}")
+        
+    def listTestPlans(self) -> List[Tuple[int, str]]:
         return self._database.listTestPlans()
  
     def loadPlan(self):
         """Load the current test plan for this station from the database."""
         self._plan = self._database.get_TestPlanForStation()
+        self._planCRC = calcCRC(self._plan)
 
     def getPlan(self) -> Plan:
-        """Get the current test plan."""
+        """Returns the loaded test plan."""
         if self._plan is None:
             logging.error("No test plan loaded.")
             return None
@@ -46,22 +53,31 @@ class PlanService:
 
     def savePlan(self) -> int | None:
         """Save the current test plan for this station to the database."""
-        if self._plan is not None:
-            id = self._database.saveTestPlan(self._plan)
-            logging.debug(f"Test plan '{id}' saved successfully.")
-        else:
-            logging.warning("No test plan to save.")
-            id = None
+        if self._plan is None:
+            logging.error("No test plan loaded.")
+            return None
+        
+        newPlanCRC = calcCRC(self._plan)
+        if self._planCRC == newPlanCRC:
+            return self._planId
+        
+        id = self._database.saveTestPlan(self._plan)
+        if id == -1:
+            logging.error(f"Test plan '{self._plan.name}' was not saved.")
+            return id
+        
+        self._planCRC = newPlanCRC
+        self._planId = id
 
+        logging.debug(f"Test plan '{id}:{self._plan.name}' saved successfully.")
+        
         return id
 
     def setTestPlan(self, planId: int) -> bool:
         """Set the current test plan for this station.
         Returns True if set successfully, False otherwise.
         """
-        if not planId:
-            logging.error("Test plan ID cannot be empty.")
-            return False
+        #TODO: Check if the planId is a valid ID!
 
         if self._database.set_TestPlanForStation(planId):
             self.loadPlan()
@@ -89,7 +105,7 @@ class PlanService:
     
     def removeTestFromPlan(self, testName: str) -> bool:
         """Remove a test from the current plan."""
-        if not self._plan:
+        if self._plan is None:
             logging.error("No test plan loaded.")
             return False
 

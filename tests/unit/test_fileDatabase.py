@@ -39,14 +39,17 @@ def test_SetGetChamber(db_env: Tuple[FileDatabase, PluginService, PlanService, C
 
 def test_SaveEmptyPlan(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     _, _, plan_service, _ = db_env
-    id = plan_service.newPlan(TestPlanName1)
+    plan_service.newPlan(TestPlanName1)
+
+    id = plan_service.savePlan()
+
     assert id is not None, "New plan should return a valid ID."
-    assert id == 1, "New plan ID should be 1 on a wiped database."
+    assert id == 1, f"New plan ID should be 1, not {id} on a wiped database."
 
 def test_SetGetTestPlanId(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     _, _, plan_service, _ = db_env
-    plans:List[Plan] = plan_service.listTestPlans()
-    assert plans[0].name == TestPlanName1, "First plan should match the created plan name."
+    plans = plan_service.listTestPlans()
+    assert plans[0][1] == TestPlanName1, "First plan should match the created plan name."
 
 def test_SaveLoadPlan(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     _, _, plan_service, _ = db_env

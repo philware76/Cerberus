@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Tuple
 
 from Cerberus.plan import Plan
 
@@ -31,6 +32,6 @@ class StorageInterface(ABC):
         raise NotImplementedError("This method should be overridden by subclasses.")
     
     @abstractmethod    
-    def listTestPlans(self) -> list[Plan]:
+    def listTestPlans(self) -> list[Tuple[int, str]]:
         """List all test plans in the database."""
         raise NotImplementedError("This method should be overridden by subclasses.")

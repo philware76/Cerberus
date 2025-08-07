@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from Cerberus.database.database import StorageInterface
 from Cerberus.plan import Plan
@@ -42,15 +42,16 @@ class FileDatabase(StorageInterface):
         self._save_data()
         return True
     
-    def listTestPlans(self) -> list[Plan]:
+    def listTestPlans(self) -> list[Tuple[int, str]]:
         """List all test plans in the database."""
-        return [Plan.from_dict(planEntry["plan"]) for planEntry in self._data.get('test_plans', [])]
+        return [(planEntry["id"], Plan.from_dict(planEntry["plan"]).name) for planEntry in self._data.get('test_plans', [])]
     
     def get_TestPlanForStation(self) -> Plan:
         """Get the test plan for this station."""
         plan_id = self._data.get('testPlanId', None)
         if plan_id is None:
             return None
+        
         test_plans = self._data.get('test_plans', [])
         for planEntry in test_plans:
             if planEntry.get('id') == plan_id:
@@ -68,11 +69,14 @@ class FileDatabase(StorageInterface):
         """Save a new test plan for this station, assigning a new ID."""
         test_plans: List[Dict[str, str]] = self._data.get('test_plans', [])
         new_id = len(test_plans) + 1
+
         plan_dict = {
             "id": new_id,
             "plan": plan.to_dict()
         }
+        
         test_plans.append(plan_dict)
         self._data['test_plans'] = test_plans
         self._save_data()
+        
         return new_id
