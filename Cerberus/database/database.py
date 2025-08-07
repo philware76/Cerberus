@@ -184,10 +184,11 @@ class Database(StorageInterface):
         cursor = None
         try:
             cursor = self.conn.cursor()
-            cursor.execute("SELECT id, name, created_at, user FROM testplans")
+            cursor.execute("SELECT id, plan_json FROM testplans")
             for row in cursor.fetchall():
                 plan_id = row[0]
-                plan = Plan(name=row[1], date=row[2], user=row[3])
+                planJson = json.loads(row[1]) 
+                plan = Plan.from_dict(planJson)
                 plans.append((plan_id, plan))
 
         except mysql.connector.Error as err:
