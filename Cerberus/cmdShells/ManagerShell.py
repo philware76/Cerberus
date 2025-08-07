@@ -6,7 +6,7 @@ class ManagerShell(BaseShell):
     intro = "Cerberus Manager Shell. Type help or ? to list commands."
     prompt = "Manager> "
 
-    def __init__(self, manager:Manager):
+    def __init__(self, manager: Manager):
         super().__init__(manager)
         self.chamberService = manager.chamberService
         self.planService = manager.planService
@@ -49,10 +49,10 @@ class ManagerShell(BaseShell):
     def do_listPlans(self, arg):
         """List all available test plans."""
         plans = self.manager.db.listTestPlans()
-        if not plans:
+        if len(plans) == 0:
             print("No test plans available.")
             return
-        
+
         print("Available test plans:")
-        for plan in plans:
-            print(f" - {plan.name}: {plan.user} on {plan.date}")
+        for id, plan in plans:
+            print(f" - #{id}: {plan.name}: {plan.user} on {plan.date}")
