@@ -68,13 +68,11 @@ class BasePluginShell(BaseShell):
             print(f"Missing expected key in parameters: {e}")
         except Exception as e:
             print("Error setting parameters:", e)
-        
+
     def do_uiParams(self, arg):
         """Show a GUI for the parameters to edit"""
         try:
-            import importlib
-            gui_module = importlib.import_module("Cerberus.gui.display_ui")
-            gui_module.displayParametersUI(self.plugin._groupParams)
+            displayParametersUI(self.plugin._groupParams)
         except ImportError as e:
             print("GUI not available (PySide6 not installed?)")
 

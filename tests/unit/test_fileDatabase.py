@@ -12,6 +12,7 @@ from Cerberus.pluginService import PluginService
 
 TestPlanName1 = "Test Plan 1"
 
+
 @pytest.fixture(scope="module")
 def db_env() -> Tuple[FileDatabase, PluginService, PlanService, ChamberService]:
     db = FileDatabase("test.db")
@@ -29,6 +30,7 @@ def test_WipeFileDatabase(db_env: Tuple[FileDatabase, PluginService, PlanService
     plans = db.listTestPlans()
     assert len(plans) == 0, "Database should be empty after wipe."
 
+
 def test_SetGetChamber(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     _, _, _, chamber_service = db_env
     chamber = "CT200"
@@ -36,6 +38,7 @@ def test_SetGetChamber(db_env: Tuple[FileDatabase, PluginService, PlanService, C
 
     retrieved_chamber = chamber_service.loadChamber()
     assert retrieved_chamber == chamber, "Retrieved chamber should match the saved chamber type."
+
 
 def test_SaveEmptyPlan(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     _, _, plan_service, _ = db_env
@@ -46,17 +49,20 @@ def test_SaveEmptyPlan(db_env: Tuple[FileDatabase, PluginService, PlanService, C
     assert id is not None, "New plan should return a valid ID."
     assert id == 1, f"New plan ID should be 1, not {id} on a wiped database."
 
+
 def test_SetGetTestPlanId(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     _, _, plan_service, _ = db_env
     plans = plan_service.listTestPlans()
-    assert plans[0][1] == TestPlanName1, "First plan should match the created plan name."
+    id, plan = plans[0]
+    assert plan.name == TestPlanName1, "First plan should match the created plan name."
+
 
 def test_SaveLoadPlan(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     _, _, plan_service, _ = db_env
     plan_name = "Test Plan"
     plan_service.newPlan(plan_name)
     assert plan_service._plan.name == plan_name, "Plan name should match the created plan name."
-    
+
     assert plan_service.addTestToPlan("Simple Test #1"), "Adding a valid test to the plan should succeed."
     id = plan_service.savePlan()
     assert id is not None, "Saving the plan should return a valid ID."

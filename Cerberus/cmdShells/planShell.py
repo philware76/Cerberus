@@ -1,4 +1,6 @@
 from Cerberus.cmdShells.baseShell import BaseShell
+from Cerberus.gui.helpers import displayWidget
+from Cerberus.gui.PlanUI import PlanListWidget
 from Cerberus.manager import Manager
 from Cerberus.plan import Plan
 
@@ -27,7 +29,7 @@ class PlanShell(BaseShell):
             print(f"Test '{testName}' added to the current plan.")
         else:
             print(f"Failed to add test '{testName}' to the current plan. Ensure a plan is created first.")
-    
+
     def do_remove(self, testName):
         "Remove a test name from the current plan. Usage: remove <test_name>"
         if self.planService.removeTestFromPlan(testName):
@@ -37,10 +39,11 @@ class PlanShell(BaseShell):
 
     def do_show(self, arg):
         "Show the current plan details."
-        if self.planService._plan is None:
+        plan = self.planService.getPlan()
+        if plan is None:
             print("No plan created.")
             return
-        plan = self.planService._plan
+
         print(f"Plan name: {plan.name}")
         print(f"User: {plan.user}")
         print(f"Date: {plan.date}")
@@ -48,3 +51,7 @@ class PlanShell(BaseShell):
         for test in plan:
             print(f"  - {test}")
 
+    def do_listPlans(self, arg):
+        plans = self.planService.listTestPlans()
+        widget = PlanListWidget(plans)
+        displayWidget(widget)

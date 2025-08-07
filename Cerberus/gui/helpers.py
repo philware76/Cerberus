@@ -6,33 +6,51 @@ from Cerberus.gui.widgetGen import apply_parameters, create_all_parameters_ui
 from Cerberus.plugins.baseParameters import BaseParameters
 
 
-def displayParametersUI(pluginName:str, groups: Dict[str, BaseParameters]):
-        """Show a GUI for the parameters to edit"""
-        # Make sure QApplication exists; create one if it doesn't
-        paramApp = QApplication.instance()
-        if paramApp is None:
-            paramApp = QApplication([])
+def displayWidget(widget: QWidget):
+    # Make sure QApplication exists; create one if it doesn't
+    qapp = QApplication.instance()
+    if qapp is None:
+        qapp = QApplication([])
 
-        window = QWidget()
-        layout = QVBoxLayout(window)
+    window = QWidget()
+    layout = QVBoxLayout(window)
 
-        ui, widget_map = create_all_parameters_ui(groups)
-        layout.addWidget(ui)
+    layout.addWidget(widget)
 
-        apply_btn = QPushButton("Apply")
-        layout.addWidget(apply_btn)
+    window.setWindowTitle("Widget")
+    window.resize(400, 300)
+    window.show()
 
-        def on_apply():
-            apply_parameters(groups, widget_map)
-            print("Updated parameters:")
-            for group in groups.values():
-                for param in group.values():
-                    print(f"{group.groupName} -> {param.name}: {param.value} {param.units}")
+    qapp.exec()
 
-        apply_btn.clicked.connect(on_apply)
 
-        window.setWindowTitle(f"{pluginName} Parameters")
-        window.resize(400, 300)
-        window.show()
+def displayParametersUI(pluginName: str, groups: Dict[str, BaseParameters]):
+    """Show a GUI for the parameters to edit"""
+    # Make sure QApplication exists; create one if it doesn't
+    qapp = QApplication.instance()
+    if qapp is None:
+        qapp = QApplication([])
 
-        paramApp.exec()
+    window = QWidget()
+    layout = QVBoxLayout(window)
+
+    ui, widget_map = create_all_parameters_ui(groups)
+    layout.addWidget(ui)
+
+    apply_btn = QPushButton("Apply")
+    layout.addWidget(apply_btn)
+
+    def on_apply():
+        apply_parameters(groups, widget_map)
+        print("Updated parameters:")
+        for group in groups.values():
+            for param in group.values():
+                print(f"{group.groupName} -> {param.name}: {param.value} {param.units}")
+
+    apply_btn.clicked.connect(on_apply)
+
+    window.setWindowTitle(f"{pluginName} Parameters")
+    window.resize(400, 300)
+    window.show()
+
+    qapp.exec()
