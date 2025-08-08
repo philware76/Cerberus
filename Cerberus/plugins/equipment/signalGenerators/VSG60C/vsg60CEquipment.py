@@ -10,9 +10,10 @@ from Cerberus.plugins.equipment.visaDevice import VISADevice
 @hookimpl
 @singleton
 def createEquipmentPlugin():
-    return VSG60CEquipment()
+    return VSG60C()
 
-class VSG60CEquipment(BaseSigGen):
+
+class VSG60C(BaseSigGen):
     def __init__(self):
         super().__init__("VSG60C Signal Generator")
         self.identity: Identity | None

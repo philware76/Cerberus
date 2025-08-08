@@ -7,7 +7,7 @@ from Cerberus.pluginService import PluginService
 
 class ChamberService:
     def __init__(self, pluginService: PluginService, db: Database):
-        self.chamber: BaseChamber
+        self.chamber: BaseChamber | None
         self.database = db
         self.pluginService = pluginService
         self.loadChamber()

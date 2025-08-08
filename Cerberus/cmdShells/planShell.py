@@ -23,6 +23,14 @@ class PlanShell(BaseShell):
         self.planService.newPlan(plan_name)
         print(f"New plan '{plan_name}' created.")
 
+    def do_save(self, arg):
+        """Saves the current test plan to the database"""
+        id = self.planService.savePlan()
+        if id is not None:
+            print(f"Test Plan saved as id #{id}")
+        else:
+            print("Failed to save test plan")
+
     def do_add(self, testName):
         "Add a test name to the current plan. Usage: add <test_name>"
         if self.planService.addTestToPlan(testName):

@@ -8,9 +8,11 @@ from threading import Event
 @dataclass
 class DBInfo:
     host: str = "localhost"
+    port: int = 3306
     username: str = "root"
     password: str = ""
     database: str = "cerberus"
+
 
 def calcCRC(obj: object):
     return 0

@@ -18,6 +18,7 @@ class Database(StorageInterface):
         logging.debug(f"Connecting to database...")
         self.conn = mysql.connector.connect(
             host=dbInfo.host,
+            port=dbInfo.port,
             user=dbInfo.username,
             password=dbInfo.password,
             database=dbInfo.database
@@ -25,6 +26,29 @@ class Database(StorageInterface):
 
         self._ensure_station_table()
         self._ensure_testplans_table()
+        self._checkStationExists()
+
+    def _checkStationExists(self):
+        cursor = None
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT identity FROM station WHERE identity = %s", (self.stationId,))
+            row = cursor.fetchone()
+            if not row:
+                # Insert new station entry if missing
+                cursor.execute(
+                    "INSERT INTO station (identity) VALUES (%s)",
+                    (self.stationId,)
+                )
+                self.conn.commit()
+                logging.info(f"Created new station entry for identity: {self.stationId}")
+            else:
+                logging.info("Station entry in Database is found")
+        except mysql.connector.Error as err:
+            logging.error(f"Error checking/creating station entry for {self.stationId}: {err}")
+        finally:
+            if cursor is not None:
+                cursor.close()
 
     def close(self):
         if self.conn:
@@ -187,7 +211,7 @@ class Database(StorageInterface):
             cursor.execute("SELECT id, plan_json FROM testplans")
             for row in cursor.fetchall():
                 plan_id = row[0]
-                planJson = json.loads(row[1]) 
+                planJson = json.loads(row[1])
                 plan = Plan.from_dict(planJson)
                 plans.append((plan_id, plan))
 

@@ -11,10 +11,10 @@ from Cerberus.plugins.equipment.visaDevice import VISADevice
 @hookimpl
 @singleton
 def createEquipmentPlugin():
-    return BB60CEquipment()
+    return BB60C()
 
 
-class BB60CEquipment(BaseSpecAnalyser):
+class BB60C(BaseSpecAnalyser):
     def __init__(self):
         super().__init__("BB60C Spectrum Analyser")
         self.identity: Identity | None
