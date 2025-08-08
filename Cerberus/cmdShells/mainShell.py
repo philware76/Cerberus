@@ -22,7 +22,7 @@ class MainShell(BaseShell):
     intro = "Welcome to Cerberus Shell. Type help or ? to list commands.\n"
     prompt = 'Cerberus> '
 
-    def __init__(self, manager:Manager):
+    def __init__(self, manager: Manager):
         super().__init__(manager)
 
     def do_equip(self, arg):
@@ -55,6 +55,7 @@ class MainShell(BaseShell):
         self.manager.finalize()
         super().do_quit(arg)
 
+
 def loadIni(inifile: str = "cerberus.ini") -> Tuple[str, DBInfo]:
     ini = iniconfig.IniConfig(inifile)
     if ini is None:
@@ -64,6 +65,7 @@ def loadIni(inifile: str = "cerberus.ini") -> Tuple[str, DBInfo]:
     stationId = ini["cerberus"]["identity"]
     dbInfo = DBInfo(
         host=ini["database"]["host"],
+        port=int(ini["database"]["port"]),
         username=ini["database"]["username"],
         password=ini["database"]["password"],
         database=ini["database"]["database"]
