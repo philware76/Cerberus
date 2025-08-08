@@ -19,7 +19,7 @@ class PlanShell(BaseShell):
         if not plan_name:
             print("Please provide a plan name.")
             return
-        from Cerberus.plan import Plan
+
         self.planService.newPlan(plan_name)
         print(f"New plan '{plan_name}' created.")
 
