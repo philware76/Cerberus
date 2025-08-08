@@ -14,15 +14,15 @@ class Manager():
         self.pluginService = PluginService()
         self.planService = PlanService(self.pluginService, self.db)
         self.chamberService = ChamberService(self.pluginService, self.db)
-    
+
     def finalize(self):
         """Final cleanup before exiting the application."""
         logging.debug("Finalizing Cerberus manager...")
-        
+
         # Close the database connection if it exists
-        if hasattr(self, 'database') and self.db:
+        if self.db:
             self.db.close()
             logging.debug("Database connection closed.")
-        
+
         # Any other cleanup tasks can be added here
         logging.debug("Cerberus manager finalized.")
