@@ -4,8 +4,10 @@ from typing import Tuple
 
 import iniconfig
 from PySide6.QtWidgets import QApplication
+from tabulate import tabulate
 
 from Cerberus.cmdShells.baseShell import BaseShell
+from Cerberus.cmdShells.common import is_valid_ip
 from Cerberus.cmdShells.databaseShell import DatabaseShell
 from Cerberus.cmdShells.equipmentShell import EquipShell
 from Cerberus.cmdShells.ManagerShell import ManagerShell
@@ -14,6 +16,7 @@ from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo
 from Cerberus.database.database import Database
+from Cerberus.ethDiscovery import EthDiscovery
 from Cerberus.logConfig import setupLogging
 from Cerberus.manager import Manager
 
@@ -24,6 +27,8 @@ class MainShell(BaseShell):
 
     def __init__(self, manager: Manager):
         super().__init__(manager)
+        self.devices = {}
+        self.device = None
 
     def do_equip(self, arg):
         """Go into the Equipment shell subsystem"""
@@ -54,6 +59,39 @@ class MainShell(BaseShell):
         print("Exiting Cerberus shell...")
         self.manager.finalize()
         super().do_quit(arg)
+
+    def do_discover(self, arg):
+        """Discovery NESIE devices on the network.
+        You can specify the Key to sort on too."""
+        if arg is not None and arg != "":
+            sortField = arg
+        else:
+            sortField = "ID"
+
+        self.devices = EthDiscovery().search()
+        if self.devices is not None and len(self.devices) > 0:
+            self.devices = sorted(self.devices, key=lambda x: x[sortField])
+            print(tabulate(self.devices, headers="keys", tablefmt="pretty"))
+        else:
+            print("No devices found!")
+
+    def do_select(self, arg):
+        """Select a device to use"""
+        if arg is None or arg == "":
+            print("You need to specify the IP Address of the device to select")
+            return
+
+        if not is_valid_ip(arg):
+            print("You must use a valid IP Address format")
+            return
+
+        matches = [d for d in self.devices if d["IP Address"] == arg]
+        if len(matches) == 0:
+            print(f"Device at IP Address '{arg}' is not available. Run discover again.")
+            return
+
+        self.device = matches[0]
+        print(f"Selected device: {self.device}")
 
 
 def loadIni(inifile: str = "cerberus.ini") -> Tuple[str, DBInfo]:
@@ -100,8 +138,9 @@ def runShell(argv):
         MainShell(manager).cmdloop()
     except KeyboardInterrupt:
         pass
+
     except Exception as e:
-        print(f"Shell failed to start with: {e}")
+        print(f"Shell Exception: {e}")
 
     finally:
         print("\nGoodbye")

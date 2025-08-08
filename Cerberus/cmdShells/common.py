@@ -1,3 +1,4 @@
+import ipaddress
 from typing import Dict
 
 from Cerberus.plugins.basePlugin import BasePlugin
@@ -12,10 +13,17 @@ def displayPluginCategory(category_name, plugins: Dict[str, BasePlugin]):
 
     print("")
 
-def getInt(text:str) -> int:
+
+def getInt(text: str) -> int | None:
     try:
         return int(text)
     except ValueError:
         return None
+
+
+def is_valid_ip(ip: str) -> bool:
+    try:
+        ipaddress.ip_address(ip)
+        return True
     except ValueError:
-        return None
+        return False
