@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 
 
@@ -9,4 +11,7 @@ class BaseSigGen(BaseEquipment):
 
     def __init__(self, name: str):
         super().__init__(name)
-              
+
+    @abstractmethod
+    def setOutputPower(self, level_dBm):
+        """Sets the output power level"""

@@ -2,7 +2,6 @@ from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.gui.helpers import displayWidget
 from Cerberus.gui.PlanUI import PlanListWidget
 from Cerberus.manager import Manager
-from Cerberus.plan import Plan
 
 
 class PlanShell(BaseShell):

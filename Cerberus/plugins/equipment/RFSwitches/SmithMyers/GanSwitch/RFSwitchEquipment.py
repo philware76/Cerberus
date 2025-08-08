@@ -28,7 +28,7 @@ class RFSwitch(BaseEquipment):
 
         return info
 
-    def Switch(self, slot):
+    def switch(self, slot):
         logging.debug(f"Switching to RX:{slot}")
         if slot not in range(0, 5):
             logging.debug('Invalid slot number')

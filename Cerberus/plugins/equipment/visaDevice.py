@@ -1,4 +1,5 @@
 import logging
+from typing import cast
 
 import pyvisa as visa
 
@@ -23,8 +24,10 @@ class VISADevice():
     def open(self):
         try:
             logging.debug(f"Opening VISA resource: {self.resource}")
-            self.instrument = self.rm.open_resource(self.resource, read_termination='\n', write_termination='\n')
-            print(self.instrument)
+            resource = self.rm.open_resource(self.resource, read_termination='\n', write_termination='\n')
+            self.instrument = cast(visa.resources.TCPIPInstrument, resource)
+
+            logging.debug(self.instrument)
             self.instrument.timeout = self.timeout
             return self.instrument
 
@@ -45,7 +48,7 @@ class VISADevice():
             logging.error(f"Failed to close resource: {self.resource} - {e}")
             return False
 
-    def write(self, command) -> bool:
+    def write(self, command: str) -> bool:
         logging.debug(f"{self.resource} - Query {command}")
         if self.instrument is None:
             logging.warning("VISA Device is not open, can't write to device.")
@@ -54,7 +57,7 @@ class VISADevice():
         self.instrument.write(command)
         return True
 
-    def query(self, command) -> str | None:
+    def query(self, command: str) -> str | None:
         logging.debug(f"{self.resource} - Query {command}")
         if self.instrument is None:
             logging.warning("VISA Device is not open, can't query the device.")
