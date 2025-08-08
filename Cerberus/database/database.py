@@ -28,6 +28,12 @@ class Database(StorageInterface):
         self._ensure_testplans_table()
         self._checkStationExists()
 
+    def close(self):
+        """Close the database connection"""
+        if self.conn is not None:
+            self.conn.close()
+            logging.debug("Closed the MySQL database connection")
+
     def _checkStationExists(self):
         cursor = None
         try:
@@ -49,10 +55,6 @@ class Database(StorageInterface):
         finally:
             if cursor is not None:
                 cursor.close()
-
-    def close(self):
-        if self.conn:
-            self.conn.close()
 
     def _ensure_station_table(self):
         cursor = None

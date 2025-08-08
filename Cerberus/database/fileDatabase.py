@@ -9,21 +9,6 @@ from Cerberus.plan import Plan
 
 
 class FileDatabase(StorageInterface):
-    def deleteTestPlan(self, plan_id: int) -> bool:
-        """Delete a test plan by ID. Returns True if deleted, False otherwise."""
-        test_plans = self._data.get('test_plans', [])
-        for i, plan in enumerate(test_plans):
-            if plan.get('id') == plan_id:
-                del test_plans[i]
-                self._data['test_plans'] = test_plans
-                if self._data.get('testPlanId') == plan_id:
-                    self._data['testPlanId'] = None
-                self._save_data()
-                logging.info(f"Test plan with ID {plan_id} deleted.")
-                return True
-            
-        logging.error(f"Test plan with ID {plan_id} not found.")
-        return False
     """File-based implementation of the StorageInterface."""
 
     def __init__(self, file_path: str):
@@ -46,6 +31,25 @@ class FileDatabase(StorageInterface):
         """Save data to the file."""
         with open(self._file_path, 'w') as file:
             json.dump(self._data, file, indent=4)
+
+    def close(self):
+        logging.debug("Closed file database.")
+
+    def deleteTestPlan(self, plan_id: int) -> bool:
+        """Delete a test plan by ID. Returns True if deleted, False otherwise."""
+        test_plans = self._data.get('test_plans', [])
+        for i, plan in enumerate(test_plans):
+            if plan.get('id') == plan_id:
+                del test_plans[i]
+                self._data['test_plans'] = test_plans
+                if self._data.get('testPlanId') == plan_id:
+                    self._data['testPlanId'] = None
+                self._save_data()
+                logging.info(f"Test plan with ID {plan_id} deleted.")
+                return True
+
+        logging.error(f"Test plan with ID {plan_id} not found.")
+        return False
 
     # Implement other abstract methods here...
     def get_ChamberForStation(self) -> str:

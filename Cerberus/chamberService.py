@@ -1,12 +1,13 @@
 import logging
 
 from Cerberus.database.database import Database
+from Cerberus.database.storeageInterface import StorageInterface
 from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
 from Cerberus.pluginService import PluginService
 
 
 class ChamberService:
-    def __init__(self, pluginService: PluginService, db: Database):
+    def __init__(self, pluginService: PluginService, db: StorageInterface):
         self.chamber: BaseChamber | None
         self.database = db
         self.pluginService = pluginService

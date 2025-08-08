@@ -6,6 +6,11 @@ from Cerberus.plan import Plan
 
 class StorageInterface(ABC):
     """Abstract base class for the storage interface required for Cerberus."""
+
+    @abstractmethod
+    def close(self):
+        """Close the database"""
+
     @abstractmethod
     def saveTestPlan(self, plan: Plan) -> int | None:
         """Save a test plan to the database and return its ID."""
