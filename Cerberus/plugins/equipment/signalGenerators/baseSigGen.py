@@ -13,5 +13,5 @@ class BaseSigGen(BaseEquipment):
         super().__init__(name)
 
     @abstractmethod
-    def setOutputPower(self, level_dBm):
+    def setOutputPower(self, level_dBm) -> bool:
         """Sets the output power level"""

@@ -2,6 +2,7 @@ import logging
 from typing import cast
 
 import pyvisa as visa
+from pyvisa.resources.tcpip import TCPIPInstrument
 
 from Cerberus import common
 from Cerberus.plugins.equipment.baseEquipment import Identity
@@ -16,16 +17,17 @@ class VISADevice():
         else:
             self.ipAddress = ipAddress
 
-        self.resource = f'TCPIP::{self.ipAddress}::5025::SOCKET'
+        # Use the provided port instead of hard-coded 5025
+        self.resource = f'TCPIP::{self.ipAddress}::{self.port}::SOCKET'
 
         self.rm = visa.ResourceManager()
         self.instrument: visa.resources.TCPIPInstrument
 
-    def open(self):
+    def open(self) -> TCPIPInstrument | None:
         try:
             logging.debug(f"Opening VISA resource: {self.resource}")
             resource = self.rm.open_resource(self.resource, read_termination='\n', write_termination='\n')
-            self.instrument = cast(visa.resources.TCPIPInstrument, resource)
+            self.instrument = cast(TCPIPInstrument, resource)
 
             logging.debug(self.instrument)
             self.instrument.timeout = self.timeout
@@ -48,8 +50,19 @@ class VISADevice():
             logging.error(f"Failed to close resource: {self.resource} - {e}")
             return False
 
+    def checkSend(self, cmd) -> bool:
+        if self.instrument is None:
+            print("Device needs to be initialised with 'init' command")
+            return False
+
+        if not self.command(cmd):
+            logging.debug(f"Command {cmd} was not successful.")
+            return False
+
+        return True
+
     def write(self, command: str) -> bool:
-        logging.debug(f"{self.resource} - Query {command}")
+        logging.debug(f"{self.resource} - Write {command}")
         if self.instrument is None:
             logging.warning("VISA Device is not open, can't write to device.")
             return False
