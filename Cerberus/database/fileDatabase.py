@@ -1,5 +1,8 @@
 import json
 import logging
+import os
+import sys
+from sys import path
 from typing import Any, Dict, List, Tuple
 
 from Cerberus.database.database import StorageInterface
@@ -39,6 +42,16 @@ class FileDatabase(StorageInterface):
     # --- Core API --------------------------------------------------------------------------------------------------
     def close(self):
         logging.debug("Closed file database.")
+
+    def wipeDB(self) -> bool:
+        try:
+            os.remove(self._file_path)
+            self._data = {}
+        except Exception as e:
+            logging.error("Failed to delete file database. {e}")
+            return False
+
+        return True
 
     def deleteTestPlan(self, plan_id: int) -> bool:
         test_plans = self._data.get('test_plans', [])

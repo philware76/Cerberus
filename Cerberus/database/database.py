@@ -35,6 +35,27 @@ class Database(StorageInterface):
             self.conn.close()
             logging.debug("Closed the MySQL database connection")
 
+    def wipeDB(self) -> bool:
+        cursor = None
+        try:
+            cursor = self.conn.cursor()
+            # Drop station first (depends on equipment/testplans via FK to equipment only)
+            cursor.execute("DROP TABLE IF EXISTS station")
+            cursor.execute("DROP TABLE IF EXISTS testplans")
+            cursor.execute("DROP TABLE IF EXISTS equipment")
+            self.conn.commit()
+
+            logging.warning("Database tables dropped by user command.")
+            return True
+
+        except Exception as e:
+            logging.error(f"Error wiping database: {e}")
+            return False
+
+        finally:
+            if cursor is not None:
+                cursor.close()
+
     def _checkStationExists(self):
         cursor = None
         try:

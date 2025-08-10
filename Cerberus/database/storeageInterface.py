@@ -12,6 +12,10 @@ class StorageInterface(ABC):
         """Close the database"""
 
     @abstractmethod
+    def wipeDB(self) -> bool:
+        """Wipes the entire database"""
+
+    @abstractmethod
     def saveTestPlan(self, plan: Plan) -> int | None:
         """Save a test plan to the database and return its ID."""
 
