@@ -1,7 +1,6 @@
-from typing import Self, Type
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, Self, Type
 
 
 class GenRepr:
@@ -70,8 +69,8 @@ class BaseParameter(ABC):
 
 
 class NumericParameter(BaseParameter):
-    def __init__(self, name: str, value: float, units: str = "", minValue: Optional[float] = None,
-                 maxValue: Optional[float] = None, description: Optional[str] = None):
+    def __init__(self, name: str, value: float | int, units: str = "", minValue: Optional[float | int] = None,
+                 maxValue: Optional[float | int] = None, description: Optional[str] = None):
         super().__init__(name, value, units, description)
         self.minValue = minValue
         self.maxValue = maxValue

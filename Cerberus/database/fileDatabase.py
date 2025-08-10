@@ -14,11 +14,12 @@ from Cerberus.plan import Plan
 class FileDatabase(StorageInterface):
     """File-based implementation of the StorageInterface (single-station)."""
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, station_identity: str = "STATION-1"):
         self._file_path = file_path
+        self.station_identity = station_identity
         self._data: Dict[str, Any] = {}
         self._load_data()
-        # Ensure mandatory containers
+        # Ensure mandatory containers (role-less)
         self._data.setdefault('test_plans', [])
         self._data.setdefault('equipment', [])
         self._data.setdefault('testPlanId', None)
@@ -105,24 +106,19 @@ class FileDatabase(StorageInterface):
         self._save_data()
         return new_id
 
-    # --- Equipment Management -------------------------------------------------------------------------------------
+    # --- Equipment Management (role-less) ------------------------------------------------------------------------
     def _next_equipment_id(self) -> int:
         equipment: List[Dict[str, Any]] = self._data.get('equipment', [])
         if not equipment:
             return 1
         return max(e.get('id', 0) for e in equipment) + 1
 
-    def upsertEquipment(self, equipRole: str, manufacturer: str, model: str, serial: str, version: str,
-                        ip: str, port: int, timeout: int, calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
-        role = equipRole.upper()
-        if role not in ("SIGGEN", "SPECAN"):
-            logging.error(f"Invalid equipment role '{equipRole}'")
-            return None
+    def upsertEquipment(self, manufacturer: str, model: str, serial: str, version: str,
+                        ip: str, port: int, timeout: int, calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:  # type: ignore[override]
         equipment: List[Dict[str, Any]] = self._data.get('equipment', [])
         for eq in equipment:
             if eq.get('serial') == serial:
                 eq.update({
-                    'role': role,
                     'manufacturer': manufacturer,
                     'model': model,
                     'version': version,
@@ -137,7 +133,7 @@ class FileDatabase(StorageInterface):
         new_id = self._next_equipment_id()
         equipment.append({
             'id': new_id,
-            'role': role,
+            'station_identity': None,
             'manufacturer': manufacturer,
             'model': model,
             'serial': serial,
@@ -152,27 +148,18 @@ class FileDatabase(StorageInterface):
         self._save_data()
         return new_id
 
-    def assignEquipmentToStation(self, equipRole: str, equipmentId: int) -> bool:
-        role = equipRole.upper()
-        if role == 'SIGGEN':
-            key = 'siggen_id'
-        elif role == 'SPECAN':
-            key = 'specan_id'
-        else:
-            logging.error(f"Unknown equipment role {equipRole} for assignment")
-            return False
-        self._data[key] = equipmentId
-        self._save_data()
-        return True
-
-    def getStationEquipment(self) -> Dict[str, Dict[str, Any]]:
-        result: Dict[str, Dict[str, Any]] = {}
+    def attachEquipmentToStation(self, equipmentId: int) -> bool:
         equipment: List[Dict[str, Any]] = self._data.get('equipment', [])
-        id_map = {e['id']: e for e in equipment}
-        sg_id = self._data.get('siggen_id')
-        sa_id = self._data.get('specan_id')
-        if sg_id and sg_id in id_map:
-            result['SIGGEN'] = id_map[sg_id].copy()
-        if sa_id and sa_id in id_map:
-            result['SPECAN'] = id_map[sa_id].copy()
-        return result
+        for eq in equipment:
+            if eq.get('id') == equipmentId:
+                if eq.get('station_identity') == self.station_identity:
+                    return True
+                eq['station_identity'] = self.station_identity
+                self._save_data()
+                return True
+        logging.error(f"Equipment id {equipmentId} not found for attachment")
+        return False
+
+    def listStationEquipment(self) -> List[Dict[str, Any]]:
+        equipment: List[Dict[str, Any]] = self._data.get('equipment', [])
+        return [e.copy() for e in equipment if e.get('station_identity') == self.station_identity]

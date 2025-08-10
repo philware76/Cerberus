@@ -26,7 +26,7 @@ class BasePlugin(ABC):
     def __init__(self, name: str, description: Optional[str] = None):
         self.name = name
         self.description = description
-        self.initialised = False
+        self._initialised = False
         self.configured = False
         self.finalised = False
 
@@ -42,6 +42,9 @@ class BasePlugin(ABC):
             logging.warning(f"Parameter group '{group.groupName}' already exists. Overwriting.")
 
         self._groupParams[group.groupName] = group
+
+    def isInitialised(self) -> bool:
+        return self._initialised
 
     @abstractmethod
     def initialise(self, init: Any = None) -> bool:

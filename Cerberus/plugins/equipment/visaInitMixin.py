@@ -26,22 +26,21 @@ class VisaInitMixin:
 
         # (Re)initialise VISADevice portion explicitly
         VISADevice.__init__(self, port=port, ipAddress=ip, timeout=timeout)  # type: ignore[misc]
-        if self.open() is None:  # type: ignore[attr-defined]
-            res = getattr(self, 'resource', '<unknown>')
-            logging.error(f"Failed to open VISA resource {res}")
+        if VISADevice.open(self) is None:  # type: ignore[attr-defined]
+            logging.error(f"Failed to open VISA resource {ip}:{port}")
             return False
 
         self._visa_opened = True
 
         # Identify instrument
-        idn = self.query('*IDN?')  # type: ignore[attr-defined]
+        idn = VISADevice.query(self, '*IDN?')  # type: ignore[attr-defined]
         if idn:
             # Identity attribute provided by BaseEquipment
             self.identity = Identity(idn)  # type: ignore[attr-defined]
             return True
 
         logging.error("Did not receive *IDN? response; closing VISA resource")
-        self.close()  # type: ignore[attr-defined]
+        VISADevice.close(self)  # type: ignore[attr-defined]
         self._visa_opened = False
 
         return False
@@ -49,6 +48,6 @@ class VisaInitMixin:
     def _visa_finalise(self) -> None:
         if self._visa_opened:
             try:
-                self.close()  # type: ignore[attr-defined]
+                VISADevice.close(self)  # type: ignore[attr-defined]
             finally:
                 self._visa_opened = False

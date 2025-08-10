@@ -6,7 +6,7 @@
             "plan": {
                 "name": "Test Plan 1",
                 "user": "philw",
-                "date": "2025-08-10T18:08:13.216576",
+                "date": "2025-08-10T22:40:59.382863",
                 "tests": []
             }
         },
@@ -15,7 +15,7 @@
             "plan": {
                 "name": "Test Plan",
                 "user": "philw",
-                "date": "2025-08-10T18:08:13.220579",
+                "date": "2025-08-10T22:40:59.386863",
                 "tests": [
                     "Simple Test #1"
                 ]
@@ -26,7 +26,7 @@
     "equipment": [
         {
             "id": 1,
-            "role": "SPECAN",
+            "station_identity": "STATION-1",
             "manufacturer": "Acme",
             "model": "SpecModelX",
             "serial": "SPECAN-SN-0",
@@ -39,7 +39,7 @@
         },
         {
             "id": 2,
-            "role": "SPECAN",
+            "station_identity": "STATION-1",
             "manufacturer": "Acme",
             "model": "SpecModelX",
             "serial": "SPECAN-SN-1",
@@ -52,7 +52,7 @@
         },
         {
             "id": 3,
-            "role": "SPECAN",
+            "station_identity": null,
             "manufacturer": "Acme",
             "model": "SpecModelX",
             "serial": "SPECAN-SN-2",
@@ -65,7 +65,7 @@
         },
         {
             "id": 4,
-            "role": "SIGGEN",
+            "station_identity": null,
             "manufacturer": "Acme",
             "model": "SigGenPro",
             "serial": "SIGGEN-SN-0",
@@ -78,7 +78,7 @@
         },
         {
             "id": 5,
-            "role": "SIGGEN",
+            "station_identity": null,
             "manufacturer": "Acme",
             "model": "SigGenPro",
             "serial": "SIGGEN-SN-1",
@@ -91,7 +91,7 @@
         },
         {
             "id": 6,
-            "role": "SPECAN",
+            "station_identity": null,
             "manufacturer": "Acme",
             "model": "SpecModelX",
             "serial": "SPECAN-CAL-1",
@@ -104,7 +104,7 @@
         },
         {
             "id": 7,
-            "role": "SIGGEN",
+            "station_identity": "STATION-1",
             "manufacturer": "Acme",
             "model": "SigModelAlpha",
             "serial": "SIGGEN-SVC-1",
@@ -117,7 +117,7 @@
         },
         {
             "id": 8,
-            "role": "SPECAN",
+            "station_identity": "STATION-1",
             "manufacturer": "Acme",
             "model": "SpecModelBeta",
             "serial": "SPECAN-SVC-1",
@@ -128,7 +128,5 @@
             "calibration_date": null,
             "calibration_due": null
         }
-    ],
-    "specan_id": 8,
-    "siggen_id": 7
+    ]
 }

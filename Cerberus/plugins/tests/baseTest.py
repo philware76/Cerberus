@@ -18,7 +18,7 @@ class BaseTest(BasePlugin):
         if init is not None:
             self._init = init
 
-        self.initialised = True
+        self._initialised = True
         return True
 
     def configure(self, config=None) -> bool:

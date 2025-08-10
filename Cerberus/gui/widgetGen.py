@@ -3,8 +3,8 @@ from typing import Dict, cast
 
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QFrame,
-                               QHBoxLayout, QLabel, QLineEdit, QToolButton,
-                               QVBoxLayout, QWidget)
+                               QHBoxLayout, QLabel, QLineEdit, QSpinBox,
+                               QToolButton, QVBoxLayout, QWidget)
 
 from Cerberus.plugins.baseParameters import (BaseParameter, BaseParameters,
                                              EnumParameter, NumericParameter,
@@ -17,8 +17,8 @@ class CollapsibleGroupBox(QWidget):
 
         # === Toggle button ===
         self.toggle_button = QToolButton()
-        self.toggle_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        self.toggle_button.setArrowType(Qt.DownArrow)
+        self.toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.toggle_button.setArrowType(Qt.ArrowType.DownArrow)
         self.toggle_button.setCheckable(True)
         self.toggle_button.setChecked(True)
         self.toggle_button.setFixedSize(16, 16)
@@ -53,7 +53,7 @@ class CollapsibleGroupBox(QWidget):
 
         # === Content Area ===
         self.content_area = QFrame()
-        self.content_area.setFrameShape(QFrame.StyledPanel)
+        self.content_area.setFrameShape(QFrame.Shape.StyledPanel)
         self.content_area.setStyleSheet("""
             QFrame {
                 background-color: #D6EAF8;
@@ -69,7 +69,7 @@ class CollapsibleGroupBox(QWidget):
         # === Animation ===
         self.animation = QPropertyAnimation(self.content_area, b"maximumHeight")
         self.animation.setDuration(250)
-        self.animation.setEasingCurve(QEasingCurve.InOutQuad)
+        self.animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
         # === Main layout ===
         main_layout = QVBoxLayout()
@@ -92,7 +92,7 @@ class CollapsibleGroupBox(QWidget):
 
     def toggle_content(self):
         expanding = self.toggle_button.isChecked()
-        self.toggle_button.setArrowType(Qt.DownArrow if expanding else Qt.RightArrow)
+        self.toggle_button.setArrowType(Qt.ArrowType.DownArrow if expanding else Qt.ArrowType.RightArrow)
 
         if expanding:
             self.content_area.setVisible(True)
@@ -119,15 +119,31 @@ def create_parameter_widget(param: BaseParameter) -> QWidget:
     """Return a QWidget (e.g., QLineEdit or QDoubleSpinBox) for a given parameter."""
     widget = None
     if isinstance(param, NumericParameter):
-        spin = QDoubleSpinBox()
-        if param.minValue is not None:
-            spin.setMinimum(param.minValue)
-        if param.maxValue is not None:
-            spin.setMaximum(param.maxValue)
-        spin.setValue(param.value)
+        if isinstance(param.value, float) or isinstance(param.minValue, float) or isinstance(param.maxValue, float):
+            spin = QDoubleSpinBox()
+            spin.setDecimals(6)
+            spin.setSingleStep(0.1)
+            # Apply min/max as float
+            if param.minValue is not None:
+                spin.setMinimum(float(param.minValue))
+            if param.maxValue is not None:
+                spin.setMaximum(float(param.maxValue))
+            try:
+                spin.setValue(float(param.value))  # type: ignore[arg-type]
+            except Exception:
+                logging.error(f"Invalid float value for parameter {param.name}: {param.value}")
+        else:
+            spin = QSpinBox()
+            if param.minValue is not None:
+                spin.setMinimum(int(param.minValue))
+            if param.maxValue is not None:
+                spin.setMaximum(int(param.maxValue))
+            try:
+                spin.setValue(int(param.value))  # type: ignore[arg-type]
+            except Exception:
+                logging.error(f"Invalid int value for parameter {param.name}: {param.value}")
+
         spin.setSuffix(f" {param.units}" if param.units else "")
-        spin.setDecimals(4)
-        spin.setSingleStep(0.1)
         widget = spin
 
     elif isinstance(param, OptionParameter):
@@ -138,19 +154,18 @@ def create_parameter_widget(param: BaseParameter) -> QWidget:
     elif isinstance(param, EnumParameter):
         combobox = QComboBox()
         enum_members = list(param.enumType)
-
         for member in enum_members:
             combobox.addItem(member.name, member)
-
-        combobox.setCurrentIndex(enum_members.index(param.value))
+        if param.value in enum_members:
+            combobox.setCurrentIndex(enum_members.index(param.value))
         widget = combobox
 
     elif isinstance(param, StringParameter):
         text = QLineEdit()
-        text.setText(param.value)
+        text.setText(str(param.value))
         widget = text
 
-    if widget == None:
+    if widget is None:
         logging.error(f"Failed to create widget for {param} parameter")
         emptyLabel = QLabel()
         emptyLabel.setText(f"Unknown Parameter Type: {param.name}")
@@ -218,11 +233,11 @@ def apply_parameters(groups: Dict[str, BaseParameters], widget_map: dict[str, di
             param = base_params[param_name]
             if isinstance(widget, QDoubleSpinBox):
                 param.value = widget.value()
+            if isinstance(widget, QSpinBox):
+                param.value = widget.value()
             elif isinstance(widget, QLineEdit):
                 param.value = widget.text()
             elif isinstance(widget, QCheckBox):
                 param.value = widget.isChecked()
             elif isinstance(widget, QComboBox):
-                param.value = cast(QComboBox, widget).currentData()
-                param.value = cast(QComboBox, widget).currentData()
                 param.value = cast(QComboBox, widget).currentData()

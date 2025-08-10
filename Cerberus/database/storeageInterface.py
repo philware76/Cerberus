@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 from Cerberus.plan import Plan
 
@@ -43,20 +43,16 @@ class StorageInterface(ABC):
     def deleteTestPlan(self, plan_id: int) -> bool:
         """Delete a test plan by ID."""
 
-    # --- Equipment Management -------------------------------------------------------------------------------------
+    # --- Equipment Management (station-centric, role-less) -------------------------------------------------------
     @abstractmethod
-    def upsertEquipment(self, equipRole: str, manufacturer: str, model: str, serial: str, version: str,
+    def upsertEquipment(self, manufacturer: str, model: str, serial: str, version: str,
                         ip: str, port: int, timeout: int, calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
-        """Insert or update an equipment record, returning its ID.
-        equipRole: logical role the equipment fulfils (SIGGEN | SPECAN)
-        model: plugin / model identifier
-        Calibration dates optional (YYYY-MM-DD).
-        """
+        """Insert or update an equipment record (unique by serial), returning its ID."""
 
     @abstractmethod
-    def assignEquipmentToStation(self, equipRole: str, equipmentId: int) -> bool:
-        """Assign an equipment record (by role SIGGEN/SPECAN) to this station."""
+    def attachEquipmentToStation(self, equipmentId: int) -> bool:
+        """Attach an equipment record to this station (one station per equipment)."""
 
     @abstractmethod
-    def getStationEquipment(self) -> Dict[str, Dict[str, Any]]:
-        """Return mapping of role -> equipment record (roles: SIGGEN, SPECAN)."""
+    def listStationEquipment(self) -> List[Dict[str, Any]]:
+        """Return list of equipment dicts attached to this station."""
