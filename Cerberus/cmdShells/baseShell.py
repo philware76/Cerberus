@@ -4,7 +4,7 @@ from Cerberus.manager import Manager
 
 
 class BaseShell(cmd.Cmd):
-    def __init__(self, manager: Manager = None):
+    def __init__(self, manager: Manager):
         super().__init__()
         if manager is None:
             raise ValueError("Manager instance must be provided")
