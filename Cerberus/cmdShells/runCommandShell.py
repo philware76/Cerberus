@@ -124,15 +124,15 @@ class RunCommandShell(BasePluginShell):
         """Override onecmd to handle multiple commands separated by semicolons"""
         # Split the line by semicolons and process each command
         commands = [cmd.strip() for cmd in line.split(';') if cmd.strip()]
-
+        stop = False
         for command in commands:
-            if command == "exit":
-                return True
+            # Let cmd.Cmd dispatch (so breakpoints in do_exit fire)
+            result = super().onecmd(command)
+            if result:          # do_exit (or any command) signaled to stop
+                stop = True
+                break
 
-            if super().onecmd(command):
-                break                       # stop processing if we get a 'Exit' (True) returned
-
-        return False
+        return stop
 
     def _format_type_annotation(self, annotation):
         """Format type annotation for clean display."""

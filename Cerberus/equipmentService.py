@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from Cerberus.database.storeageInterface import StorageInterface
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
@@ -9,67 +9,55 @@ from Cerberus.pluginService import PluginService
 
 
 class EquipmentService:
-    """Service to manage assigned equipment (Signal Generator & Spectrum Analyser) for a station.
-
-    Responsibilities:
-    - Assign specific equipment instances (by existing equipment table record) to station.
-    - Validate equipment type via plugin registry (ensures correct class type name).
-    - Retrieve currently assigned equipment metadata.
-    """
+    """Service to manage equipment for a station (role-less storage)."""
 
     def __init__(self, pluginService: PluginService, db: StorageInterface):
         self.database = db
         self.pluginService = pluginService
-        self._assigned: Dict[str, Dict[str, Any]] = {}
-        self.loadAssignedEquipment()
+        self._attached: List[Dict[str, Any]] = []
+        self.reload()
 
-    def loadAssignedEquipment(self) -> Dict[str, Dict[str, Any]]:
-        """Load equipment assignments (by equipment IDs) from station record."""
-        self._assigned = self.database.getStationEquipment()
-        return self._assigned
+    def reload(self) -> List[Dict[str, Any]]:
+        if hasattr(self.database, 'listStationEquipment'):
+            self._attached = self.database.listStationEquipment()  # type: ignore[attr-defined]
+        else:
+            self._attached = []
+        return self._attached
 
-    # --- Assignment Helpers --------------------------------------------------------------------------------------
-    def assignSignalGenerator(self, equipId: int) -> bool:
-        return self._assignEquipmentId("SIGGEN", equipId)
+    # Registration -----------------------------------------------------------------------------------------------
+    def registerEquipment(self, manufacturer: str, model: str, serial: str, version: str,
+                          ip: str, port: int, timeout: int, calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
+        return self.database.upsertEquipment(manufacturer, model, serial, version, ip, port, timeout, calibration_date, calibration_due)  # type: ignore[arg-type]
 
-    def assignSpectrumAnalyser(self, equipId: int) -> bool:
-        return self._assignEquipmentId("SPECAN", equipId)
-
-    def _assignEquipmentId(self, role: str, equipId: int):
-        if self.database.assignEquipmentToStation(role, equipId):
-            logging.info(f"Assigned {role} equipment id={equipId} to station")
-            self.loadAssignedEquipment()
-            return True
-        logging.error(f"Failed to assign {role} equipment id={equipId} to station")
-        return False
-
-    # --- Validation -----------------------------------------------------------------------------------------------
-    def validateSigGenType(self, name: str) -> bool:
-        plugin = self.pluginService.findEquipType(name, BaseSigGen)
-        return plugin is not None
-
-    def validateSpecAnalyserType(self, name: str) -> bool:
-        plugin = self.pluginService.findEquipType(name, BaseSpecAnalyser)
-        return plugin is not None
-
-    # --- Register / Upsert Equipment -----------------------------------------------------------------------------
-    def registerSignalGenerator(self, typeName: str, serial: str, ip: str, port: int, timeout: int,
-                                manufacturer: str = "", model: str = "", version: str = "",
-                                calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
-        if not self.validateSigGenType(typeName):
+    def registerSigGen(self, typeName: str, serial: str, ip: str, port: int, timeout: int,
+                       manufacturer: str = "", version: str = "", calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
+        if not self.pluginService.findEquipType(typeName, BaseSigGen):
             logging.error(f"Type '{typeName}' is not a valid BaseSigGen plugin")
             return None
-        return self.database.upsertEquipment("SIGGEN", manufacturer, model or typeName, serial, version, ip, port, timeout, calibration_date, calibration_due)
+        return self.registerEquipment(manufacturer or "", typeName, serial, version, ip, port, timeout, calibration_date, calibration_due)
 
-    def registerSpectrumAnalyser(self, typeName: str, serial: str, ip: str, port: int, timeout: int,
-                                 manufacturer: str = "", model: str = "", version: str = "",
-                                 calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
-        if not self.validateSpecAnalyserType(typeName):
+    def registerSpecAn(self, typeName: str, serial: str, ip: str, port: int, timeout: int,
+                       manufacturer: str = "", version: str = "", calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
+        if not self.pluginService.findEquipType(typeName, BaseSpecAnalyser):
             logging.error(f"Type '{typeName}' is not a valid BaseSpecAnalyser plugin")
             return None
-        return self.database.upsertEquipment("SPECAN", manufacturer, model or typeName, serial, version, ip, port, timeout, calibration_date, calibration_due)
+        return self.registerEquipment(manufacturer or "", typeName, serial, version, ip, port, timeout, calibration_date, calibration_due)
 
-    # --- Accessors ------------------------------------------------------------------------------------------------
-    def getAssigned(self) -> Dict[str, Dict[str, Any]]:
-        return self._assigned.copy()
-        return self._assigned.copy()
+    # Attachment --------------------------------------------------------------------------------------------------
+    def attach(self, equipmentId: int) -> bool:
+        if hasattr(self.database, 'attachEquipmentToStation') and self.database.attachEquipmentToStation(equipmentId):  # type: ignore[attr-defined]
+            logging.info(f"Attached equipment id={equipmentId} to station")
+            self.reload()
+            return True
+        logging.error("attachEquipmentToStation not available or failed on storage backend")
+        return False
+
+    # Filtering ---------------------------------------------------------------------------------------------------
+    def filterSigGens(self) -> List[Dict[str, Any]]:
+        return [e for e in self._attached if self.pluginService.findEquipType(e.get('model', ''), BaseSigGen)]
+
+    def filterSpecAns(self) -> List[Dict[str, Any]]:
+        return [e for e in self._attached if self.pluginService.findEquipType(e.get('model', ''), BaseSpecAnalyser)]
+
+    def listAttached(self) -> List[Dict[str, Any]]:
+        return list(self._attached)

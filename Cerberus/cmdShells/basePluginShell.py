@@ -85,5 +85,10 @@ class BasePluginShell(BaseShell):
 
     def do_finalise(self, arg):
         """Finalises and closes the equipment"""
-        if self.plugin.initialised:
+        if self.plugin._initialised:
             self.plugin.finalise()
+
+    def do_exit(self, arg) -> bool:
+        """Finalise (close) and exit the equipment shell"""
+        self.do_finalise(arg)
+        return super().do_exit(arg)

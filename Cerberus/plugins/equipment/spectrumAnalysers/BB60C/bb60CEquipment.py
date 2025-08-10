@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.equipment.baseEquipment import Identity
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
@@ -21,15 +21,15 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         VisaInitMixin.__init__(self)
 
     def initialise(self, init: Any | None = None) -> bool:
-        if self.initialised:
+        if self._initialised:
             logging.debug(f"{self.name} is already initialised.")
             return True
 
         if not self._visa_initialise(init):
             return False
 
-        BaseSpecAnalyser.initialise(self)
-        return True
+        self._initialised = BaseEquipment.initialise(self)
+        return self._initialised
 
     def finalise(self) -> bool:
         self._visa_finalise()

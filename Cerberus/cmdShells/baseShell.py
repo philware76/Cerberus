@@ -15,7 +15,7 @@ class BaseShell(cmd.Cmd):
         """Quits the shell immediately"""
         raise KeyboardInterrupt()
 
-    def do_exit(self, arg):
+    def do_exit(self, arg) -> bool:
         """Exit the Cerberus Test shell"""
         return True
 

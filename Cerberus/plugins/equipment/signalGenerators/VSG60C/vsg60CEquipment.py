@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.equipment.baseEquipment import Identity
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.visaDevice import VISADevice
 from Cerberus.plugins.equipment.visaInitMixin import VisaInitMixin
@@ -20,13 +20,15 @@ class VSG60C(BaseSigGen, VISADevice, VisaInitMixin):
         VisaInitMixin.__init__(self)
 
     def initialise(self, init: Any | None = None) -> bool:
-        if self.initialised:
+        if self._initialised:
+            logging.debug(f"{self.name} is already initialised.")
             return True
 
         if not self._visa_initialise(init):
             return False
 
-        return BaseSigGen.initialise(self)
+        self._initialised = BaseEquipment.initialise(self)
+        return self._initialised
 
     def finalise(self) -> bool:
         self._visa_finalise()

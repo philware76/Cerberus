@@ -10,10 +10,10 @@ class Identity():
     def __init__(self, idString: str):
         parts = idString.split(",")
         if len(parts) == 4:
-            self.manufacturer = parts[0]
-            self.model = parts[1]
-            self.serial = parts[2]
-            self.version = parts[3]
+            self.manufacturer = parts[0].strip()
+            self.model = parts[1].strip()
+            self.serial = parts[2].strip()
+            self.version = parts[3].strip()
         else:
             self.manufacturer = "Unknown"
             self.model = "Unknown"
@@ -57,9 +57,11 @@ class BaseEquipment(BasePlugin):
         groupObj = self._groupParams.get(group)
         if not groupObj:
             return False
+
         param = groupObj.get(paramName)
         if not param:
             return False
+
         param.value = value
         return True
 
@@ -72,7 +74,6 @@ class BaseEquipment(BasePlugin):
         if isinstance(init, dict):
             self.updateParameters("Communication", init)
 
-        self.initialised = True
         return True
 
     def configure(self, config: Any | None = None) -> bool:
@@ -85,7 +86,7 @@ class BaseEquipment(BasePlugin):
 
     def finalise(self) -> bool:
         logging.debug("Finalise")
-        self.initialised = False
+        self._initialised = False
         self.configured = False
         self.finalised = True
         return True
