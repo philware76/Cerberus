@@ -66,6 +66,8 @@ def test_SaveLoadPlan(db_env: Tuple[FileDatabase, PluginService, PlanService, Ch
     assert plan_service.addTestToPlan("Simple Test #1"), "Adding a valid test to the plan should succeed."
     id = plan_service.savePlan()
     assert id is not None, "Saving the plan should return a valid ID."
+    id2 = plan_service.savePlan()
+    assert id2 == id, "Saving the same plan should return the same ID."
 
     plan_service.setTestPlan(id)
     assert plan.name == plan_name, "Plan name should match the created plan name."

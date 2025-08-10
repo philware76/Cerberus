@@ -1,4 +1,5 @@
 import getpass
+import zlib
 from datetime import datetime
 from typing import Any, Dict, List, Self
 
@@ -30,3 +31,25 @@ class Plan(List[str]):
         plan.extend(data.get("tests", []))
 
         return plan
+
+
+def calcCRC(plan: Plan) -> int:
+    """Fast hash for a Plan's tests list.
+
+    Compares only membership (add/remove), ignoring order. Duplicate entries still
+    influence the hash (their count matters). Returns 0 for None.
+    """
+    if plan is None:
+        return 0
+
+    # Attempt to treat plan as iterable of test names
+    tests: list[str]
+    try:
+        tests = [str(t) for t in plan]  # type: ignore[arg-type]
+    except Exception:
+        return 0
+
+    # Order-insensitive: sort; include length to differentiate permutations with duplicates
+    tests_sorted = sorted(tests)
+    payload = ("|".join(tests_sorted) + f"#{len(tests_sorted)}").encode("utf-8")
+    return zlib.crc32(payload) & 0xFFFFFFFF

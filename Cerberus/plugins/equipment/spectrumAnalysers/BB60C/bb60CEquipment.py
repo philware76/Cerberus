@@ -6,7 +6,7 @@ from Cerberus.plugins.equipment.baseEquipment import Identity
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
-from Cerberus.plugins.equipment.visaEquipmentMixin import VisaInitMixin
+from Cerberus.plugins.equipment.visaInitMixin import VisaInitMixin
 
 
 @hookimpl
@@ -32,16 +32,6 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
     def finalise(self) -> bool:
         self._visa_finalise()
         return BaseSpecAnalyser.finalise(self)
-
-    def checkSend(self, cmd) -> bool:
-        if not self.initialised:
-            print("Device needs to be initialised with 'init' command")
-            return False
-
-        if self.command(cmd):
-            logging.debug(f"Command {cmd} successful")
-
-        return True
 
     def setRBW(self, bandwidth: float) -> bool:
         cmd = f'BAND:RES {bandwidth}KHz'

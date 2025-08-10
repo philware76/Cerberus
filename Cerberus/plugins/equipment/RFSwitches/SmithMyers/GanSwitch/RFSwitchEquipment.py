@@ -18,17 +18,19 @@ class RFSwitch(BaseEquipment):
     def __init__(self):
         super().__init__("RF Switch")
         self.identity: Identity | None
+        # Default communication parameters already provided by BaseEquipment (IP Address, Port, Timeout)
+        # Override defaults specific to this switch if needed
+        self.setParameterValue("Communication", "Port", 80)
 
-        self._init = {"Port": 80, "IPAddress": "127.0.0.1"}
+    def initialise(self, init: Any | None = None) -> bool:
+        # Allow user-provided init dict to override Communication params
+        super().initialise(init)
+        return True
 
-    def getInfo(self):
-        info = self.request("info")
-        if info is not None:
-            logging.debug(info)
+    def getInfo(self) -> Any:
+        return self._request("info")
 
-        return info
-
-    def switch(self, slot):
+    def switch(self, slot: int):
         logging.debug(f"Switching to RX:{slot}")
         if slot not in range(0, 5):
             logging.debug('Invalid slot number')
@@ -38,27 +40,30 @@ class RFSwitch(BaseEquipment):
         relay_val = 0 if slot == 0 else 1
         relay_cmd = f'cmd?Relay{relay_num}={relay_val}'
 
-        self.request(relay_cmd)
+        self._request(relay_cmd)
+        time.sleep(0.5)  # allow RF switch to settle
 
-        # dwell for rf switch to settle.
-        time.sleep(0.5)
+    # Internal request helper using communication parameters
+    def _request(self, path: str) -> Any:
+        ip = self.getParameterValue("Communication", "IP Address") or "127.0.0.1"
+        port = self.getParameterValue("Communication", "Port") or 80
+        timeout_ms = self.getParameterValue("Communication", "Timeout") or 1000
+        timeout_s = float(timeout_ms) / 1000.0
 
-    def request(self, relay_cmd):
-        get_request = None
-        attm = 0
-        while get_request is None and attm < 5:
+        url = f"http://{ip}:{int(port)}/{path}" if int(port) not in (80, 443) else f"http://{ip}/{path}"
+        attempts = 0
+        last_status: Any = None
+        while attempts < 5:
             try:
-                req = requests.get(f'http://{switch_ip}/{relay_cmd}', timeout=10)
-                logging.debug(f"Status Code: {req.status_code}")
-                get_request = req.status_code
+                resp = requests.get(url, timeout=timeout_s)
+                logging.debug(f"RF Switch request '{url}' status: {resp.status_code}")
+                last_status = resp.status_code
+                return resp.text if path == "info" else last_status
             except Exception as e:
-                logging.debug(e)
-                pass
-
-            if get_request is None:
-                logging.debug('Failed to connect to RF switch retrying!')
-                attm += 1
-
-        if get_request is None:
-            logging.debug('Failed to connect to RF switch')
-            raise Exception
+                logging.debug(f"RF Switch request error: {e}")
+            attempts += 1
+            if attempts < 5:
+                logging.debug("Retrying RF Switch connection...")
+        logging.debug('Failed to connect to RF switch after retries')
+        raise ConnectionError("RF Switch connection failed")
+        raise ConnectionError("RF Switch connection failed")

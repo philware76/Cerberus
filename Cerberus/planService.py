@@ -62,6 +62,7 @@ class PlanService:
 
         newPlanCRC = calcCRC(self._plan)
         if self._planCRC == newPlanCRC:
+            logging.debug("Plan CRC is the same, not saving")
             return self._planId
 
         id = self._database.saveTestPlan(self._plan)

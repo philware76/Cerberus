@@ -26,8 +26,7 @@ class VSG60C(BaseSigGen, VISADevice, VisaInitMixin):
         if not self._visa_initialise(init):
             return False
 
-        BaseSigGen.initialise(self)
-        return True
+        return BaseSigGen.initialise(self)
 
     def finalise(self) -> bool:
         self._visa_finalise()
