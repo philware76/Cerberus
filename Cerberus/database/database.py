@@ -66,10 +66,10 @@ class Database(StorageInterface):
                 identity VARCHAR(100) PRIMARY KEY,
                 chamber_type VARCHAR(100),
                 testplan_id INT,
-                bb60c_id INT NULL,
-                vsg60c_id INT NULL,
-                CONSTRAINT fk_station_bb60c FOREIGN KEY (bb60c_id) REFERENCES equipment(id),
-                CONSTRAINT fk_station_vsg60c FOREIGN KEY (vsg60c_id) REFERENCES equipment(id)
+                siggen_id INT NULL,
+                specan_id INT NULL,
+                CONSTRAINT fk_station_siggen FOREIGN KEY (siggen_id) REFERENCES equipment(id),
+                CONSTRAINT fk_station_specan FOREIGN KEY (specan_id) REFERENCES equipment(id)
             )
             """)
             self.conn.commit()
@@ -106,7 +106,7 @@ class Database(StorageInterface):
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS equipment (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                type ENUM('BB60C','VSG60C') NOT NULL,
+                role ENUM('SIGGEN','SPECAN') NOT NULL,
                 manufacturer VARCHAR(100),
                 model VARCHAR(100),
                 serial VARCHAR(100) UNIQUE,
@@ -293,8 +293,12 @@ class Database(StorageInterface):
                 cursor.close()
 
     # Equipment management -----------------------------------------------------------------------------------------
-    def upsertEquipment(self, equipType: str, manufacturer: str, model: str, serial: str, version: str,
+    def upsertEquipment(self, equipRole: str, manufacturer: str, model: str, serial: str, version: str,
                         ip: str, port: int, timeout: int, calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
+        equipRole = equipRole.upper()
+        if equipRole not in ("SIGGEN", "SPECAN"):
+            logging.error(f"Invalid equipment role '{equipRole}' (expected SIGGEN|SPECAN)")
+            return None
         cursor = None
         try:
             cursor = self.conn.cursor(dictionary=True)
@@ -304,16 +308,16 @@ class Database(StorageInterface):
                 equip_id = int(row['id'])
                 cursor.execute("""
                     UPDATE equipment
-                    SET type=%s, manufacturer=%s, model=%s, version=%s, ip_address=%s, port=%s, timeout_ms=%s, calibration_date=%s, calibration_due=%s
+                    SET role=%s, manufacturer=%s, model=%s, version=%s, ip_address=%s, port=%s, timeout_ms=%s, calibration_date=%s, calibration_due=%s
                     WHERE id=%s
-                """, (equipType, manufacturer, model, version, ip, port, timeout, calibration_date, calibration_due, equip_id))
+                """, (equipRole, manufacturer, model, version, ip, port, timeout, calibration_date, calibration_due, equip_id))
                 self.conn.commit()
                 return equip_id
             else:
                 cursor.execute("""
-                    INSERT INTO equipment (type, manufacturer, model, serial, version, ip_address, port, timeout_ms, calibration_date, calibration_due)
+                    INSERT INTO equipment (role, manufacturer, model, serial, version, ip_address, port, timeout_ms, calibration_date, calibration_due)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                """, (equipType, manufacturer, model, serial, version, ip, port, timeout, calibration_date, calibration_due))
+                """, (equipRole, manufacturer, model, serial, version, ip, port, timeout, calibration_date, calibration_due))
                 self.conn.commit()
                 new_id = cursor.lastrowid  # type: ignore[assignment]
                 if new_id is None:
@@ -326,14 +330,14 @@ class Database(StorageInterface):
             if cursor is not None:
                 cursor.close()
 
-    def assignEquipmentToStation(self, equipType: str, equipmentId: int) -> bool:
-        field = None
-        if equipType.upper() == 'BB60C':
-            field = 'bb60c_id'
-        elif equipType.upper() == 'VSG60C':
-            field = 'vsg60c_id'
+    def assignEquipmentToStation(self, equipRole: str, equipmentId: int) -> bool:
+        role = equipRole.upper()
+        if role == 'SIGGEN':
+            field = 'siggen_id'
+        elif role == 'SPECAN':
+            field = 'specan_id'
         else:
-            logging.error(f"Unknown equipment type {equipType} for assignment")
+            logging.error(f"Unknown equipment role {equipRole} for assignment")
             return False
         cursor = None
         try:
@@ -354,28 +358,28 @@ class Database(StorageInterface):
         try:
             cursor = self.conn.cursor(dictionary=True)
             cursor.execute("""
-                SELECT s.bb60c_id, s.vsg60c_id,
-                       eb.type as bb_type, eb.manufacturer as bb_manufacturer, eb.model as bb_model, eb.serial as bb_serial, eb.version as bb_version, eb.ip_address as bb_ip, eb.port as bb_port, eb.timeout_ms as bb_timeout, eb.calibration_date as bb_cal_date, eb.calibration_due as bb_cal_due,
-                       ev.type as vsg_type, ev.manufacturer as vsg_manufacturer, ev.model as vsg_model, ev.serial as vsg_serial, ev.version as vsg_version, ev.ip_address as vsg_ip, ev.port as vsg_port, ev.timeout_ms as vsg_timeout, ev.calibration_date as vsg_cal_date, ev.calibration_due as vsg_cal_due
+                SELECT s.siggen_id, s.specan_id,
+                       sg.role as sg_role, sg.manufacturer as sg_manufacturer, sg.model as sg_model, sg.serial as sg_serial, sg.version as sg_version, sg.ip_address as sg_ip, sg.port as sg_port, sg.timeout_ms as sg_timeout, sg.calibration_date as sg_cal_date, sg.calibration_due as sg_cal_due,
+                       sa.role as sa_role, sa.manufacturer as sa_manufacturer, sa.model as sa_model, sa.serial as sa_serial, sa.version as sa_version, sa.ip_address as sa_ip, sa.port as sa_port, sa.timeout_ms as sa_timeout, sa.calibration_date as sa_cal_date, sa.calibration_due as sa_cal_due
                 FROM station s
-                LEFT JOIN equipment eb ON s.bb60c_id = eb.id
-                LEFT JOIN equipment ev ON s.vsg60c_id = ev.id
+                LEFT JOIN equipment sg ON s.siggen_id = sg.id
+                LEFT JOIN equipment sa ON s.specan_id = sa.id
                 WHERE s.identity = %s
             """, (self.stationId,))
             row = cast(Optional[Dict[str, Any]], cursor.fetchone())
             if not row:
                 return result
-            if row.get('bb60c_id'):
-                result['BB60C'] = {
-                    'id': row.get('bb60c_id'), 'type': row.get('bb_type'), 'manufacturer': row.get('bb_manufacturer'), 'model': row.get('bb_model'),
-                    'serial': row.get('bb_serial'), 'version': row.get('bb_version'), 'ip': row.get('bb_ip'), 'port': row.get('bb_port'), 'timeout': row.get('bb_timeout'),
-                    'calibration_date': row.get('bb_cal_date'), 'calibration_due': row.get('bb_cal_due')
+            if row.get('siggen_id'):
+                result['SIGGEN'] = {
+                    'id': row.get('siggen_id'), 'role': row.get('sg_role'), 'manufacturer': row.get('sg_manufacturer'), 'model': row.get('sg_model'),
+                    'serial': row.get('sg_serial'), 'version': row.get('sg_version'), 'ip': row.get('sg_ip'), 'port': row.get('sg_port'), 'timeout': row.get('sg_timeout'),
+                    'calibration_date': row.get('sg_cal_date'), 'calibration_due': row.get('sg_cal_due')
                 }
-            if row.get('vsg60c_id'):
-                result['VSG60C'] = {
-                    'id': row.get('vsg60c_id'), 'type': row.get('vsg_type'), 'manufacturer': row.get('vsg_manufacturer'), 'model': row.get('vsg_model'),
-                    'serial': row.get('vsg_serial'), 'version': row.get('vsg_version'), 'ip': row.get('vsg_ip'), 'port': row.get('vsg_port'), 'timeout': row.get('vsg_timeout'),
-                    'calibration_date': row.get('vsg_cal_date'), 'calibration_due': row.get('vsg_cal_due')
+            if row.get('specan_id'):
+                result['SPECAN'] = {
+                    'id': row.get('specan_id'), 'role': row.get('sa_role'), 'manufacturer': row.get('sa_manufacturer'), 'model': row.get('sa_model'),
+                    'serial': row.get('sa_serial'), 'version': row.get('sa_version'), 'ip': row.get('sa_ip'), 'port': row.get('sa_port'), 'timeout': row.get('sa_timeout'),
+                    'calibration_date': row.get('sa_cal_date'), 'calibration_due': row.get('sa_cal_due')
                 }
             return result
         except mysql.connector.Error as err:

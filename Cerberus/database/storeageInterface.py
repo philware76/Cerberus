@@ -41,14 +41,18 @@ class StorageInterface(ABC):
 
     # --- Equipment Management -------------------------------------------------------------------------------------
     @abstractmethod
-    def upsertEquipment(self, equipType: str, manufacturer: str, model: str, serial: str, version: str,
+    def upsertEquipment(self, equipRole: str, manufacturer: str, model: str, serial: str, version: str,
                         ip: str, port: int, timeout: int, calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
-        """Insert or update an equipment record, returning its ID. Calibration dates optional (YYYY-MM-DD)."""
+        """Insert or update an equipment record, returning its ID.
+        equipRole: logical role the equipment fulfils (SIGGEN | SPECAN)
+        model: plugin / model identifier
+        Calibration dates optional (YYYY-MM-DD).
+        """
 
     @abstractmethod
-    def assignEquipmentToStation(self, equipType: str, equipmentId: int) -> bool:
-        """Assign an equipment record to this station (by type)."""
+    def assignEquipmentToStation(self, equipRole: str, equipmentId: int) -> bool:
+        """Assign an equipment record (by role SIGGEN/SPECAN) to this station."""
 
     @abstractmethod
     def getStationEquipment(self) -> Dict[str, Dict[str, Any]]:
-        """Return a mapping of equipment type -> equipment record for this station."""
+        """Return mapping of role -> equipment record (roles: SIGGEN, SPECAN)."""

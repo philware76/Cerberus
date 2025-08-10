@@ -24,8 +24,10 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         if self.initialised:
             logging.debug(f"{self.name} is already initialised.")
             return True
+
         if not self._visa_initialise(init):
             return False
+
         BaseSpecAnalyser.initialise(self)
         return True
 
