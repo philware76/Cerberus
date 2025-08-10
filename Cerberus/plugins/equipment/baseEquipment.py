@@ -67,7 +67,6 @@ class BaseEquipment(BasePlugin):
         for k, v in values.items():
             self.setParameterValue(group, k, v)
 
-    # --- Lifecycle -------------------------------------------------------------------------------------------------
     def initialise(self, init: Any | None = None) -> bool:
         logging.debug("Initialise")
         if isinstance(init, dict):

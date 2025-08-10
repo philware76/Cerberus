@@ -1,8 +1,9 @@
-
 import re
 import time
+import zlib
 from dataclasses import dataclass
 from threading import Event
+from typing import Optional
 
 
 @dataclass
@@ -12,10 +13,6 @@ class DBInfo:
     username: str = "root"
     password: str = ""
     database: str = "cerberus"
-
-
-def calcCRC(obj: object):
-    return 0
 
 
 def dwell(period: float):
@@ -36,7 +33,7 @@ def dwellStop(period: float, stopFunc=None):
             break
 
 
-def dwellEvent(period: float, stopEvent: Event = None):
+def dwellEvent(period: float, stopEvent: Optional[Event] = None):
     if stopEvent is None:
         dwell(period)
         return
@@ -46,6 +43,21 @@ def dwellEvent(period: float, stopEvent: Event = None):
         time.sleep(0.2)
         if stopEvent.wait(0.1):
             break
+
+
+def calcCRC(plan: object) -> int:
+    """Deterministic CRC based only on Plan test entries.
+    Order-insensitive, counts matter; returns 0 if plan is None or not iterable.
+    """
+    if plan is None:
+        return 0
+    try:
+        tests = [str(t) for t in plan]  # type: ignore[arg-type]
+    except Exception:
+        return 0
+    tests_sorted = sorted(tests)
+    payload = ("|".join(tests_sorted) + f"#{len(tests_sorted)}").encode("utf-8")
+    return zlib.crc32(payload) & 0xFFFFFFFF
 
 
 def camel2Human(name: str) -> str:
