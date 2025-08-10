@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 from Cerberus.plan import Plan
 
@@ -38,3 +38,17 @@ class StorageInterface(ABC):
     @abstractmethod
     def deleteTestPlan(self, plan_id: int) -> bool:
         """Delete a test plan by ID."""
+
+    # --- Equipment Management -------------------------------------------------------------------------------------
+    @abstractmethod
+    def upsertEquipment(self, equipType: str, manufacturer: str, model: str, serial: str, version: str,
+                        ip: str, port: int, timeout: int, calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
+        """Insert or update an equipment record, returning its ID. Calibration dates optional (YYYY-MM-DD)."""
+
+    @abstractmethod
+    def assignEquipmentToStation(self, equipType: str, equipmentId: int) -> bool:
+        """Assign an equipment record to this station (by type)."""
+
+    @abstractmethod
+    def getStationEquipment(self) -> Dict[str, Dict[str, Any]]:
+        """Return a mapping of equipment type -> equipment record for this station."""

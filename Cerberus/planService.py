@@ -24,17 +24,19 @@ class PlanService:
         self._pluginService = pluginService
         self.loadPlan()
 
-    def newPlan(self, name: str):
+    def newPlan(self, name: str) -> Plan | None:
         """Create a new test plan, save to the database and returns the ID."""
         if name is None or name == "":
             logging.error("Plan name cannot be empty or none.")
-            return
+            return None
 
         self._plan = Plan(name)
         self._planCRC = -1
         self._planId = -1
 
         logging.debug(f"New plan created: {self._plan.name}")
+
+        return self._plan
 
     def listTestPlans(self) -> List[Tuple[int, Plan]]:
         return self._database.listTestPlans()
