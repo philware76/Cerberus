@@ -36,7 +36,7 @@ class PlanListWidget(QWidget):
 
     def _create_plan_item(self, plan_id: int, plan: Plan) -> QWidget:
         frame = QFrame()
-        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setFrameShape(QFrame.Shape.StyledPanel)
         frame.setStyleSheet("""
             QFrame {
                 background-color: #D6EAF8;
@@ -74,7 +74,7 @@ class PlanListWidget(QWidget):
         add_btn = QPushButton()
         add_btn.setFixedSize(28, 28)
         add_btn.setText("+")
-        add_btn.setCursor(Qt.PointingHandCursor)
+        add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         add_btn.setStyleSheet("""
             QPushButton {
                 font-size: 18px; font-weight: bold; color: #2A6099;
@@ -87,6 +87,7 @@ class PlanListWidget(QWidget):
                 background: #2A6099; color: white; border: 2px solid #154360;
             }
         """)
+
         def on_add_clicked():
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.information(add_btn, "Demo", "You clicked me")
@@ -96,7 +97,7 @@ class PlanListWidget(QWidget):
         # Add [dustbin] button for deleting plan
         delete_plan_btn = QPushButton()
         delete_plan_btn.setFixedSize(28, 28)
-        delete_plan_btn.setCursor(Qt.PointingHandCursor)
+        delete_plan_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         try:
             from PySide6.QtGui import QIcon
             delete_plan_btn.setIcon(QIcon.fromTheme("edit-delete"))
@@ -113,6 +114,7 @@ class PlanListWidget(QWidget):
                 background: #922B21; color: white; border: 2px solid #922B21;
             }
         """)
+
         def on_delete_plan_clicked():
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.information(delete_plan_btn, "Demo", "You've deleted this plan")
@@ -163,4 +165,3 @@ class PlanListWidget(QWidget):
 
         frame.setLayout(vbox)
         return frame
-    
