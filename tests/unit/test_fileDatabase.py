@@ -183,3 +183,43 @@ def test_EquipmentService_register_and_attach(db_env: Tuple[FileDatabase, Plugin
     assert equipService.attach(spec_id)
     attached_models = {e['model'] for e in equipService.listAttached()}
     assert "SigModelAlpha" in attached_models and "SpecModelBeta" in attached_models
+
+
+def test_FetchEquipmentByModel_not_attached(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
+    db, _, _, _ = db_env
+    serial = "FETCH-SN-1"
+    model = "FetchModelA"
+    eid = db.upsertEquipment(
+        manufacturer="Acme",
+        model=model,
+        serial=serial,
+        version="0.1",
+        ip="192.168.50.10",
+        port=9000,
+        timeout=500
+    )
+    assert eid is not None
+    # Not attached yet, should return None
+    rec = db.fetchStationEquipmentByModel(model)
+    assert rec is None
+
+
+def test_FetchEquipmentByModel_after_attach(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
+    db, _, _, _ = db_env
+    serial = "FETCH-SN-2"
+    model = "FetchModelB"
+    eid = db.upsertEquipment(
+        manufacturer="Acme",
+        model=model,
+        serial=serial,
+        version="0.2",
+        ip="192.168.50.11",
+        port=9001,
+        timeout=600
+    )
+    assert eid is not None
+    assert db.attachEquipmentToStation(eid)
+    rec = db.fetchStationEquipmentByModel(model)
+    assert rec is not None
+    assert rec.get('serial') == serial
+    assert rec.get('model') == model

@@ -56,3 +56,7 @@ class StorageInterface(ABC):
     @abstractmethod
     def listStationEquipment(self) -> List[Dict[str, Any]]:
         """Return list of equipment dicts attached to this station."""
+
+    @abstractmethod
+    def fetchStationEquipmentByModel(self, model: str) -> Dict[str, Any] | None:
+        """Return a single equipment dict for this station matching model, or None if not attached."""

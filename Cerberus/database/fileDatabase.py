@@ -163,3 +163,10 @@ class FileDatabase(StorageInterface):
     def listStationEquipment(self) -> List[Dict[str, Any]]:
         equipment: List[Dict[str, Any]] = self._data.get('equipment', [])
         return [e.copy() for e in equipment if e.get('station_identity') == self.station_identity]
+
+    def fetchStationEquipmentByModel(self, model: str) -> Dict[str, Any] | None:
+        equipment: List[Dict[str, Any]] = self._data.get('equipment', [])
+        for e in equipment:
+            if e.get('station_identity') == self.station_identity and e.get('model') == model:
+                return e.copy()
+        return None

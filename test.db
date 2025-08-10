@@ -6,7 +6,7 @@
             "plan": {
                 "name": "Test Plan 1",
                 "user": "philw",
-                "date": "2025-08-10T22:40:59.382863",
+                "date": "2025-08-10T23:36:14.483551",
                 "tests": []
             }
         },
@@ -15,7 +15,7 @@
             "plan": {
                 "name": "Test Plan",
                 "user": "philw",
-                "date": "2025-08-10T22:40:59.386863",
+                "date": "2025-08-10T23:36:14.487551",
                 "tests": [
                     "Simple Test #1"
                 ]
@@ -125,6 +125,32 @@
             "ip": "10.0.0.11",
             "port": 6200,
             "timeout": 2200,
+            "calibration_date": null,
+            "calibration_due": null
+        },
+        {
+            "id": 9,
+            "station_identity": null,
+            "manufacturer": "Acme",
+            "model": "FetchModelA",
+            "serial": "FETCH-SN-1",
+            "version": "0.1",
+            "ip": "192.168.50.10",
+            "port": 9000,
+            "timeout": 500,
+            "calibration_date": null,
+            "calibration_due": null
+        },
+        {
+            "id": 10,
+            "station_identity": "STATION-1",
+            "manufacturer": "Acme",
+            "model": "FetchModelB",
+            "serial": "FETCH-SN-2",
+            "version": "0.2",
+            "ip": "192.168.50.11",
+            "port": 9001,
+            "timeout": 600,
             "calibration_date": null,
             "calibration_due": null
         }
