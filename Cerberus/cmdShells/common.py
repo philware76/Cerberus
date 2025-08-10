@@ -1,14 +1,17 @@
 import ipaddress
-from typing import Dict
+from collections.abc import Mapping
+from typing import Dict  # backward compatibility if used elsewhere
 
 from Cerberus.plugins.basePlugin import BasePlugin
 
 
-def displayPluginCategory(category_name, plugins: Dict[str, BasePlugin]):
+def displayPluginCategory(category_name: str, plugins: Mapping[str, BasePlugin]):
     print(f"Available {category_name} plugins:")
     idx = 0
-    for plugin in list(plugins.values()):
-        print(f" #{idx}: '{plugin.name}' [{plugin.__class__.__base__.__name__.replace('Base', '')}]")
+    for plugin in plugins.values():
+        base_cls = plugin.__class__.__base__
+        base_name = base_cls.__name__.replace('Base', '') if base_cls and hasattr(base_cls, '__name__') else plugin.__class__.__name__
+        print(f" #{idx}: '{plugin.name}' [{base_name}]")
         idx += 1
 
     print("")

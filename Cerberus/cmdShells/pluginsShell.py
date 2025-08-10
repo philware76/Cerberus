@@ -1,5 +1,6 @@
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Dict, Type
+from typing import Dict
 
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.cmdShells.common import displayPluginCategory, getInt
@@ -10,14 +11,15 @@ from Cerberus.plugins.basePlugin import BasePlugin
 class PluginsShell(BaseShell):
     """A base shell class for interacting with plugin dictionaries."""
 
-    def __init__(self, manager:Manager, plugins: Dict[str, Type[BasePlugin]], plugin_type: str):
+    def __init__(self, manager: Manager, plugins: Mapping[str, BasePlugin], plugin_type: str):
         super().__init__(manager)
         self.pluginService = manager.pluginService
 
         PluginsShell.intro = f"Welcome to Cerberus {plugin_type} System. Type help or ? to list commands.\n"
         PluginsShell.prompt = f'{plugin_type}> '
-      
-        self._plugins = plugins
+
+        # Make a local copy to avoid mutability/type variance issues while allowing Mapping covariance.
+        self._plugins: Dict[str, BasePlugin] = dict(plugins)
         self._plugin_type = plugin_type
         self._shell: BaseShell | None = None
 
@@ -30,13 +32,15 @@ class PluginsShell(BaseShell):
 
     def do_load(self, name):
         """Load a specific plugin."""
+        modName = ""
+        className = ""
         try:
             idx = getInt(name)
             if idx is not None:
                 if idx >= len(self._plugins):
                     print("Index not valid.")
                     return
-                
+
                 name = list(self._plugins.keys())[idx]
 
             plugin = self._plugins[name]
@@ -45,14 +49,14 @@ class PluginsShell(BaseShell):
             className = self._plugin_type + "Shell"
             modName = "Cerberus.cmdShells." + className[0].lower() + className[1:]
             module = import_module(modName)
-            pluginsClass = getattr(module, className) 
+            pluginsClass = getattr(module, className)
 
             if pluginsClass:
-                # Instantiate the shell and start the command loop
+                # Instantiate the shell, but do_open() will start the shell cmdLoop()
                 self._shell = pluginsClass(plugin, self.manager)
             else:
                 print(f"No shell found for plugin type: {self._plugin_type}")
-            
+
         except KeyError:
             print(f"Unknown {self._plugin_type.lower()}: {name}")
 
@@ -65,7 +69,7 @@ class PluginsShell(BaseShell):
             self.do_load(arg)
             if self._shell is None:
                 return
-        
+
         if self._shell is not None:
             self._shell.cmdloop()
             self._shell = None

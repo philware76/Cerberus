@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Mapping
 from typing import Dict, List, Tuple, Type, TypeVar, cast
 
 import pluggy
@@ -18,9 +19,10 @@ class PluginService:
         self.pm = pluggy.PluginManager("cerberus")
         self.missingPlugins = []
 
-        self.equipPlugins: Dict[str, BaseEquipment] = cast(Dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
-        self.productPlugins: Dict[str, BaseProduct] = cast(Dict[str, BaseProduct], self._discover_plugins("Product", "products"))
-        self.testPlugins: Dict[str, BaseTest] = cast(Dict[str, BaseTest], self._discover_plugins("Test", "tests"))
+        # Expose as Mapping for covariance; internal structure remains mutable dict from discovery.
+        self.equipPlugins: Mapping[str, BaseEquipment] = cast(Dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
+        self.productPlugins: Mapping[str, BaseProduct] = cast(Dict[str, BaseProduct], self._discover_plugins("Product", "products"))
+        self.testPlugins: Mapping[str, BaseTest] = cast(Dict[str, BaseTest], self._discover_plugins("Test", "tests"))
 
     def findTest(self, testName: str) -> BaseTest | None:
         """Return a particular test"""
@@ -58,7 +60,7 @@ class PluginService:
             if isinstance(plugin, classType)
         }
 
-    def _discover_plugins(self, pluginType: str, folder: str) -> Dict[str, BasePlugin]:
+    def _discover_plugins(self, pluginType: str, folder: str) -> Dict[str, BasePlugin]:  # returns a mutable dict internally
         plugins = PluginDiscovery(self.pm, pluginType, folder)
         self.missingPlugins = plugins.loadPlugins()
 
