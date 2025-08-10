@@ -12,9 +12,14 @@ class ChamberService:
         self.pluginService = pluginService
         self.loadChamber()
 
-    def loadChamber(self):
+    def loadChamber(self) -> BaseChamber | None:
         """Load the chamber class for this station from the database."""
-        self.chamber = self.database.get_ChamberForStation()
+        chamberName = self.database.get_ChamberForStation()
+        if chamberName is None:
+            logging.warning("No chamber named for this station")
+            return None
+
+        self.chamber = self.pluginService.findEquipType(chamberName, BaseChamber)
         if self.chamber:
             logging.debug(f"Chamber class loaded: {self.chamber}")
         else:

@@ -99,14 +99,17 @@ class FileDatabase(StorageInterface):
             return 1
         return max(e.get('id', 0) for e in equipment) + 1
 
-    def upsertEquipment(self, equipType: str, manufacturer: str, model: str, serial: str, version: str,
+    def upsertEquipment(self, equipRole: str, manufacturer: str, model: str, serial: str, version: str,
                         ip: str, port: int, timeout: int, calibration_date: str | None = None, calibration_due: str | None = None) -> int | None:
+        role = equipRole.upper()
+        if role not in ("SIGGEN", "SPECAN"):
+            logging.error(f"Invalid equipment role '{equipRole}'")
+            return None
         equipment: List[Dict[str, Any]] = self._data.get('equipment', [])
         for eq in equipment:
             if eq.get('serial') == serial:
-                # Update existing
                 eq.update({
-                    'type': equipType,
+                    'role': role,
                     'manufacturer': manufacturer,
                     'model': model,
                     'version': version,
@@ -118,11 +121,10 @@ class FileDatabase(StorageInterface):
                 })
                 self._save_data()
                 return int(eq['id'])
-        # Insert new
         new_id = self._next_equipment_id()
         equipment.append({
             'id': new_id,
-            'type': equipType,
+            'role': role,
             'manufacturer': manufacturer,
             'model': model,
             'serial': serial,
@@ -137,15 +139,14 @@ class FileDatabase(StorageInterface):
         self._save_data()
         return new_id
 
-    def assignEquipmentToStation(self, equipType: str, equipmentId: int) -> bool:
-        key = None
-        et = equipType.upper()
-        if et == 'BB60C':
-            key = 'bb60c_id'
-        elif et == 'VSG60C':
-            key = 'vsg60c_id'
+    def assignEquipmentToStation(self, equipRole: str, equipmentId: int) -> bool:
+        role = equipRole.upper()
+        if role == 'SIGGEN':
+            key = 'siggen_id'
+        elif role == 'SPECAN':
+            key = 'specan_id'
         else:
-            logging.error(f"Unknown equipment type {equipType} for assignment")
+            logging.error(f"Unknown equipment role {equipRole} for assignment")
             return False
         self._data[key] = equipmentId
         self._save_data()
@@ -155,10 +156,10 @@ class FileDatabase(StorageInterface):
         result: Dict[str, Dict[str, Any]] = {}
         equipment: List[Dict[str, Any]] = self._data.get('equipment', [])
         id_map = {e['id']: e for e in equipment}
-        bb_id = self._data.get('bb60c_id')
-        vsg_id = self._data.get('vsg60c_id')
-        if bb_id and bb_id in id_map:
-            result['BB60C'] = id_map[bb_id].copy()
-        if vsg_id and vsg_id in id_map:
-            result['VSG60C'] = id_map[vsg_id].copy()
+        sg_id = self._data.get('siggen_id')
+        sa_id = self._data.get('specan_id')
+        if sg_id and sg_id in id_map:
+            result['SIGGEN'] = id_map[sg_id].copy()
+        if sa_id and sa_id in id_map:
+            result['SPECAN'] = id_map[sa_id].copy()
         return result

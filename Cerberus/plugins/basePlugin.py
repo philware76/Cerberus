@@ -23,7 +23,7 @@ def singleton(cls):
 
 
 class BasePlugin(ABC):
-    def __init__(self, name, description: Optional[str] = None):
+    def __init__(self, name: str, description: Optional[str] = None):
         self.name = name
         self.description = description
         self.initialised = False

@@ -4,8 +4,7 @@ import pytest
 
 from Cerberus.chamberService import ChamberService
 from Cerberus.database.fileDatabase import FileDatabase
-from Cerberus.database.storeageInterface import StorageInterface
-from Cerberus.plan import Plan
+from Cerberus.equipmentService import EquipmentService
 from Cerberus.planService import PlanService
 from Cerberus.pluginService import PluginService
 
@@ -36,7 +35,7 @@ def test_SetGetChamber(db_env: Tuple[FileDatabase, PluginService, PlanService, C
     assert chamber_service.saveChamber(chamber), "CT200 should be an available chamber type."
 
     retrieved_chamber = chamber_service.loadChamber()
-    assert retrieved_chamber == chamber, "Retrieved chamber should match the saved chamber type."
+    assert retrieved_chamber.name == chamber, "Retrieved chamber should match the saved chamber type."
 
 
 def test_SaveEmptyPlan(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
@@ -78,108 +77,138 @@ def test_SaveLoadPlan(db_env: Tuple[FileDatabase, PluginService, PlanService, Ch
 def test_AddMultipleEquipment(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     db, _, _, _ = db_env
 
-    # Upsert several BB60C devices
-    bb_ids = []
+    # Upsert several Spectrum Analysers (role SPECAN)
+    sa_ids = []
     for i in range(3):
-        serial = f"BB60C-SN-{i}"
+        serial = f"SPECAN-SN-{i}"
         equip_id = db.upsertEquipment(
-            equipType="BB60C",
-            manufacturer="SignalHound",
-            model="BB60C",
+            equipRole="SPECAN",
+            manufacturer="Acme",
+            model="SpecModelX",
             serial=serial,
             version="1.0",
             ip=f"192.168.0.{10+i}",
-            port=5025 + i,
+            port=6000 + i,
             timeout=1000
         )
-        assert equip_id is not None, "BB60C upsert should return an ID"
-        bb_ids.append(equip_id)
+        assert equip_id is not None, "SPECAN upsert should return an ID"
+        sa_ids.append(equip_id)
 
-    # Upsert several VSG60C devices
-    vsg_ids = []
+    # Upsert several Signal Generators (role SIGGEN)
+    sg_ids = []
     for i in range(2):
-        serial = f"VSG60C-SN-{i}"
+        serial = f"SIGGEN-SN-{i}"
         equip_id = db.upsertEquipment(
-            equipType="VSG60C",
-            manufacturer="SignalHound",
-            model="VSG60C",
+            equipRole="SIGGEN",
+            manufacturer="Acme",
+            model="SigGenPro",
             serial=serial,
             version="2.0",
             ip=f"192.168.1.{20+i}",
-            port=5024 + i,
+            port=7000 + i,
             timeout=1500
         )
-        assert equip_id is not None, "VSG60C upsert should return an ID"
-        vsg_ids.append(equip_id)
+        assert equip_id is not None, "SIGGEN upsert should return an ID"
+        sg_ids.append(equip_id)
 
-    # Ensure IDs are unique
-    all_ids = set(bb_ids + vsg_ids)
-    assert len(all_ids) == len(bb_ids) + len(vsg_ids), "Equipment IDs should be unique across types"
+    all_ids = set(sa_ids + sg_ids)
+    assert len(all_ids) == len(sa_ids) + len(sg_ids), "Equipment IDs should be unique across roles"
 
-    # Ensure records stored
     eq_map = {e['serial']: e for e in db._data.get('equipment', [])}
-    for s in [f"BB60C-SN-{i}" for i in range(3)]:
+    for s in [f"SPECAN-SN-{i}" for i in range(3)]:
         assert s in eq_map, f"Equipment serial {s} should exist"
-    for s in [f"VSG60C-SN-{i}" for i in range(2)]:
+    for s in [f"SIGGEN-SN-{i}" for i in range(2)]:
         assert s in eq_map, f"Equipment serial {s} should exist"
 
 
 def test_AssignEquipmentToStation(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     db, _, _, _ = db_env
-    # Pick first BB and VSG
-    bb_serial = "BB60C-SN-0"
-    vsg_serial = "VSG60C-SN-0"
+    spec_serial = "SPECAN-SN-0"
+    sig_serial = "SIGGEN-SN-0"
 
-    # Find their IDs
-    bb_id = next(e['id'] for e in db._data['equipment'] if e['serial'] == bb_serial)
-    vsg_id = next(e['id'] for e in db._data['equipment'] if e['serial'] == vsg_serial)
+    spec_id = next(e['id'] for e in db._data['equipment'] if e['serial'] == spec_serial)
+    sig_id = next(e['id'] for e in db._data['equipment'] if e['serial'] == sig_serial)
 
-    assert db.assignEquipmentToStation("BB60C", bb_id), "Should assign BB60C to station"
-    assert db.assignEquipmentToStation("VSG60C", vsg_id), "Should assign VSG60C to station"
+    assert db.assignEquipmentToStation("SPECAN", spec_id), "Should assign SPECAN to station"
+    assert db.assignEquipmentToStation("SIGGEN", sig_id), "Should assign SIGGEN to station"
 
     station_eq = db.getStationEquipment()
-    assert 'BB60C' in station_eq, "Station should have BB60C mapping"
-    assert 'VSG60C' in station_eq, "Station should have VSG60C mapping"
-    assert station_eq['BB60C']['serial'] == bb_serial, "Stored BB60C serial mismatch"
-    assert station_eq['VSG60C']['serial'] == vsg_serial, "Stored VSG60C serial mismatch"
+    assert 'SPECAN' in station_eq, "Station should have SPECAN mapping"
+    assert 'SIGGEN' in station_eq, "Station should have SIGGEN mapping"
+    assert station_eq['SPECAN']['serial'] == spec_serial, "Stored SPECAN serial mismatch"
+    assert station_eq['SIGGEN']['serial'] == sig_serial, "Stored SIGGEN serial mismatch"
 
 
 def test_EquipmentCalibrationFields(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     db, _, _, _ = db_env
-    serial = "BB60C-CAL-1"
+    serial = "SPECAN-CAL-1"
     cal_date = "2024-01-15"
     cal_due = "2025-01-15"
     eid = db.upsertEquipment(
-        equipType="BB60C",
-        manufacturer="SignalHound",
-        model="BB60C",
+        equipRole="SPECAN",
+        manufacturer="Acme",
+        model="SpecModelX",
         serial=serial,
         version="1.1",
         ip="192.168.2.10",
-        port=5025,
+        port=6100,
         timeout=1200,
         calibration_date=cal_date,
         calibration_due=cal_due
     )
     assert eid is not None, "Equipment insert with calibration should return ID"
 
-    # Update with new due date only (same serial)
     new_due = "2025-06-30"
     eid2 = db.upsertEquipment(
-        equipType="BB60C",
-        manufacturer="SignalHound",
-        model="BB60C",
+        equipRole="SPECAN",
+        manufacturer="Acme",
+        model="SpecModelX",
         serial=serial,
         version="1.1",
         ip="192.168.2.10",
-        port=5025,
+        port=6100,
         timeout=1200,
         calibration_date=cal_date,
         calibration_due=new_due
     )
     assert eid == eid2, "Upsert should return same ID for existing serial"
 
-    # Find record
     rec = next(e for e in db._data['equipment'] if e['serial'] == serial)
     assert rec.get('calibration_date') == cal_date, "Calibration date should persist"
     assert rec.get('calibration_due') == new_due, "Calibration due date should update"
+
+
+def test_EquipmentService_registration_and_assignment(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
+    db, pluginService, _, _ = db_env
+    equipService = EquipmentService(pluginService, db)
+
+    # Register (upsert) devices via service using roles
+    sig_id = db.upsertEquipment(
+        equipRole="SIGGEN",
+        manufacturer="Acme",
+        model="SigModelAlpha",
+        serial="SIGGEN-SVC-1",
+        version="3.0",
+        ip="10.0.0.10",
+        port=7100,
+        timeout=2000
+    )
+    spec_id = db.upsertEquipment(
+        equipRole="SPECAN",
+        manufacturer="Acme",
+        model="SpecModelBeta",
+        serial="SPECAN-SVC-1",
+        version="3.1",
+        ip="10.0.0.11",
+        port=6200,
+        timeout=2200
+    )
+    assert sig_id is not None and spec_id is not None, "Service upserts should return IDs"
+
+    assert equipService.assignSignalGenerator(sig_id), "Should assign SIGGEN via EquipmentService"
+    assert equipService.assignSpectrumAnalyser(spec_id), "Should assign SPECAN via EquipmentService"
+
+    assigned = equipService.getAssigned()
+    assert 'SIGGEN' in assigned and 'SPECAN' in assigned, "Both roles should be assigned"
+    assert assigned['SIGGEN']['id'] == sig_id, "SIGGEN ID mismatch"
+    assert assigned['SPECAN']['id'] == spec_id, "SPECAN ID mismatch"

@@ -59,11 +59,13 @@ class RFSwitch(BaseEquipment):
                 logging.debug(f"RF Switch request '{url}' status: {resp.status_code}")
                 last_status = resp.status_code
                 return resp.text if path == "info" else last_status
+
             except Exception as e:
                 logging.debug(f"RF Switch request error: {e}")
+
             attempts += 1
             if attempts < 5:
                 logging.debug("Retrying RF Switch connection...")
+
         logging.debug('Failed to connect to RF switch after retries')
-        raise ConnectionError("RF Switch connection failed")
         raise ConnectionError("RF Switch connection failed")

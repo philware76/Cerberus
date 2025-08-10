@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Tuple, Type, cast
+from typing import Dict, List, Tuple, Type, TypeVar, cast
 
 import pluggy
 
@@ -9,12 +9,15 @@ from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 
+# Generic type variable for equipment specialisation
+T = TypeVar("T", bound=BaseEquipment)
+
 
 class PluginService:
     def __init__(self):
         self.pm = pluggy.PluginManager("cerberus")
         self.missingPlugins = []
-        
+
         self.equipPlugins: Dict[str, BaseEquipment] = cast(Dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
         self.productPlugins: Dict[str, BaseProduct] = cast(Dict[str, BaseProduct], self._discover_plugins("Product", "products"))
         self.testPlugins: Dict[str, BaseTest] = cast(Dict[str, BaseTest], self._discover_plugins("Test", "tests"))
@@ -27,6 +30,17 @@ class PluginService:
         """Return a particular equipment instance"""
         return self.equipPlugins.get(equipName, None)
 
+    def findEquipType(self, name: str, expected_type: Type[T]) -> T | None:
+        equip = self.equipPlugins.get(name, None)
+        if equip is None:
+            return None
+
+        if isinstance(equip, expected_type):
+            return cast(T, equip)
+
+        logging.debug(f"Equipment '{name}' is not of expected type '{expected_type.__name__}'")
+        return None
+
     def findEquipTypes(self, classType) -> dict:
         """Return a dictionary of {name: instance} for equipment matching the given class type."""
         return {
@@ -36,14 +50,14 @@ class PluginService:
 
     def findProduct(self, productName: str) -> BaseProduct | None:
         return self.productPlugins.get(productName, None)
-    
+
     def findProductTypes(self, classType) -> dict:
         """Return a dictionary of {name: instance} for products matching the given class type."""
         return {
             name: plugin for name, plugin in self.productPlugins.items()
             if isinstance(plugin, classType)
         }
-    
+
     def _discover_plugins(self, pluginType: str, folder: str) -> Dict[str, BasePlugin]:
         plugins = PluginDiscovery(self.pm, pluginType, folder)
         self.missingPlugins = plugins.loadPlugins()
