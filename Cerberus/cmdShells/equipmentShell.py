@@ -40,7 +40,8 @@ class EquipmentShell(RunCommandShell):
             print("Equipment identity/serial unavailable.")
             return False
 
-        rec = self.manager.db.fetchStationEquipmentByModel(self.equip.name)  # type: ignore[attr-defined]
+        # Use the model from the identity (not the plugin name) for DB lookup
+        rec = self.manager.db.fetchStationEquipmentByModel(ident.model)  # type: ignore[attr-defined]
         if not rec:
             print("No database record for this model on this station (not attached yet).")
             return False
@@ -56,7 +57,6 @@ class EquipmentShell(RunCommandShell):
             mismatches.append(f"version(db={rec.get('version')} != dev={ident.version})")
         if not mismatches:
             print(f"Identity OK: {ident}")
-
         else:
             print("Identity mismatch:")
             for m in mismatches:
