@@ -1,6 +1,8 @@
 import logging
+from pathlib import Path
 
 import pytest
+from iniconfig import IniConfig
 
 from Cerberus.database.fileDatabase import FileDatabase
 from Cerberus.manager import Manager
@@ -30,10 +32,20 @@ def warn_assert(request):
 def configure_logging():
     logging.basicConfig(level=logging.DEBUG)
 
-import pytest
-
 
 @pytest.fixture(scope="module")
 def manager():
-    fileDB = FileDatabase("test.db")
-    return Manager(fileDB)
+    config_path = Path(__file__).resolve().parent.parent / 'cerberus.ini'
+    if not config_path.exists():
+        config_path = Path(__file__).resolve().parent.parent.parent / 'cerberus.ini'
+
+    station_id = 'UNKNOWN_STATION'
+    if config_path.exists():
+        try:
+            cfg = IniConfig(str(config_path))
+            station_id = cfg['cerberus']['identity']  # type: ignore[index]
+        except Exception:  # Broad: missing section/key or parse issue
+            pass
+
+    fileDB = FileDatabase("test.db", station_identity=station_id)
+    return Manager(station_id, fileDB)

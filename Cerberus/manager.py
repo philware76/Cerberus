@@ -8,14 +8,45 @@ from Cerberus.pluginService import PluginService
 
 
 class Manager():
-    def __init__(self, db: StorageInterface):
+    def __init__(self, stationId: str, db: StorageInterface):
         logging.info("Starting TestManager...")
+        self.stationId = stationId
         self.db = db
 
         self.pluginService = PluginService()
+
         self.planService = PlanService(self.pluginService, self.db)
         self.chamberService = ChamberService(self.pluginService, self.db)
         self.equiService = EquipmentService(self.pluginService, self.db)
+
+        # Load any persisted equipment comms settings for this station
+        self._applyPersistedEquipmentComms()
+
+    def _applyPersistedEquipmentComms(self):
+        try:
+            records = self.db.listStationEquipment()  # type: ignore[attr-defined]
+        except Exception as ex:
+            logging.error(f"Failed to list station equipment: {ex}")
+            return
+
+        if not records:
+            logging.debug("No equipment records attached to this station.")
+            return
+
+        applied = 0
+        for rec in records:
+            model = rec['model']
+            equip = self.pluginService.findEquipment(model)
+            if not equip:
+                logging.debug(f"No plugin found for model '{model}'")
+                continue
+
+            equip.setParameterValue('Communication', 'IP Address', rec['ip_address'])
+            equip.setParameterValue('Communication', 'Port', int(rec['port']))
+            equip.setParameterValue('Communication', 'Timeout', int(rec['timeout_ms']))
+            applied += 1
+
+        logging.info(f"Applied comms parameters to {applied} equipment plugin(s).")
 
     def finalize(self):
         """Final cleanup before exiting the application."""

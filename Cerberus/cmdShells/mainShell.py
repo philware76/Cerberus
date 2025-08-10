@@ -16,6 +16,7 @@ from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo
 from Cerberus.database.database import Database
+from Cerberus.database.fileDatabase import FileDatabase
 from Cerberus.ethDiscovery import EthDiscovery
 from Cerberus.logConfig import setupLogging
 from Cerberus.manager import Manager
@@ -125,14 +126,13 @@ def runShell(argv):
     logging.info(f"Cerberus:{stationId}")
 
     if args.filedb:
-        from Cerberus.database.fileDatabase import FileDatabase
         db = FileDatabase(args.filedb)
         logging.info(f"Using FileDatabase: {args.filedb}")
     else:
         db = Database(stationId, dbInfo)
-        logging.info("Using MySQL Database")
+        logging.info(f"Using MySQL: {dbInfo.host}:{dbInfo.port}")
 
-    manager = Manager(db)
+    manager = Manager(stationId, db)
 
     try:
         MainShell(manager).cmdloop()

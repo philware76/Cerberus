@@ -10,7 +10,7 @@ from Cerberus.plan import Plan
 
 
 class Database(StorageInterface):
-    def __init__(self, stationId, dbInfo: DBInfo = DBInfo()):
+    def __init__(self, stationId: str, dbInfo: DBInfo = DBInfo()):
         self.stationId = stationId
         self.db_info = dbInfo
 
@@ -385,9 +385,30 @@ class Database(StorageInterface):
                 for r in rows:
                     results.append(cast(Dict[str, Any], r))
             return results
+
         except mysql.connector.Error as err:
             logging.error(f"Error listing equipment for station {self.stationId}: {err}")
             return results
+
+        finally:
+            if cursor is not None:
+                cursor.close()
+
+    def fetchStationEquipmentByModel(self, model: str) -> Dict[str, Any] | None:
+        cursor = None
+        try:
+            cursor = self.conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM equipment WHERE station_identity=%s AND model=%s LIMIT 1", (self.stationId, model))
+            row = cursor.fetchone()
+            if row:
+                return cast(Dict[str, Any], row)
+
+            return None
+
+        except mysql.connector.Error as err:
+            logging.error(f"Error fetching equipment model '{model}' for station {self.stationId}: {err}")
+            return None
+
         finally:
             if cursor is not None:
                 cursor.close()

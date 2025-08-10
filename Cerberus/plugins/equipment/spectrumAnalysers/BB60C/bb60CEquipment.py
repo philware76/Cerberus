@@ -17,7 +17,7 @@ def createEquipmentPlugin():
 
 class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
     def __init__(self):
-        BaseSpecAnalyser.__init__(self, "BB60C Spectrum Analyser")
+        BaseSpecAnalyser.__init__(self, "BB60C")
         VisaInitMixin.__init__(self)
 
     def initialise(self, init: Any | None = None) -> bool:

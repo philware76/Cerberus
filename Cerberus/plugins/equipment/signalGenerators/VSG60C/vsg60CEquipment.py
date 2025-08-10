@@ -16,7 +16,7 @@ def createEquipmentPlugin():
 
 class VSG60C(BaseSigGen, VISADevice, VisaInitMixin):
     def __init__(self):
-        BaseSigGen.__init__(self, "VSG60C Signal Generator")
+        BaseSigGen.__init__(self, "VSG60")
         VisaInitMixin.__init__(self)
 
     def initialise(self, init: Any | None = None) -> bool:

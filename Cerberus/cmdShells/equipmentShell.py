@@ -1,4 +1,5 @@
 import argparse
+from typing import Any, cast  # added for identity check typing
 
 from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
@@ -23,11 +24,45 @@ class EquipmentShell(RunCommandShell):
 
     def do_identity(self, arg):
         """Show the equipment identity (if initialised)"""
-        ident = getattr(self.equip, "identity", None)
-        if ident:
-            print(str(ident))
+        if self.equip.isInitialised():
+            print(self.equip.identity)
         else:
-            print("Identity not available (instrument not initialised?)")
+            print("Equipment/Device is not initialised.")
+
+    def do_checkId(self, arg):
+        """checkId : Compare initialised equipment identity with DB (lookup by model & station)."""
+        if not self.equip.isInitialised():
+            print("Equipment is not initialised; run init first.")
+            return False
+
+        ident = self.equip.identity
+        if not ident or not ident.serial:
+            print("Equipment identity/serial unavailable.")
+            return False
+
+        rec = self.manager.db.fetchStationEquipmentByModel(self.equip.name)  # type: ignore[attr-defined]
+        if not rec:
+            print("No database record for this model on this station (not attached yet).")
+            return False
+
+        mismatches: list[str] = []
+        if rec.get('manufacturer') != ident.manufacturer:
+            mismatches.append(f"manufacturer(db={rec.get('manufacturer')} != dev={ident.manufacturer})")
+        if rec.get('model') != ident.model:
+            mismatches.append(f"model(db={rec.get('model')} != dev={ident.model})")
+        if rec.get('serial') != ident.serial:
+            mismatches.append(f"serial(db={rec.get('serial')} != dev={ident.serial})")
+        if rec.get('version') != ident.version:
+            mismatches.append(f"version(db={rec.get('version')} != dev={ident.version})")
+        if not mismatches:
+            print(f"Identity OK: {ident}")
+
+        else:
+            print("Identity mismatch:")
+            for m in mismatches:
+                print(f" - {m}")
+
+        return False
 
     def do_setForStation(self, arg):
         """
@@ -74,5 +109,4 @@ class EquipmentShell(RunCommandShell):
             return False
 
         print(f"Equipment attached: id={equip_id}, serial={self.equip.identity.serial}, ip={ip}, port={port}")
-        return False
         return False
