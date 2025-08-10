@@ -6,6 +6,7 @@ from Cerberus.plugins.equipment.baseEquipment import Identity
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
+from Cerberus.plugins.equipment.visaEquipmentMixin import VisaInitMixin
 
 
 @hookimpl
@@ -14,52 +15,35 @@ def createEquipmentPlugin():
     return BB60C()
 
 
-class BB60C(BaseSpecAnalyser):
+class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
     def __init__(self):
-        super().__init__("BB60C Spectrum Analyser")
-        self.identity: Identity | None
-        self.visa: VISADevice
-
-        self._init = {"Port": 5025, "IPAddress": "127.0.0.1"}
+        BaseSpecAnalyser.__init__(self, "BB60C Spectrum Analyser")
+        VisaInitMixin.__init__(self)
 
     def initialise(self, init: Any | None = None) -> bool:
         if self.initialised:
             logging.debug(f"{self.name} is already initialised.")
             return True
-
-        if init is not None:
-            super().initialise(init)
-
-        self.visa = VISADevice(self._init["Port"], self._init["IPAddress"])
-        if self.visa.open() is None:
-            logging.error("Failed to open the BB60C Spectrum Analyser")
+        if not self._visa_initialise(init):
             return False
-
-        self.identity = self.visa.identity()
-        if self.identity is not None:
-            self.initialised = True
-            return True
-
-        return False
+        BaseSpecAnalyser.initialise(self)
+        return True
 
     def finalise(self) -> bool:
-        if self.visa.close():
-            return super().finalise()
-        else:
-            return False
+        self._visa_finalise()
+        return BaseSpecAnalyser.finalise(self)
 
     def checkSend(self, cmd) -> bool:
         if not self.initialised:
             print("Device needs to be initialised with 'init' command")
             return False
 
-        if self.visa.command(cmd):
+        if self.command(cmd):
             logging.debug(f"Command {cmd} successful")
 
         return True
 
     def setRBW(self, bandwidth: float) -> bool:
-        """Sets the resolution bandwidth"""
         cmd = f'BAND:RES {bandwidth}KHz'
         return self.checkSend(cmd)
 
