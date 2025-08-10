@@ -35,6 +35,7 @@ def test_SetGetChamber(db_env: Tuple[FileDatabase, PluginService, PlanService, C
     assert chamber_service.saveChamber(chamber), "CT200 should be an available chamber type."
 
     retrieved_chamber = chamber_service.loadChamber()
+    assert retrieved_chamber is not None
     assert retrieved_chamber.name == chamber, "Retrieved chamber should match the saved chamber type."
 
 
