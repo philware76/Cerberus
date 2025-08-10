@@ -6,7 +6,7 @@
             "plan": {
                 "name": "Test Plan 1",
                 "user": "philw",
-                "date": "2025-08-10T12:31:04.256160",
+                "date": "2025-08-10T12:58:01.409325",
                 "tests": []
             }
         },
@@ -15,12 +15,94 @@
             "plan": {
                 "name": "Test Plan",
                 "user": "philw",
-                "date": "2025-08-10T12:31:04.264663",
+                "date": "2025-08-10T12:58:01.413332",
                 "tests": [
                     "Simple Test #1"
                 ]
             }
         }
     ],
-    "testPlanId": 2
+    "testPlanId": 2,
+    "equipment": [
+        {
+            "id": 1,
+            "type": "BB60C",
+            "manufacturer": "SignalHound",
+            "model": "BB60C",
+            "serial": "BB60C-SN-0",
+            "version": "1.0",
+            "ip": "192.168.0.10",
+            "port": 5025,
+            "timeout": 1000,
+            "calibration_date": null,
+            "calibration_due": null
+        },
+        {
+            "id": 2,
+            "type": "BB60C",
+            "manufacturer": "SignalHound",
+            "model": "BB60C",
+            "serial": "BB60C-SN-1",
+            "version": "1.0",
+            "ip": "192.168.0.11",
+            "port": 5026,
+            "timeout": 1000,
+            "calibration_date": null,
+            "calibration_due": null
+        },
+        {
+            "id": 3,
+            "type": "BB60C",
+            "manufacturer": "SignalHound",
+            "model": "BB60C",
+            "serial": "BB60C-SN-2",
+            "version": "1.0",
+            "ip": "192.168.0.12",
+            "port": 5027,
+            "timeout": 1000,
+            "calibration_date": null,
+            "calibration_due": null
+        },
+        {
+            "id": 4,
+            "type": "VSG60C",
+            "manufacturer": "SignalHound",
+            "model": "VSG60C",
+            "serial": "VSG60C-SN-0",
+            "version": "2.0",
+            "ip": "192.168.1.20",
+            "port": 5024,
+            "timeout": 1500,
+            "calibration_date": null,
+            "calibration_due": null
+        },
+        {
+            "id": 5,
+            "type": "VSG60C",
+            "manufacturer": "SignalHound",
+            "model": "VSG60C",
+            "serial": "VSG60C-SN-1",
+            "version": "2.0",
+            "ip": "192.168.1.21",
+            "port": 5025,
+            "timeout": 1500,
+            "calibration_date": null,
+            "calibration_due": null
+        },
+        {
+            "id": 6,
+            "type": "BB60C",
+            "manufacturer": "SignalHound",
+            "model": "BB60C",
+            "serial": "BB60C-CAL-1",
+            "version": "1.1",
+            "ip": "192.168.2.10",
+            "port": 5025,
+            "timeout": 1200,
+            "calibration_date": "2024-01-15",
+            "calibration_due": "2025-06-30"
+        }
+    ],
+    "bb60c_id": 1,
+    "vsg60c_id": 4
 }
