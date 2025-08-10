@@ -107,16 +107,17 @@ class Database(StorageInterface):
             CREATE TABLE IF NOT EXISTS equipment (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 role ENUM('SIGGEN','SPECAN') NOT NULL,
-                manufacturer VARCHAR(100),
-                model VARCHAR(100),
-                serial VARCHAR(100) UNIQUE,
+                manufacturer VARCHAR(100) NOT NULL,
+                model VARCHAR(100) NOT NULL,
+                serial VARCHAR(100) NOT NULL,
                 version VARCHAR(100),
                 ip_address VARCHAR(64) NOT NULL,
                 port INT NOT NULL,
                 timeout_ms INT NOT NULL DEFAULT 1000,
                 calibration_date DATE NULL,
                 calibration_due DATE NULL,
-                last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_equipment_serial (serial)
             )
             """)
             self.conn.commit()

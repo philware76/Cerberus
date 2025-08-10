@@ -5,13 +5,13 @@ from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 
 
 class EquipShell(PluginsShell):
-    def __init__(self, manager:Manager):
+    def __init__(self, manager: Manager):
         pluginService = manager.pluginService
         super().__init__(manager, pluginService.equipPlugins, "Equipment")
 
 
 class EquipmentShell(RunCommandShell):
-    def __init__(self, equip:BaseEquipment, manager: Manager):
+    def __init__(self, equip: BaseEquipment, manager: Manager):
         EquipmentShell.intro = f"Welcome to Cerberus {equip.name} Equipment System. Type help or ? to list commands.\n"
         EquipmentShell.prompt = f"{equip.name}> "
 
