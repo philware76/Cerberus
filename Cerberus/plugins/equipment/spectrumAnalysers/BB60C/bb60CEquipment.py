@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from Cerberus.exceptions import EquipmentError
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
@@ -30,6 +31,27 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
 
         self._initialised = BaseEquipment.initialise(self)
         return self._initialised
+
+    # This overrides the VISA operationComplete version
+    def operationComplete(self) -> bool:
+        logging.debug("Waiting for operation complete...")
+
+        resp = self.query("*OPC?")
+        if resp is None:
+            logging.debug("Failed to get response from *OPC?")
+            return False
+
+        try:
+            complete = int(resp)
+            logging.debug(f"{self.resource} - *OPC? => {complete}")
+            if complete == 1:
+                return True
+
+        except ValueError:
+            logging.error(f"{self.resource} Invalid response from *OPC? [{resp}]")
+            return False
+
+        raise EquipmentError("Failed to get operation complete")
 
     def finalise(self) -> bool:
         self._visa_finalise()

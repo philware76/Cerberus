@@ -1,10 +1,12 @@
 import logging
+import time
 from typing import cast
 
 import pyvisa as visa
 from pyvisa.resources.tcpip import TCPIPInstrument
 
 from Cerberus import common
+from Cerberus.exceptions import EquipmentError
 from Cerberus.plugins.equipment.baseEquipment import Identity
 
 
@@ -21,7 +23,7 @@ class VISADevice():
         self.resource = f'TCPIP::{self.ipAddress}::{self.port}::SOCKET'
 
         self.rm = visa.ResourceManager()
-        self.instrument: TCPIPInstrument
+        self.instrument: TCPIPInstrument | None = None
 
     def open(self) -> TCPIPInstrument | None:
         try:
@@ -79,25 +81,35 @@ class VISADevice():
         return self.instrument.query(command)
 
     def operationComplete(self) -> bool:
-        logging.debug(f"{self.resource} - *OPC?")
-        resp = self.query("*OPC?")
-        if resp is None:
+        logging.debug("Waiting for operation complete...")
+        if not self.write("*OPC"):
+            logging.warning("Failed to send *OPC")
             return False
 
-        try:
-            complete = int(resp)
-            logging.debug(f"{self.resource} - *OPC? => {complete}")
-            if complete != 0:
-                return True
-            else:
+        count = 0
+        while count < 10:
+            resp = self.query("*ESR?")
+            if resp is None:
+                logging.debug("Failed to get response from *ESR?")
                 return False
 
-        except ValueError:
-            logging.error(f"{self.resource} Invalid response from *OPC? [{resp}]")
-            return False
+            try:
+                complete = int(resp)
+                logging.debug(f"{self.resource} - *ESR? => {complete}")
+                if complete == 1:
+                    return True
+                else:
+                    common.dwell(0.1)
+                    count += 1
+
+            except ValueError:
+                logging.error(f"{self.resource} Invalid response from *ESR? [{resp}]")
+                return False
+
+        raise EquipmentError("Failed to get operation complete")
 
     def reset(self, dwell=5):
-        self.write("*RST?")
+        self.write("*RST")
         common.dwell(dwell)
 
     def command(self, command) -> bool:
