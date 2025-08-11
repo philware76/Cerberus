@@ -8,9 +8,10 @@ from pyvisa.resources.tcpip import TCPIPInstrument
 from Cerberus import common
 from Cerberus.exceptions import EquipmentError
 from Cerberus.plugins.equipment.baseEquipment import Identity
+from Cerberus.plugins.equipment.commsInterface import CommsInterface
 
 
-class VISADevice():
+class VISADevice(CommsInterface):
     def __init__(self, port, ipAddress=None, timeout=10000):
         self.port = port
         self.timeout = timeout

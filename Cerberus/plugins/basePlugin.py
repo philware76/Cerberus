@@ -43,6 +43,32 @@ class BasePlugin(ABC):
 
         self._groupParams[group.groupName] = group
 
+# --- Parameter Helpers -----------------------------------------------------------------------------------------
+    def getParameterValue(self, group: str, paramName: str) -> Any | None:
+        groupObj = self._groupParams.get(group)
+        if not groupObj:
+            return None
+        param = groupObj.get(paramName)
+        if not param:
+            return None
+        return param.value
+
+    def setParameterValue(self, group: str, paramName: str, value: Any) -> bool:
+        groupObj = self._groupParams.get(group)
+        if not groupObj:
+            return False
+
+        param = groupObj.get(paramName)
+        if not param:
+            return False
+
+        param.value = value
+        return True
+
+    def updateParameters(self, group: str, values: Dict[str, Any]):
+        for k, v in values.items():
+            self.setParameterValue(group, k, v)
+
     def isInitialised(self) -> bool:
         return self._initialised
 

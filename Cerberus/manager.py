@@ -38,12 +38,15 @@ class Manager():
             model = rec['model']
             equip = self.pluginService.findEquipment(model)
             if not equip:
-                logging.debug(f"No plugin found for model '{model}'")
+                logging.warning(f"No plugin found for model '{model}'")
                 continue
 
-            equip.setParameterValue('Communication', 'IP Address', rec['ip_address'])
-            equip.setParameterValue('Communication', 'Port', int(rec['port']))
-            equip.setParameterValue('Communication', 'Timeout', int(rec['timeout_ms']))
+            comms = {
+                'IP Address': rec.get('ip_address'),
+                'Port': int(rec.get('port', 0)),
+                'Timeout': int(rec.get('timeout_ms', 0)),
+            }
+            equip.initComms(comms)  # type: ignore[attr-defined]
             applied += 1
 
         logging.info(f"Applied comms parameters to {applied} equipment plugin(s).")

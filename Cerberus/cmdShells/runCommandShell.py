@@ -127,10 +127,13 @@ class RunCommandShell(BasePluginShell):
         stop = False
         for command in commands:
             # Let cmd.Cmd dispatch (so breakpoints in do_exit fire)
-            result = super().onecmd(command)
-            if result:          # do_exit (or any command) signaled to stop
-                stop = True
-                break
+            try:
+                result = super().onecmd(command)
+                if result:          # do_exit (or any command) signaled to stop
+                    stop = True
+                    break
+            except Exception as e:
+                print(f"Command failed: {e}")
 
         return stop
 

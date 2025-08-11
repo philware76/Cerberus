@@ -28,8 +28,6 @@ class MainShell(BaseShell):
 
     def __init__(self, manager: Manager):
         super().__init__(manager)
-        self.devices = {}
-        self.device = None
 
     def do_equip(self, arg):
         """Go into the Equipment shell subsystem"""
@@ -60,39 +58,6 @@ class MainShell(BaseShell):
         print("Exiting Cerberus shell...")
         self.manager.finalize()
         super().do_quit(arg)
-
-    def do_discover(self, arg):
-        """Discovery NESIE devices on the network.
-        You can specify the Key to sort on too."""
-        if arg is not None and arg != "":
-            sortField = arg
-        else:
-            sortField = "ID"
-
-        self.devices = EthDiscovery().search()
-        if self.devices is not None and len(self.devices) > 0:
-            self.devices = sorted(self.devices, key=lambda x: x[sortField])
-            print(tabulate(self.devices, headers="keys", tablefmt="pretty"))
-        else:
-            print("No devices found!")
-
-    def do_select(self, arg):
-        """Select a device to use"""
-        if arg is None or arg == "":
-            print("You need to specify the IP Address of the device to select")
-            return
-
-        if not is_valid_ip(arg):
-            print("You must use a valid IP Address format")
-            return
-
-        matches = [d for d in self.devices if d["IP Address"] == arg]
-        if len(matches) == 0:
-            print(f"Device at IP Address '{arg}' is not available. Run discover again.")
-            return
-
-        self.device = matches[0]
-        print(f"Selected device: {self.device}")
 
 
 def loadIni(inifile: str = "cerberus.ini") -> Tuple[str, DBInfo]:
