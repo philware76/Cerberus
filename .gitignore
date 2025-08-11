@@ -4,3 +4,4 @@ venv
 .coverage
 cov.json
 .vscode
+htmlcov

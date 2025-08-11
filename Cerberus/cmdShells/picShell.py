@@ -1,6 +1,3 @@
-import cmd
-import logging
-
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.manager import Manager
 from Cerberus.plugins.products.nesiePIC import NesiePIC

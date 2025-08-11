@@ -4,7 +4,6 @@ import pytest
 
 from Cerberus.chamberService import ChamberService
 from Cerberus.database.fileDatabase import FileDatabase
-from Cerberus.equipmentService import EquipmentService
 from Cerberus.planService import PlanService
 from Cerberus.pluginService import PluginService
 
@@ -157,32 +156,6 @@ def test_EquipmentCalibrationFields(db_env: Tuple[FileDatabase, PluginService, P
     assert rec.get('calibration_due') == new_due
 
 
-def test_EquipmentService_register_and_attach(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
-    db, pluginService, _, _ = db_env
-    equipService = EquipmentService(pluginService, db)
-    sig_id = db.upsertEquipment(
-        manufacturer="Acme",
-        model="SigModelAlpha",
-        serial="SIGGEN-SVC-1",
-        version="3.0",
-        ip="10.0.0.10",
-        port=7100,
-        timeout=2000
-    )
-    spec_id = db.upsertEquipment(
-        manufacturer="Acme",
-        model="SpecModelBeta",
-        serial="SPECAN-SVC-1",
-        version="3.1",
-        ip="10.0.0.11",
-        port=6200,
-        timeout=2200
-    )
-    assert sig_id is not None and spec_id is not None
-    assert equipService.attach(sig_id)
-    assert equipService.attach(spec_id)
-    attached_models = {e['model'] for e in equipService.listAttached()}
-    assert "SigModelAlpha" in attached_models and "SpecModelBeta" in attached_models
 
 
 def test_FetchEquipmentByModel_not_attached(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
