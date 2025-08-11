@@ -1,6 +1,5 @@
 import ipaddress
 from collections.abc import Mapping
-from typing import Dict  # backward compatibility if used elsewhere
 
 from Cerberus.plugins.basePlugin import BasePlugin
 

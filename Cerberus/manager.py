@@ -2,7 +2,6 @@ import logging
 
 from Cerberus.chamberService import ChamberService
 from Cerberus.database.storeageInterface import StorageInterface
-from Cerberus.equipmentService import EquipmentService
 from Cerberus.planService import PlanService
 from Cerberus.pluginService import PluginService
 
@@ -17,7 +16,6 @@ class Manager():
 
         self.planService = PlanService(self.pluginService, self.db)
         self.chamberService = ChamberService(self.pluginService, self.db)
-        self.equiService = EquipmentService(self.pluginService, self.db)
 
         # Load any persisted equipment comms settings for this station
         self._applyPersistedEquipmentComms()
