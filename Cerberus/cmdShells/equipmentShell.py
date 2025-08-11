@@ -5,6 +5,7 @@ from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
 from Cerberus.manager import Manager
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.equipment.commsInterface import CommsInterface
 
 
 class EquipShell(PluginsShell):
@@ -63,6 +64,25 @@ class EquipmentShell(RunCommandShell):
                 print(f" - {m}")
 
         return False
+
+    def do_write(self, command):
+        """Basic query command to device"""
+        if isinstance(self.equip, CommsInterface):
+            comms = cast(CommsInterface, self.equip)
+            if comms.write(command):
+                print("Successful")
+            else:
+                print("Unsuccessful")
+
+    def do_query(self, command):
+        """Basic query command to device"""
+        if isinstance(self.equip, CommsInterface):
+            comms = cast(CommsInterface, self.equip)
+            resp = comms.query(command)
+            if resp is not None:
+                print(resp)
+            else:
+                print("Did not get a response")
 
     def do_setForStation(self, arg):
         """
