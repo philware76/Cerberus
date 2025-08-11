@@ -18,7 +18,7 @@ class DBInfo:
 def dwell(period: float):
     period = time.perf_counter() + period
     while (time.perf_counter() < period):
-        time.sleep(0.2)
+        time.sleep(0.1)
 
 
 def dwellStop(period: float, stopFunc=None):
@@ -28,7 +28,7 @@ def dwellStop(period: float, stopFunc=None):
 
     endTime = time.perf_counter() + period
     while (time.perf_counter() < endTime):
-        time.sleep(0.2)
+        time.sleep(0.1)
         if stopFunc():
             break
 
@@ -40,7 +40,6 @@ def dwellEvent(period: float, stopEvent: Optional[Event] = None):
 
     endTime = time.perf_counter() + period
     while (time.perf_counter() < endTime):
-        time.sleep(0.2)
         if stopEvent.wait(0.1):
             break
 
