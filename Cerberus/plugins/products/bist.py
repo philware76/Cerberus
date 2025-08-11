@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Optional
 
-from Cerberus.telnetClient import TelnetClient
+from Cerberus.telnetClient import TelnetClient, TelnetError
 
 
 class Bist:
@@ -11,30 +11,45 @@ class Bist:
     Blocking / synchronous: commands wait up to the TelnetClient timeout (default 120s).
     """
 
-    def __init__(self, host: str, port: int = 3000, timeout: float = 120.0):
+    def __init__(self):
+        logging.debug("__init__")
+        self._client: TelnetClient | None = None
+
+    def initComms(self, host: str, port: int = 51234, timeout: float = 120.0):
         self._client = TelnetClient(host, port, timeout=timeout)
-        self.stable_temps = False
 
     # Connection lifecycle -------------------------------------------------------------
-    def open(self) -> None:
+
+    def openBIST(self) -> None:
+        if self._client is None:
+            raise TelnetError("initComms has not been configured.")
+
         self._client.open()
 
-    def close(self) -> None:
+    def closeBIST(self) -> None:
+        if self._client is None:
+            return
+
         self._client.close()
 
     def is_open(self) -> bool:
+        if self._client is None:
+            raise TelnetError("Must open the BIST communication first")
+
         return self._client.is_open()
 
     # Low-level helpers ----------------------------------------------------------------
     def _send(self, cmd: str) -> None:
-        logging.debug(f"BIST <- {cmd}")
+        if self._client is None or not self._client.is_open():
+            raise TelnetError("Must open the BIST communication first")
+
         self._client.send(cmd)
 
     def _query(self, cmd: str) -> str:
-        logging.debug(f"BIST <- {cmd}")
-        resp = self._client.query(cmd)
+        if self._client is None or not self._client.is_open():
+            raise TelnetError("Must open the BIST communication first")
 
-        logging.debug(f"BIST => {resp}")
+        resp = self._client.query(cmd)
         return resp
 
     # Core command wrappers ------------------------------------------------------------
@@ -229,22 +244,17 @@ class Bist:
 
     def get_temps(self):
         logging.debug('Checking Unit Temperature...')
-        # Query until DA:TEMP? returns a numeric piece
-        da_temp_raw = ''
-        attempts = 0
-        while (not da_temp_raw or da_temp_raw == '\n') and attempts < 3:
-            da_temp_raw = self._query('DA:TEMP?')
-            attempts += 1
-            if not da_temp_raw:
-                time.sleep(1)
+        da_temp_raw = self._query('DA:TEMP?')
 
         def _flt(s: str) -> float:
             num = ''.join(c for c in s if c.isdigit() or c == '.')
             return float(num) if num else float('nan')
+
         da_temp = _flt(da_temp_raw)
         rf_temp = _flt(self._query('ENG:TEMP?'))
         pa_temp = _flt(self._query('TX:PATEMP?'))
         rfmb_temp = _flt(self._query('ENG:TEMP? MB'))
+
         logging.debug(f'DA:{da_temp} RF:{rf_temp} PA:{pa_temp} MB:{rfmb_temp}')
         return da_temp, rf_temp, pa_temp, rfmb_temp
 
@@ -256,13 +266,16 @@ class Bist:
         if FWDorREV not in ['FWD', 'REV']:
             logging.debug('Select TX Link Direction (FWD/REV)')
             return
+
         logging.debug(f'Setting TX Link Direction To {FWDorREV}')
+
         # Logic preserved from legacy implementation
         special = ['0x30', '0x37', '0x3d', '0x1c', '0x3f', '0x39']
         if FWDorREV == 'FWD':
             cmd = 'TX:FORREV SET' if band in special else 'TX:FORREV CLEAR'
         else:  # REV
             cmd = 'TX:FORREV CLEAR' if band in special else 'TX:FORREV SET'
+
         self._query(cmd)
 
     def get_rx_fwd_rev(self):
@@ -367,37 +380,3 @@ class Bist:
     def tx_lte_stop(self):
         logging.debug('Stopping LTE TX')
         self._query('APP:NESIERF:OFF')
-
-    def stabilise(self):
-        logging.debug('CHECKING FOR STABLE UNIT TEMPS.')
-        self.stable_temps = False
-        temp_list = {'da_temp': [], 'rf_temp': [], 'pa_temp': [], 'mb_temp': []}
-        target_d = 0.5
-        next_sample = time.time()
-        while True:
-            if len(temp_list['da_temp']) >= 15:
-                unit_temp_d = max([
-                    max(temp_list['da_temp']) - min(temp_list['da_temp']),
-                    max(temp_list['rf_temp']) - min(temp_list['rf_temp']),
-                    max(temp_list['pa_temp']) - min(temp_list['pa_temp']),
-                    max(temp_list['mb_temp']) - min(temp_list['mb_temp']),
-                ])
-                if unit_temp_d > target_d:
-                    logging.debug(f'UNIT TEMP NOT STABLE: target {target_d} deviation {unit_temp_d}')
-                    # drop the oldest sample for all lists
-                    for k in temp_list.keys():
-                        if temp_list[k]:
-                            temp_list[k].pop(0)
-                else:
-                    logging.debug(f'UNIT STABLE: target {target_d} deviation {unit_temp_d}')
-                    self.stable_temps = True
-                    break
-            now = time.time()
-            if now >= next_sample:
-                da_temp, rf_temp, pa_temp, mb_temp = self.get_temps()
-                temp_list['da_temp'].append(da_temp)
-                temp_list['rf_temp'].append(rf_temp)
-                temp_list['pa_temp'].append(pa_temp)
-                temp_list['mb_temp'].append(mb_temp)
-                logging.debug(f'UNIT TEMPS: DA:{da_temp} RF:{rf_temp} PA:{pa_temp} MB:{mb_temp}')
-                next_sample = now + 60

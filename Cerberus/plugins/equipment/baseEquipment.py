@@ -41,6 +41,7 @@ class BaseEquipment(BasePlugin):
 
     def initialise(self, init: Any | None = None) -> bool:
         """Initialises the communication information"""
+        logging.debug("Initialise")
         return True
 
     def configure(self, config: Any | None = None) -> bool:

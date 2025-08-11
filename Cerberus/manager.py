@@ -24,7 +24,7 @@ class Manager():
 
     def _applyPersistedEquipmentComms(self):
         try:
-            records = self.db.listStationEquipment()  # type: ignore[attr-defined]
+            records = self.db.listStationEquipment()
         except Exception as ex:
             logging.error(f"Failed to list station equipment: {ex}")
             return
@@ -46,7 +46,7 @@ class Manager():
                 'Port': int(rec.get('port', 0)),
                 'Timeout': int(rec.get('timeout_ms', 0)),
             }
-            equip.initComms(comms)  # type: ignore[attr-defined]
+            equip.initComms(comms)
             applied += 1
 
         logging.info(f"Applied comms parameters to {applied} equipment plugin(s).")
