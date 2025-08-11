@@ -1,0 +1,87 @@
+import cmd
+import logging
+
+from Cerberus.cmdShells.baseShell import BaseShell
+from Cerberus.manager import Manager
+from Cerberus.plugins.products.nesiePIC import NesiePIC
+
+
+class PICShell(BaseShell):
+    def __init__(self, manager: Manager, productName: str, picIPAddress: str):
+        super().__init__(manager)
+
+        PICShell.intro = "Cerberus PIC Shell. Type help or ? to list commands."
+        PICShell.prompt = f"{productName} PIC@{picIPAddress}> "
+
+        self.pic: NesiePIC | None = None
+
+        self.productName = productName
+        self.picIPAddress = picIPAddress
+        self.daIPAddress: str
+
+        self.do_getStatus("")
+
+    def runLoop(self) -> str | None:
+        """Runs the command loop and returns the DA IP Address on exit"""
+        super().cmdloop()
+        return self.daIPAddress
+
+    def do_getStatus(self, arg):
+        pic = NesiePIC(self.picIPAddress)
+        if pic is None:
+            print("Failed to get PIC status")
+            return
+
+        self.pic = pic
+        print(pic)
+
+        self.do_getDA(arg)
+
+    def do_getDA(self, arg):
+        if self.pic is None:
+            print("Please run getstatus first")
+            return
+
+        self.daIPAddress = self.pic["daaddress"]
+        if self.daIPAddress == "0.0.0.0":
+            print("DA board not ready yet... please wait for PowerState: 8")
+            return
+
+        print("DA IP Address: " + self.daIPAddress)
+
+    def do_powerOn(self, arg):
+        if self.pic is None:
+            print("Please run getstatus first")
+            return
+
+        if not self.pic.powerOn():
+            print("Failed to request for power on")
+
+        if arg is not None:
+
+            def _timeoutFunc(timeTaken: int):
+                print(".", end="")
+                return timeTaken < 90
+
+            if self.pic.waitForPowerOn(_timeoutFunc):
+                print("\nPowered On")
+            else:
+                print("\nTimed out waiting for device to boot.")
+
+    def do_powerOff(self, arg):
+        if self.pic is None:
+            print("Please run getstatus first")
+            return
+
+        if not self.pic.powerOff():
+            print("Failed to request for power off")
+
+        if arg is not None:
+            def _timeoutFunc(timeTaken: int):
+                print(".", end="")
+                return timeTaken < 90
+
+            if self.pic.waitForPowerOff(_timeoutFunc):
+                print("\nPowered Off")
+            else:
+                print("\nTimed out waiting for device to power off.")

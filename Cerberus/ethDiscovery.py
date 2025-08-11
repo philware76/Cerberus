@@ -1,5 +1,6 @@
 import logging
 import socket
+from typing import Dict, List
 
 from Cerberus.deviceTypes import DEVICE_TYPES
 
@@ -9,9 +10,9 @@ class EthDiscovery():
 
     KEYS = ('IP Address', 'Name', 'Mac Address', 'Type', 'ID', 'Group')
 
-    def search(self):
+    def search(self) -> List[Dict[str, str]]:
         """Search and return discovered devices"""
-        results = []
+        results: List[Dict[str, str]] = []
         HOST = "0.0.0.0"
         PORT = 30303
 
