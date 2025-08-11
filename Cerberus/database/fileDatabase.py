@@ -89,9 +89,14 @@ class FileDatabase(StorageInterface):
         return None
 
     def set_TestPlanForStation(self, plan_id: int) -> bool:
-        self._data['testPlanId'] = plan_id
-        self._save_data()
-        return True
+        # Validate the plan exists before setting current
+        for planEntry in self._data.get('test_plans', []):
+            if planEntry.get('id') == plan_id:
+                self._data['testPlanId'] = plan_id
+                self._save_data()
+                return True
+        logging.warning(f"Attempted to set unknown test plan id {plan_id}")
+        return False
 
     def saveTestPlan(self, plan: Plan) -> int | None:
         test_plans: List[Dict[str, Any]] = self._data.get('test_plans', [])
