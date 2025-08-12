@@ -3,7 +3,7 @@ from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.products.bist import TacticalBIST
 
 
-class Tactical(BaseProduct, TacticalBIST):
+class BaseTactical(BaseProduct, TacticalBIST):
     FILTER_DICT = {
         0x2F: LTE7,
         0x30: LTE20,
