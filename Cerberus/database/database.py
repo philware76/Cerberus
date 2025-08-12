@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import mysql.connector
 
@@ -205,7 +207,7 @@ class Database(StorageInterface):
             WHERE s.identity = %s
         """
         cursor.execute(query, (self.stationId,))
-        row = cast(Optional[Dict[str, Any]], cursor.fetchone())
+        row = cast(Optional[dict[str, Any]], cursor.fetchone())
         plan = Plan.EmptyPlan()
         try:
             if row and row.get('plan_json'):
@@ -229,7 +231,7 @@ class Database(StorageInterface):
         query = "SELECT chamber_type FROM station WHERE identity = %s"
         try:
             cursor.execute(query, (self.stationId,))
-            row = cast(Optional[Dict[str, Any]], cursor.fetchone())
+            row = cast(Optional[dict[str, Any]], cursor.fetchone())
             if row and row.get('chamber_type') is not None:
                 val = row.get('chamber_type')
                 if isinstance(val, (bytes, bytearray)):
@@ -260,15 +262,15 @@ class Database(StorageInterface):
             if cursor:
                 cursor.close()
 
-    def listTestPlans(self) -> list[Tuple[int, Plan]]:
+    def listTestPlans(self) -> list[tuple[int, Plan]]:
         """List all test plans in the database."""
-        plans: list[Tuple[int, Plan]] = []
+        plans: list[tuple[int, Plan]] = []
         cursor = None
         try:
             cursor = self.conn.cursor(dictionary=True)
             cursor.execute("SELECT id, plan_json FROM testplans")
             for _row in cursor.fetchall():
-                row = cast(Dict[str, Any], _row)
+                row = cast(dict[str, Any], _row)
                 raw_json_obj = row.get('plan_json')
                 if isinstance(raw_json_obj, (bytes, bytearray)):
                     raw_json = raw_json_obj.decode('utf-8')
@@ -321,7 +323,7 @@ class Database(StorageInterface):
         try:
             cursor = self.conn.cursor(dictionary=True)
             cursor.execute("SELECT id FROM equipment WHERE serial = %s", (serial,))
-            row = cast(Optional[Dict[str, Any]], cursor.fetchone())
+            row = cast(Optional[dict[str, Any]], cursor.fetchone())
             if row:
                 equip_id = int(row['id'])
                 cursor.execute("""
@@ -374,16 +376,16 @@ class Database(StorageInterface):
             if cursor is not None:
                 cursor.close()
 
-    def listStationEquipment(self) -> List[Dict[str, Any]]:
+    def listStationEquipment(self) -> list[dict[str, Any]]:
         cursor = None
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         try:
             cursor = self.conn.cursor(dictionary=True)
             cursor.execute("SELECT * FROM equipment WHERE station_identity=%s ORDER BY id", (self.stationId,))
             rows = cursor.fetchall()
             if rows:
                 for r in rows:
-                    results.append(cast(Dict[str, Any], r))
+                    results.append(cast(dict[str, Any], r))
             return results
 
         except mysql.connector.Error as err:
@@ -394,14 +396,14 @@ class Database(StorageInterface):
             if cursor is not None:
                 cursor.close()
 
-    def fetchStationEquipmentByModel(self, model: str) -> Dict[str, Any] | None:
+    def fetchStationEquipmentByModel(self, model: str) -> dict[str, Any] | None:
         cursor = None
         try:
             cursor = self.conn.cursor(dictionary=True)
             cursor.execute("SELECT * FROM equipment WHERE station_identity=%s AND model=%s LIMIT 1", (self.stationId, model))
             row = cursor.fetchone()
             if row:
-                return cast(Dict[str, Any], row)
+                return cast(dict[str, Any], row)
 
             return None
 
@@ -411,4 +413,5 @@ class Database(StorageInterface):
 
         finally:
             if cursor is not None:
+                cursor.close()
                 cursor.close()

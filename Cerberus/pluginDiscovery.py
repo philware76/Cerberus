@@ -4,12 +4,11 @@ import os
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Dict
 
 from Cerberus.plugins.basePlugin import BasePlugin
 
 
-class PluginDiscovery(Dict[str, BasePlugin]):
+class PluginDiscovery(dict[str, BasePlugin]):
     def __init__(self, pluginManager, pluginType, folder):
         self.pm = pluginManager
         self.pluginType = pluginType
@@ -77,7 +76,7 @@ class PluginDiscovery(Dict[str, BasePlugin]):
             if plugin is not None:
                 self[plugin.name] = plugin
         else:
-            pass # logging.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
+            pass  # logging.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
 
     def __getitem__(self, key: str) -> BasePlugin:
         if key is None or key == "":
@@ -129,9 +128,9 @@ class PluginDiscovery(Dict[str, BasePlugin]):
                         self.registeredPlugins += 1
                         pluginCount += 1
                     else:
-                        pass #logging.debug(f"Skipped {entry.name} - module doesn't end in {self.pluginType}.py")
+                        pass  # logging.debug(f"Skipped {entry.name} - module doesn't end in {self.pluginType}.py")
                 else:
-                    pass #logging.debug(f"Skipped {entry.name} - not a valid {self.pluginType}.py plugin file.")
+                    pass  # logging.debug(f"Skipped {entry.name} - not a valid {self.pluginType}.py plugin file.")
 
             if pluginCount == 0:
                 logging.warning(f"No {self.pluginType} plugins found in {pluginFolder}. Ensure plugins are correctly implemented and named.")

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
                                              StringParameter)
@@ -34,7 +34,7 @@ class BaseEquipment(BasePlugin):
         self.identity = Identity("")
         self.addParameterGroup(CommsParams())
 
-    def initComms(self, comms: Dict[str, Any]) -> None:
+    def initComms(self, comms: dict[str, Any]) -> None:
         """Initialise communication parameters from a dict (keys: 'IP Address','Port','Timeout')."""
         if isinstance(comms, dict):
             self.updateParameters("Communication", comms)
@@ -75,6 +75,6 @@ class BaseEquipment(BasePlugin):
         param.value = value
         return True
 
-    def updateParameters(self, group: str, values: Dict[str, Any]):
+    def updateParameters(self, group: str, values: dict[str, Any]):
         for k, v in values.items():
             self.setParameterValue(group, k, v)

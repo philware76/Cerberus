@@ -1,6 +1,6 @@
 import shlex
 from pathlib import Path
-from typing import Dict, List, cast
+from typing import cast
 
 from tabulate import tabulate
 
@@ -23,7 +23,7 @@ class ProductsShell(PluginsShell):
         super().__init__(manager, pluginService.productPlugins, "Product")
 
         self.picIPAddress: str | None = None
-        self.nesies: List[Dict[str, str]] = []
+        self.nesies: list[dict[str, str]] = []
 
     def do_discover(self, arg):
         """Discover NESIE devices.
@@ -154,7 +154,7 @@ class ProductShell(RunCommandShell):
         super().__init__(product, manager)
         self.product: BaseProduct = product
         self.config = {}
-        self.nesies: List[Dict[str, str]] = []
+        self.nesies: list[dict[str, str]] = []
         self.picIPAddress: str | None = None
         self.daIPAddress: str | None = None
         self.bist: BaseBIST | None = None
