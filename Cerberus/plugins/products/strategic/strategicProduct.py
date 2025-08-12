@@ -5,11 +5,10 @@ from Cerberus.plugins.products.bist import StrategicBIST
 
 
 class BaseStrategic(BaseProduct, StrategicBIST):
+    SLOT_DETAILS_DICT = {0: EGSM900, 1: DCS1800, 2: THREEGBAND1}
+
     def __init__(self, name: str, description: str | None = None):
         super().__init__(name, description)
-
-
-SLOT_DETAILS_DICT = {0: EGSM900, 1: DCS1800, 2: THREEGBAND1}
 
 
 @hookimpl
@@ -23,5 +22,4 @@ class Strategic(BaseStrategic):
         super().__init__("Strategic")
 
     def Initialise(self) -> bool:
-        return super().initialise()
         return super().initialise()

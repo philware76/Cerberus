@@ -1,5 +1,5 @@
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.products.tactical.tactical import Tactical
+from Cerberus.plugins.products.tactical.tactical import BaseTactical
 
 
 @hookimpl
@@ -8,7 +8,7 @@ def createProductPlugin():
     return TacticalU()
 
 
-class TacticalU(Tactical):
+class TacticalU(BaseTactical):
     def __init__(self):
         super().__init__("Tactical_U_Transceiver")
 
