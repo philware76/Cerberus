@@ -22,19 +22,16 @@ class Executor:
             logging.error(f"Failed to initialize test: {test.name}")
             return False
 
-        # Check for required equipment (not initialised here)
-        req_map, missingEquipTypes = self.pluginService.checkRequirements(test)
-        if len(missingEquipTypes) > 0:
-            logging.error(f"Missing required equipment for test: {test.name}. Missing: {missingEquipTypes}")
+        # Get requirements (candidates, missing, and default selection in one call)
+        reqs = self.pluginService.getRequirements(test)
+        if len(reqs.missing) > 0:
+            missing_names = [t.__name__ for t in reqs.missing]
+            logging.error(f"Missing required equipment for test: {test.name}. Missing: {missing_names}")
             return False
 
-        # Select one instance per required type and initialise now (comms already applied by Manager)
+        # Initialise selected equipment instances now
         equip_map: dict[type[BaseEquipment], BaseEquipment] = {}
-        for req_type, candidates in req_map.items():
-            if not candidates:
-                continue
-            # Simple policy: pick the first available candidate
-            equip = candidates[0]
+        for req_type, equip in reqs.selection.items():
             if not equip.initialise():
                 logging.error(f"Failed to initialise {equip.name}, is it online?")
                 return False

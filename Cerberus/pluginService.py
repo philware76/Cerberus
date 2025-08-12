@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Dict, List, Tuple, Type, TypeVar, cast
 
 import pluggy
@@ -13,6 +14,17 @@ from Cerberus.plugins.tests.baseTest import BaseTest
 
 # Generic type variable for equipment specialisation
 T = TypeVar("T", bound=BaseEquipment)
+
+
+# New unified requirements container
+@dataclass
+class Requirements:
+    # All matching candidates per required equipment type
+    candidates: Dict[Type[BaseEquipment], List[BaseEquipment]]
+    # Types that have no candidates available
+    missing: List[Type[BaseEquipment]]
+    # Selected instance per required type based on current policy (not initialised)
+    selection: Dict[Type[BaseEquipment], BaseEquipment]
 
 
 class PluginService:
@@ -77,10 +89,19 @@ class PluginService:
 
         return plugins
 
+    # Deprecated: now delegates to getRequirements to preserve compatibility
     def checkRequirements(self, test: BaseTest) -> Tuple[Dict[Type[BaseEquipment], List[BaseEquipment]], List[str]]:
         """Return a mapping of required types to available equipment instances (not initialised), and a list of missing type names."""
-        req_map: Dict[Type[BaseEquipment], List[BaseEquipment]] = {}
-        missing: List[str] = []
+        reqs = self.getRequirements(test)
+        missing_names = [t.__name__ for t in reqs.missing]
+        return reqs.candidates, missing_names
+
+    # New unified API: compute candidates, missing, and a selection in one call
+    def getRequirements(self, test: BaseTest) -> Requirements:
+        """Return requirements info: candidates per type, missing types, and a selected instance per required type (not initialised)."""
+        candidates: Dict[Type[BaseEquipment], List[BaseEquipment]] = {}
+        missing: List[Type[BaseEquipment]] = []
+        selection: Dict[Type[BaseEquipment], BaseEquipment] = {}
 
         logging.warning(f"Checking requirements for test: {test.name}")
         equipmentRequirements: List[Type[BaseEquipment]] = test.requiredEquipment
@@ -90,34 +111,20 @@ class PluginService:
             logging.debug(" - Required equipment: %s", equipType.__name__)
             matches = [equip for equip in equipmentList if isinstance(equip, equipType)]
             if matches:
-                req_map[equipType] = matches
+                candidates[equipType] = matches
                 for equip in matches:
                     logging.debug(f"   - Found: {equip.name}")
+                # Selection policy: first candidate
+                selection[equipType] = matches[0]
             else:
                 logging.debug(f"   - Missing: {equipType.__name__}")
-                missing.append(equipType.__name__)
+                missing.append(equipType)
 
-        return req_map, missing
+        return Requirements(candidates=candidates, missing=missing, selection=selection)
 
-    def getRequirements(self, test: BaseTest) -> dict[str, list[BaseEquipment]]:
-        """Return a dict mapping required equipment type names to a list of matching equipment instances."""
-        requirement_matches = {}
-
-        logging.warning(f"Checking requirements for test: {test.name}")
-        equipmentRequirements: List[Type[BaseEquipment]] = test.requiredEquipment
-
-        for equipType in equipmentRequirements:
-            type_name = equipType.__name__
-            logging.debug(" - Required equipment: %s", type_name)
-
-            matching_equips = self.findEquipTypes(equipType)
-
-            if matching_equips:
-                for equip in matching_equips.values():
-                    logging.debug(f"   - Found: {equip.name}")
-            else:
-                logging.debug(f"   - Missing: {type_name}")
-
-            requirement_matches[type_name] = list(matching_equips.values())
-
-        return requirement_matches
+    # Deprecated: now delegates to getRequirements to preserve compatibility
+    def selectEquipmentFor(self, test: BaseTest) -> Dict[Type[BaseEquipment], BaseEquipment]:
+        """Choose one equipment instance per required type for the given test (no initialisation).
+        Current policy: pick the first available candidate for each required type.
+        """
+        return self.getRequirements(test).selection
