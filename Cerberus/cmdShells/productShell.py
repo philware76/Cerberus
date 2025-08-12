@@ -38,42 +38,47 @@ class ProductsShell(PluginsShell):
         sort_field = None
 
         if len(parts) == 0:
-            sort_field = "Name"
+            sort_field = "Name"  # default sort when no args
         elif len(parts) == 1:
             sort_field = parts[0]
         elif len(parts) >= 2:
             filter_col, filter_value = parts[0], parts[1]
             sort_field = "Name"  # default sort after filtering
 
-        devices = EthDiscovery().search()
+        devices = EthDiscovery.search()
         if not devices:
             print("No devices found!")
             self.nesies = []
             return
 
-        # Apply filter if requested
+        # Build case-insensitive key map for columns
+        key_map = {k.casefold(): k for k in devices[0].keys()}
+
+        # Apply filter if requested (case-insensitive column and value)
         if filter_col and filter_value:
-            if filter_col not in devices[0]:
+            norm_filter_col = key_map.get(filter_col.casefold())
+            if not norm_filter_col:
                 print(f"Unknown filter column '{filter_col}'. Available: {', '.join(devices[0].keys())}")
                 self.nesies = []
                 return
-            fv = str(filter_value).lower()
+            fv = str(filter_value).casefold()
 
             def _contains(v):
                 try:
-                    return fv in str(v).lower()
+                    return fv in str(v).casefold()
                 except Exception:
                     return False
-            devices = [d for d in devices if _contains(d.get(filter_col, ""))]
+            devices = [d for d in devices if _contains(d.get(norm_filter_col, ""))]
             if not devices:
                 print("No devices match the specified filter.")
                 self.nesies = []
                 return
 
-        # Optional sort
+        # Optional sort (case-insensitive column name)
         if sort_field:
-            if sort_field in devices[0]:
-                devices = sorted(devices, key=lambda x: x[sort_field])
+            norm_sort_field = key_map.get(sort_field.casefold())
+            if norm_sort_field:
+                devices = sorted(devices, key=lambda x: x[norm_sort_field])
             else:
                 print(f"Unknown sort field '{sort_field}'. No sorting applied.")
 
@@ -110,28 +115,32 @@ class ProductsShell(PluginsShell):
         self.productID = selected['ID']
         ProductsShell.prompt = f"{self.productType} @{self.picIPAddress}> "
 
-    def do_connect(self, arg):
+    def do_connect(self, name):
         """Connects the selected device to a Product Plugin. Can select with Connect <IP | Idx> as well"""
-        if arg is not None and arg != "":
-            self.do_select(arg)
+        if name is not None and name != "":
+            self.do_select(name)
 
         productPluginName = prodIDMapping[self.productID]
         super().do_load(productPluginName)
         if self._shell is not None:
             pShell = cast(ProductShell, self._shell)
             pShell.picIPAddress = self.picIPAddress
+            ProductShell.prompt = f"{productPluginName} PIC@{pShell.picIPAddress}> "
+
+        super().do_open("")
 
     def do_load(self, name):
+        """Not used"""
         print("Please use 'select' device and then 'connect'")
 
-    def do_open(self, name):
+    def do_open(self, arg):
+        """Not used"""
         print("Please use 'select' device and then 'connect'")
 
 
 class ProductShell(RunCommandShell):
     def __init__(self, product: BaseProduct, manager: Manager):
         ProductShell.intro = f"Welcome to Cerberus {product.name} Product System. Type help or ? to list commands.\n"
-        ProductShell.prompt = f"{product.name}> "
 
         super().__init__(product, manager)
         self.product: BaseProduct = product
@@ -142,6 +151,7 @@ class ProductShell(RunCommandShell):
         self.bist: BaseBIST | None = None
 
     def do_openPIC(self, arg):
+        """Open the PIC controller"""
         if self.picIPAddress is None:
             print("No selected PIC to open")
             return
