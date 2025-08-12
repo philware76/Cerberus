@@ -150,6 +150,32 @@ class DuplexerMixin:
     def get_duplex(self: _BISTIO,  side: str): return self._query(f"{side}:DUP?")
     def set_duplex(self: _BISTIO,  side: str, code: str): self._send(f"{side}:DUP {code}")
 
+    def set_duplexer(self: _BISTIO, band_name: str, *, TXorRX: str | None = None):
+        """Set duplexer path by band name and side.
+        TXorRX must be 'TX' or 'RX'. Band name must be one of the known slots.
+        Order-sensitive mapping follows legacy behavior.
+        """
+        if TXorRX not in ('TX', 'RX'):
+            logging.debug('Select Transmit or Receive Path (TX/RX) ONLY')
+            return
+
+        names = ['LTE_7', 'LTE_20', 'GSM850', 'EGSM900', 'DCS1800', 'PCS1900',
+                 'UMTS_1', 'SPARE', 'SPARE2', 'SPARE3', 'SPARE4', 'SPARE5']
+        try:
+            slot_num = names.index(band_name)
+        except ValueError:
+            logging.debug(f'Band name {band_name} not recognised')
+            return
+
+        # Single mapping for type and suffix; hundreds digit differs by TX/RX (1 vs 3)
+        kinds = ['DUP', 'DUP', 'DUP', 'FIL', 'FIL', 'FIL', 'DUP', 'DUP', 'DUP', 'DUP', 'DUP', 'DUP']
+        suffixes = ['00',  '01',  '02',  '00',  '01',  '02',  '03',  '04',  '05',  '06',  '07',  '08']
+        hundreds = '1' if TXorRX == 'TX' else '3'
+        selected_path = f"{kinds[slot_num]}{hundreds}{suffixes[slot_num]}"
+
+        logging.debug(f'Setting Duplexer Path To: {selected_path}')
+        self._send(f'{TXorRX}:DUP {selected_path}')
+
 
 class TempsMixin:
     def get_temps(self: _BISTIO):
