@@ -34,6 +34,16 @@ class RunCommandShell(BasePluginShell):
         self.allowed_methods = get_base_methods(self.base_cls)
         self.parsers = self._buildParsers()
 
+    # Include dynamic plugin method names in tab completion of the first word
+    def completenames(self, text, *ignored):  # type: ignore[override]
+        try:
+            base = super().completenames(text, *ignored)
+        except Exception:
+            base = []
+        plugin_cmds = [name for name in self.allowed_methods.keys() if name.startswith(text)]
+        # Deduplicate and sort case-insensitively
+        return sorted(set(base + plugin_cmds), key=str.lower)
+
     def _buildParsers(self) -> Dict[str, argparse.ArgumentParser]:
         """Build ArgumentParsers for each allowed method based on its signature."""
         parsers = {}
@@ -158,7 +168,8 @@ class RunCommandShell(BasePluginShell):
         """List the commands this plugin can execute"""
         if not cmd:
             print("Available commands:-")
-            for method_name, method in self.allowed_methods.items():
+            for method_name in sorted(self.allowed_methods.keys(), key=str.lower):
+                method = self.allowed_methods[method_name]
                 sig = inspect.signature(method)
 
                 # Build parameter list, excluding 'self'
