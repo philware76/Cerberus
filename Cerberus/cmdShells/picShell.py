@@ -24,6 +24,7 @@ class PICShell(BaseShell):
         return self.daIPAddress
 
     def do_getStatus(self, arg):
+        """Get the status of the device"""
         pic = NesiePIC(self.picIPAddress)
         if pic is None:
             print("Failed to get PIC status")

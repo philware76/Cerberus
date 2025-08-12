@@ -63,7 +63,7 @@ class PluginsShell(BaseShell):
         except Exception as e:
             print(f"Failed to create plugin shell: {modName}.{className} - {e}")
 
-    def do_open(self, name):
+    def do_open(self, arg):
         """Opens a new shell or the currently loaded shell"""
         if self._shell is None:
             print("You need to load a shell first")

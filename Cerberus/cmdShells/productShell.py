@@ -1,4 +1,5 @@
 import shlex
+from pathlib import Path
 from typing import Dict, List, cast
 
 from tabulate import tabulate
@@ -12,6 +13,7 @@ from Cerberus.manager import Manager
 from Cerberus.plugins.common import prodIDMapping
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.products.bist import BaseBIST
+from Cerberus.plugins.products.utilities import EEPROM, NesieSSH, SSHComms
 
 
 class ProductsShell(PluginsShell):
@@ -133,11 +135,11 @@ class ProductsShell(PluginsShell):
         super().do_open("")
 
     def do_load(self, name):
-        """Not used"""
-        print("Please use 'discover' and then 'connect'")
+        """Do not use for Product shell"""
+        super().do_load(name)
 
     def do_open(self, arg):
-        """Not used"""
+        """Do not use for Product shell"""
         print("Please use 'discover' and then 'connect'")
 
 
@@ -168,17 +170,13 @@ class ProductShell(RunCommandShell):
 
     def do_openDA(self, arg):
         """Connect to a Nesie with the selected IP """
-        if self.daIPAddress is None:
-            print("Please use openPIC command first to get DA Address")
-            return
-
-        if self.daIPAddress == "0.0.0.0":
-            print("Device has not yet booted. Please boot device first using openPIC/powerON commands")
+        host = self._require_da_ip()
+        if not host:
             return
 
         # if it's the same connection, don't do anything
-        if self.bist is not None and self.bist.bistHost == self.daIPAddress:
-            ProductShell.prompt = f"{self.product.name} DA@{self.daIPAddress}> "
+        if self.bist is not None and self.bist.bistHost == host:
+            ProductShell.prompt = f"{self.product.name} DA@{host}> "
             return
 
         # If we have got a bist, and it's not the same as before, close the previous connection
@@ -188,7 +186,53 @@ class ProductShell(RunCommandShell):
 
         # Now open a new BIST telnet connection
         self.bist = cast(BaseBIST, self.product)
-        self.bist.initComms(host=self.daIPAddress)
+        self.bist.initComms(host=host)
         self.bist.openBIST()
 
-        ProductShell.prompt = f"{self.product.name} DA@{self.daIPAddress}> "
+        ProductShell.prompt = f"{self.product.name} DA@{host}> "
+
+    def _resolve_key_path(self) -> Path:
+        # From cmdShells/productShell.py -> up to Cerberus, down to plugins/products/Keys/id_rsa.zynq
+        return (Path(__file__).resolve().parent.parent / "plugins" / "products" / "Keys" / "id_rsa.zynq").resolve()
+
+    def _require_da_ip(self) -> str | None:
+        if self.daIPAddress is None:
+            print("Please use openPIC command first to get DA Address")
+            return None
+        if self.daIPAddress == "0.0.0.0":
+            print("Device has not yet booted. Please boot device first using openPIC/powerON commands")
+            return None
+        return self.daIPAddress
+
+    def do_stopNesie(self, arg):
+        """Stop the NESIE daemon on the DA via SSH."""
+        host = self._require_da_ip()
+        if not host:
+            return
+        key_path = self._resolve_key_path()
+        with SSHComms(host, username="root", key_path=key_path) as ssh:
+            nesie = NesieSSH(ssh)
+            ok = nesie.stop_daemon()
+            print("NESIE-daemon stopped" if ok else "Failed to stop NESIE-daemon")
+
+    def do_killNese(self, arg):
+        """Kill the NESIE daemon process on the DA via SSH."""
+        host = self._require_da_ip()
+        if not host:
+            return
+        key_path = self._resolve_key_path()
+        with SSHComms(host, username="root", key_path=key_path) as ssh:
+            nesie = NesieSSH(ssh)
+            ok, _ = nesie.kill_nesie()
+            print("killall nesie-daemon sent" if ok else "Failed to issue killall nesie-daemon")
+
+    def do_readEEPROM(self, arg):
+        """Read EEPROM contents from the DA via SSH."""
+        host = self._require_da_ip()
+        if not host:
+            return
+        key_path = self._resolve_key_path()
+        with SSHComms(host, username="root", key_path=key_path) as ssh:
+            eep = EEPROM(ssh)
+            ok = eep.read()
+            print("EEPROM read OK" if ok else "EEPROM read failed")
