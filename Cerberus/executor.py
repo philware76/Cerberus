@@ -1,7 +1,7 @@
 import logging
 
 from Cerberus.exceptions import TestError
-from Cerberus.manager import Manager, PluginService
+from Cerberus.manager import PluginService
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
@@ -28,6 +28,7 @@ class Executor:
             if not equip.initialise():
                 logging.error(f"Failed to initialise {equip.name}, is it online?")
                 return False
+
             logging.debug(f"{equip.name} has been initialised (online)")
             equip_map[req_type] = equip
 
@@ -51,8 +52,10 @@ class Executor:
         # Run the actual test logic
         try:
             test.run()
+
         except TestError as e:
             logging.error(f"Failed to run {test.name} with {e}")
+
         finally:
             test.finalise()
 
