@@ -10,10 +10,11 @@ from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
 from Cerberus.ethDiscovery import EthDiscovery
 from Cerberus.manager import Manager
-from Cerberus.plugins.common import prodIDMapping
+from Cerberus.plugins.common import NESIE_TYPES
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.products.bist import BaseBIST
-from Cerberus.plugins.products.utilities import EEPROM, NesieSSH, SSHComms
+from Cerberus.plugins.products.utilities import (EEPROM, FittedBands, NesieSSH,
+                                                 SSHComms)
 
 
 class ProductsShell(PluginsShell):
@@ -125,7 +126,7 @@ class ProductsShell(PluginsShell):
         if not self._select(arg):
             return
 
-        productPluginName = prodIDMapping[self.productID]
+        productPluginName = NESIE_TYPES[self.productID]
         super().do_load(productPluginName)
         if self._shell is not None:
             pShell = cast(ProductShell, self._shell)
@@ -157,6 +158,7 @@ class ProductShell(RunCommandShell):
         self.picIPAddress: str | None = None
         self.daIPAddress: str | None = None
         self.bist: BaseBIST | None = None
+        self._eeprom_values: list[str] = []
 
     def do_openPIC(self, arg):
         """Open the PIC controller"""
@@ -199,6 +201,7 @@ class ProductShell(RunCommandShell):
         if self.daIPAddress is None:
             print("Please use openPIC command first to get DA Address")
             return None
+
         if self.daIPAddress == "0.0.0.0":
             print("Device has not yet booted. Please boot device first using openPIC/powerON commands")
             return None
@@ -209,17 +212,19 @@ class ProductShell(RunCommandShell):
         host = self._require_da_ip()
         if not host:
             return
+
         key_path = self._resolve_key_path()
         with SSHComms(host, username="root", key_path=key_path) as ssh:
             nesie = NesieSSH(ssh)
             ok = nesie.stop_daemon()
             print("NESIE-daemon stopped" if ok else "Failed to stop NESIE-daemon")
 
-    def do_killNese(self, arg):
+    def do_killNesie(self, arg):
         """Kill the NESIE daemon process on the DA via SSH."""
         host = self._require_da_ip()
         if not host:
             return
+
         key_path = self._resolve_key_path()
         with SSHComms(host, username="root", key_path=key_path) as ssh:
             nesie = NesieSSH(ssh)
@@ -231,8 +236,56 @@ class ProductShell(RunCommandShell):
         host = self._require_da_ip()
         if not host:
             return
+
         key_path = self._resolve_key_path()
         with SSHComms(host, username="root", key_path=key_path) as ssh:
             eep = EEPROM(ssh)
-            ok = eep.read()
-            print("EEPROM read OK" if ok else "EEPROM read failed")
+            values = eep.read()
+            self._eeprom_values = values or []
+
+            if values:
+                # Pretty print as rows of 8 words
+                row = 8
+                print("EEPROM 32-bit values ({} total):".format(len(values)))
+                for i in range(0, len(values), row):
+                    chunk = values[i:i+row]
+                    print("  " + "  ".join(chunk))
+            else:
+                print("Failed to read EEPROM or no data parsed")
+
+    def do_bandsFitted(self, arg):
+        """Show fitted bands from the last EEPROM read.
+        Usage: bandsFitted
+        Note: Run readEEPROM first.
+        """
+        if not self._eeprom_values:
+            print("No EEPROM data cached. Run readEEPROM first.")
+            return
+
+        slot_details = self.product.SLOT_DETAILS_DICT
+        filter_dict = self.product.FILTER_DICT
+        if not slot_details or not filter_dict:
+            print("Product does not provide SLOT_DETAILS_DICT and FILTER_DICT")
+            return
+
+        bands = FittedBands.bands(self._eeprom_values, slot_details, filter_dict)
+        if not bands:
+            print("No fitted bands could be determined")
+            return
+
+        print(f"Fitted bands ({len(bands)}):")
+        for i, name in enumerate(bands, 1):
+            print(f"  {i:2d}. {name}")
+
+    def do_slotDetails(self, arg):
+        """Pretty-print the product's SLOT_DETAILS_DICT mapping of slot -> band name.
+        Usage: slotDetails
+        """
+        slot_details = self.product.SLOT_DETAILS_DICT
+        if not slot_details:
+            print("Product does not provide SLOT_DETAILS_DICT")
+            return
+
+        print(f"Slot details ({len(slot_details)}):")
+        for idx in sorted(slot_details.keys()):
+            print(f"  Slot {idx:2d}: {slot_details[idx]}")

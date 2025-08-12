@@ -1,9 +1,11 @@
 import logging
 import os
+import pathlib
 import socket
 import time
 from re import split
 
+import pandas as pd
 import paramiko
 
 
@@ -247,21 +249,40 @@ class EEPROM:
     def __init__(self, comms: SSHComms) -> None:
         self.ssh = comms
         self.lines: list[str] = []
+        self.values: list[str] = []  # parsed 32-bit hex words from DATA=(...)
 
     # --- reading ---------------------------------------------------------------
-    def read(self, *, display_stdout: bool = False) -> bool:
+    def read(self, *, display_stdout: bool = False) -> list[str]:
         ok, result = self.ssh.exec(self.READ_CMD, display_stdout=display_stdout)
         self.lines = result if isinstance(result, list) else [str(result)]
+
+        values: list[str] = []
         if ok:
-            logging.debug("Read EEPROM OK")
+            # Find the response line and extract DATA=(...)
+            for line in self.lines:
+                if line.startswith("Response ") and "DATA=(" in line:
+                    start = line.find("DATA=(") + len("DATA=(")
+                    end = line.find(")", start)
+                    if end != -1:
+                        inner = line[start:end]
+                        values = [tok.strip().lower().zfill(8) for tok in inner.split(',') if tok.strip()]
+                    break
+
+            if values:
+                logging.debug("Read EEPROM OK")
+            else:
+                logging.debug("EEPROM response found but no DATA words parsed")
         else:
             logging.debug("Failed to read the EEPROM, or at least the SSH command failed.")
-        return ok
+
+        self.values = values
+        return values
 
     def get_token_line(self) -> str:
         for line in self.lines:
             if 'TOKEN=d000 LENGTH=041' in line:
                 return line
+
         raise RuntimeError("Failed to read out token from EEPROM")
 
     @staticmethod
@@ -285,11 +306,6 @@ class EEPROM:
         self._convert_eeprom_hex(slots, slots11to08)
         self._convert_eeprom_hex(slots, slots15to12)
         return slots
-
-    def unit_hex_values(self) -> list[str]:
-        logging.debug('\nInterrogating Unit For Available Bands...')
-        slots = self.read_slots()
-        return [hex(i) for i in slots]
 
     # --- text file maintenance -------------------------------------------------
     def create_eeprom_txt_file(self) -> bool:
@@ -340,3 +356,76 @@ class EEPROM:
             attempts += 1
             time.sleep(1)
         return False
+
+
+class FittedBands:
+    """Helper to determine fitted bands from EEPROM 32-bit word values.
+
+    Usage:
+        bands = FittedBands.bands(values, slot_details, filters)
+    where
+        - values: list[str] from EEPROM.read() (each an 8-hex-digit string)
+        - slot_details: mapping of slot index -> default band name (first 7 slots may supply defaults)
+        - filters: mapping of filter code (int) -> band name
+    """
+
+    @staticmethod
+    def _bytes_from_word(word: str) -> list[int]:
+        w = word.strip().lower().zfill(8)[-8:]
+        return [int(w[-2:], 16), int(w[-4:-2], 16), int(w[-6:-4], 16), int(w[-8:-6], 16)]
+
+    @classmethod
+    def _slots_from_values(cls, values: list[str], filters: dict[int, str]) -> list[int]:
+        if not values:
+            return []
+
+        # Convert each 32-bit word into 4 bytes (LSB..MSB) and slide a 4-word window to get 16 slots
+        candidate: list[int] | None = None
+        filter_keys = set(filters.keys())
+
+        for i in range(0, max(0, len(values) - 3)):
+            window = values[i:i+4]
+            bytes16: list[int] = []
+            for w in window:
+                bytes16.extend(cls._bytes_from_word(w))
+            # Heuristic: prefer windows that contain at least one known filter code
+            if any(b in filter_keys for b in bytes16):
+                candidate = bytes16
+
+        # Fallback to the last 4 words if nothing matched
+        if candidate is None:
+            bytes16 = []
+            for w in values[-4:]:
+                bytes16.extend(cls._bytes_from_word(w))
+            candidate = bytes16
+
+        return candidate
+
+    @classmethod
+    def bands(cls, values: list[str], slot_details: dict[int, str], filters: dict[int, str]) -> list[str]:
+        slots = cls._slots_from_values(values, filters)
+        if not slots:
+            return []
+
+        ST = len(slot_details)
+        reverse_filter = {v: k for k, v in filters.items()}
+
+        # Apply default mapping for first 7 slots when value is 0xff
+        converted: list[int] = []
+        for i, x in enumerate(slots[:ST]):
+            if i <= 6 and x == 0xFF:
+                default_name = slot_details.get(i)
+                code = reverse_filter.get(default_name) if default_name is not None else None
+                converted.append(code if code is not None else 0xFF)
+            else:
+                converted.append(x)
+
+        # Map codes to band names, ignore unknowns/0xff
+        result: list[str] = []
+        for i, code in enumerate(converted):
+            if i >= ST:
+                break
+            name = filters.get(code)
+            if name:
+                result.append(name)
+        return result
