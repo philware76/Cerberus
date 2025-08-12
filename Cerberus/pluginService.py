@@ -28,7 +28,7 @@ class PluginService:
         self._checIDkMapping()
 
     def _checIDkMapping(self):
-        for prodId, prodName in prodIDMapping.items():
+        for _, prodName in prodIDMapping.items():
             if not self.findProduct(prodName):
                 logging.warning(f"Failed to find Product '{prodName}' in ProdIDMapping dictionary.")
 
