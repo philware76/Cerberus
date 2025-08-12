@@ -15,6 +15,20 @@ class DBInfo:
     database: str = "cerberus"
 
 
+class Spinner:
+    def __init__(self, chars=None):
+        if chars is None:
+            chars = ['', '.', '..', '...', '....', '.....']
+
+        self.chars = chars
+        self.index = 0
+
+    def next(self):
+        char = self.chars[self.index]
+        self.index = (self.index + 1) % len(self.chars)  # Cycle through indices
+        return char
+
+
 def dwell(period: float):
     period = time.perf_counter() + period
     while (time.perf_counter() < period):
