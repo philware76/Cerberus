@@ -86,61 +86,67 @@ class ProductsShell(PluginsShell):
         self.nesies = [{"Idx": str(i), **nesie} for i, nesie in enumerate(devices)]
         print(tabulate(self.nesies, headers="keys", tablefmt="pretty"))
 
-    def do_select(self, arg):
-        """Select a device to use <IP | Idx>"""
-        if arg is None or arg == "":
-            print("You need to specify the IP Address of the device to select")
-            return
-
+    def _select(self, arg) -> bool:
         if len(self.nesies) == 0:
             print("Please run discover before selecting a Nesie")
-            return
+            return False
 
         if not is_valid_ip(arg):
             if not arg.isdigit():
                 print("You must use a valid Index or IP Address format")
-                return
+                return False
+
             else:
                 selected = self.nesies[int(arg)]
+
         else:
             matches = [d for d in self.nesies if d["IP Address"] == arg]
             if len(matches) == 0:
                 print(f"Device at IP Address '{arg}' is not available. Run discover again.")
-                return
+                return False
 
             selected = matches[0]
 
         self.picIPAddress = selected["IP Address"]
         self.productType = selected['Type']
         self.productID = selected['ID']
-        ProductsShell.prompt = f"{self.productType} @{self.picIPAddress}> "
+        # ProductsShell.prompt = f"{self.productType} @{self.picIPAddress}> "
 
-    def do_connect(self, name):
+        return True
+
+    def do_connect(self, arg):
         """Connects the selected device to a Product Plugin. Can select with Connect <IP | Idx> as well"""
-        if name is not None and name != "":
-            self.do_select(name)
+        if arg is None:
+            print("You must provide an IP address or Index to connect to")
+            return
+
+        if not self._select(arg):
+            return
 
         productPluginName = prodIDMapping[self.productID]
         super().do_load(productPluginName)
         if self._shell is not None:
             pShell = cast(ProductShell, self._shell)
             pShell.picIPAddress = self.picIPAddress
-            ProductShell.prompt = f"{productPluginName} PIC@{pShell.picIPAddress}> "
+            ProductShell.prompt = f"{productPluginName} @{pShell.picIPAddress}> "
 
         super().do_open("")
 
     def do_load(self, name):
         """Not used"""
-        print("Please use 'select' device and then 'connect'")
+        print("Please use 'discover' and then 'connect'")
 
     def do_open(self, arg):
         """Not used"""
-        print("Please use 'select' device and then 'connect'")
+        print("Please use 'discover' and then 'connect'")
 
 
 class ProductShell(RunCommandShell):
     def __init__(self, product: BaseProduct, manager: Manager):
-        ProductShell.intro = f"Welcome to Cerberus {product.name} Product System. Type help or ? to list commands.\n"
+        ProductShell.intro = f"""
+            Welcome to Cerberus {product.name} Product System. Type help or ? to list commands.
+            Please use openPIC or openDA commands first\n
+            """
 
         super().__init__(product, manager)
         self.product: BaseProduct = product
@@ -162,7 +168,11 @@ class ProductShell(RunCommandShell):
 
     def do_openDA(self, arg):
         """Connect to a Nesie with the selected IP """
-        if self.daIPAddress is None or self.daIPAddress == "0.0.0.0":
+        if self.daIPAddress is None:
+            print("Please use openPIC command first to get DA Address")
+            return
+
+        if self.daIPAddress == "0.0.0.0":
             print("Device has not yet booted. Please boot device first using openPIC/powerON commands")
             return
 
@@ -181,5 +191,4 @@ class ProductShell(RunCommandShell):
         self.bist.initComms(host=self.daIPAddress)
         self.bist.openBIST()
 
-        ProductShell.prompt = f"{self.product.name} DA@{self.daIPAddress}> "
         ProductShell.prompt = f"{self.product.name} DA@{self.daIPAddress}> "
