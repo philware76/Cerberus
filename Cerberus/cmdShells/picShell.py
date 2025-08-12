@@ -30,13 +30,22 @@ class PICShell(BaseShell):
             return
 
         self.pic = pic
-        print(pic)
+        powerState = self.pic["PowerState"]
+        self.daIPAddress = self.pic["daaddress"]
+        print(f"""
+            Power state: {"ON" if powerState == 8 else "OFF" if powerState == 0 else "Booting..."}
+            DA Address : {"Not available" if self.daIPAddress == "0.0.0.0" else self.daIPAddress}
+            Temperature: {self.pic["temperature"]}
 
-        self.do_getDA(arg)
+              """)
+
+        if self.daIPAddress != "0.0.0.0":
+            print("You can exit back as we have the DA Address")
 
     def do_getDA(self, arg):
+        """Get the DA Address and store it for later use with openDA command"""
         if self.pic is None:
-            print("Please run getstatus first")
+            print("Please run getStatus first")
             return
 
         self.daIPAddress = self.pic["daaddress"]
@@ -47,6 +56,7 @@ class PICShell(BaseShell):
         print("DA IP Address: " + self.daIPAddress)
 
     def do_powerOn(self, arg):
+        """Powers on the devce"""
         if self.pic is None:
             print("Please run getstatus first")
             return
@@ -66,6 +76,7 @@ class PICShell(BaseShell):
                 print("\nTimed out waiting for device to boot.")
 
     def do_powerOff(self, arg):
+        """Powers off the device"""
         if self.pic is None:
             print("Please run getstatus first")
             return
