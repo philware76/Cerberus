@@ -1,6 +1,5 @@
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Dict
 
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.cmdShells.common import displayPluginCategory, getInt
@@ -19,7 +18,7 @@ class PluginsShell(BaseShell):
         PluginsShell.prompt = f'{plugin_type}> '
 
         # Make a local copy to avoid mutability/type variance issues while allowing Mapping covariance.
-        self._plugins: Dict[str, BasePlugin] = dict(plugins)
+        self._plugins: dict[str, BasePlugin] = dict(plugins)
         self._plugin_type = plugin_type
         self._shell: BaseShell | None = None
 

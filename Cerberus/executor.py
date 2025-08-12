@@ -13,15 +13,8 @@ class Executor:
     def __init__(self, pluginService: PluginService):
         self.pluginService = pluginService
 
-    def runTest(self, test: BaseTest) -> bool:
-        """Run a single test"""
-        logging.warning(f"Running test: {test.name}")
-
-        # Check if the test can be initialized
-        if not test.initialise():
-            logging.error(f"Failed to initialize test: {test.name}")
-            return False
-
+    def _prepare_equipment(self, test: BaseTest) -> bool:
+        """Resolve requirements, select, initialise equipment and inject into the test."""
         # Get requirements (candidates, missing, and default selection in one call)
         reqs = self.pluginService.getRequirements(test)
         if len(reqs.missing) > 0:
@@ -40,6 +33,20 @@ class Executor:
 
         # Provide required equipment to test
         test.provideEquip(equip_map)
+        return True
+
+    def runTest(self, test: BaseTest) -> bool:
+        """Run a single test"""
+        logging.warning(f"Running test: {test.name}")
+
+        # Check if the test can be initialized
+        if not test.initialise():
+            logging.error(f"Failed to initialize test: {test.name}")
+            return False
+
+        # Prepare and inject equipment
+        if not self._prepare_equipment(test):
+            return False
 
         # Run the actual test logic
         try:

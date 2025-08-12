@@ -1,6 +1,6 @@
 import logging
 import socket
-from typing import Dict, List
+from typing import List, cast
 
 from Cerberus.deviceTypes import DEVICE_TYPES
 
@@ -11,9 +11,9 @@ class EthDiscovery():
     KEYS = ('IP Address', 'Name', 'Mac Address', 'Type', 'ID', 'Group')
 
     @classmethod
-    def search(cls, timeout: int = 2) -> List[Dict[str, str]]:
+    def search(cls, timeout: int = 2) -> List[dict[str, str]]:
         """Search and return discovered devices"""
-        results: List[Dict[str, str]] = []
+        results: List[dict[str, str]] = []
         HOST = "0.0.0.0"
         PORT = 30303
 
@@ -39,7 +39,7 @@ class EthDiscovery():
                             values.insert(0, address[0])
                             device = dict(zip(EthDiscovery.KEYS, values))
                             device['Mac Address'] = ':'.join(device['Mac Address'].lower().split('-'))
-                            results.append(device)
+                            results.append(cast(dict[str, str], device))
 
         except socket.timeout as e:
             pass

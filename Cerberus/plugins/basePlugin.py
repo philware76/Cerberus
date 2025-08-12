@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pluggy
 
@@ -9,15 +9,15 @@ from Cerberus.plugins.baseParameters import BaseParameters
 hookimpl = pluggy.HookimplMarker("cerberus")
 hookspec = pluggy.HookspecMarker("cerberus")
 
+# Classic singleton decorator kept for plugin factory functions
+_def_singletons: dict[type, Any] = {}
+
 
 def singleton(cls):
-    _instances = {}
-
     def get_instance(*args, **kwargs):
-        if cls not in _instances:
-            _instances[cls] = cls(*args, **kwargs)
-
-        return _instances[cls]
+        if cls not in _def_singletons:
+            _def_singletons[cls] = cls(*args, **kwargs)
+        return _def_singletons[cls]
 
     return get_instance
 
@@ -30,10 +30,10 @@ class BasePlugin(ABC):
         self.configured = False
         self.finalised = False
 
-        self._init: Dict[str, Any] = {}
-        self.config: Dict[str, Any] = {}
+        self._init: dict[str, Any] = {}
+        self.config: dict[str, Any] = {}
 
-        self._groupParams: Dict[str, BaseParameters] = {}
+        self._groupParams: dict[str, BaseParameters] = {}
 
         logging.debug(f"__init__ {name}")
 
@@ -65,7 +65,7 @@ class BasePlugin(ABC):
         param.value = value
         return True
 
-    def updateParameters(self, group: str, values: Dict[str, Any]):
+    def updateParameters(self, group: str, values: dict[str, Any]):
         for k, v in values.items():
             self.setParameterValue(group, k, v)
 
