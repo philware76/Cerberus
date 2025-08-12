@@ -65,10 +65,8 @@ class PluginsShell(BaseShell):
 
     def do_open(self, name):
         """Opens a new shell or the currently loaded shell"""
-        if self._shell is None and name != '':
-            self.do_load(name)
-            if self._shell is None:
-                return
+        if self._shell is None:
+            print("You need to load a shell first")
 
         if self._shell is not None:
             self._shell.cmdloop()

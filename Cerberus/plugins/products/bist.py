@@ -44,14 +44,16 @@ class BaseBIST(_BISTIO):
     def openBIST(self):
         if self._client is None:
             raise BISTNotInitializedError("initComms must be called before openBIST().")
+
         try:
             self._client.open()
             logging.debug("Waiting for OK back after opening telnet connection...")
             # Some firmware expects an empty CR/LF to emit a prompt / OK - ignore errors quietly.
             try:
-                self._query("")
+                self._query("TX:ENAB?")
             except BISTQueryError:
                 pass
+
         except TelnetError as e:
             raise BISTConnectionError(f"Failed to open BIST connection: {e}") from e
 
@@ -65,18 +67,23 @@ class BaseBIST(_BISTIO):
     def _send(self,  cmd: str):
         if not self.is_open():
             raise BISTNotInitializedError("Telnet to BIST has not been opened yet.")
+
         try:
             self._client.send(cmd)  # type: ignore[union-attr]
+
         except TelnetError as e:
             raise BISTConnectionError(f"Send failed: {cmd}: {e}") from e
 
     def _query(self,  cmd: str) -> str:
         if not self.is_open():
             raise BISTNotInitializedError("Telnet to BIST has not been opened yet.")
+
         try:
             return self._client.query(cmd).strip()  # type: ignore[union-attr]
+
         except TelnetError as e:
             raise BISTConnectionError(f"Query failed: {cmd}: {e}") from e
+
         except Exception as e:  # defensive
             raise BISTQueryError(f"Unexpected error during query '{cmd}': {e}") from e
 

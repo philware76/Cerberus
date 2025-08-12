@@ -6,6 +6,7 @@ import pluggy
 
 from Cerberus.pluginDiscovery import PluginDiscovery
 from Cerberus.plugins.basePlugin import BasePlugin
+from Cerberus.plugins.common import prodIDMapping
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
@@ -23,6 +24,13 @@ class PluginService:
         self.equipPlugins: Mapping[str, BaseEquipment] = cast(Dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
         self.productPlugins: Mapping[str, BaseProduct] = cast(Dict[str, BaseProduct], self._discover_plugins("Product", "products"))
         self.testPlugins: Mapping[str, BaseTest] = cast(Dict[str, BaseTest], self._discover_plugins("Test", "tests"))
+
+        self._checIDkMapping()
+
+    def _checIDkMapping(self):
+        for prodId, prodName in prodIDMapping.items():
+            if not self.findProduct(prodName):
+                logging.warning(f"Failed to find Product '{prodName}' in ProdIDMapping dictionary.")
 
     def findTest(self, testName: str) -> BaseTest | None:
         """Return a particular test"""
