@@ -10,7 +10,7 @@ from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
 from Cerberus.ethDiscovery import EthDiscovery
 from Cerberus.manager import Manager
-from Cerberus.plugins.common import NESIE_TYPES
+from Cerberus.plugins.common import PROD_ID_MAPPING
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.products.bist import BaseBIST
 from Cerberus.plugins.products.utilities import (EEPROM, FittedBands, NesieSSH,
@@ -126,7 +126,7 @@ class ProductsShell(PluginsShell):
         if not self._select(arg):
             return
 
-        productPluginName = NESIE_TYPES[self.productID]
+        productPluginName = PROD_ID_MAPPING[self.productID]
         super().do_load(productPluginName)
         if self._shell is not None:
             pShell = cast(ProductShell, self._shell)

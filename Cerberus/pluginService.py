@@ -6,7 +6,7 @@ import pluggy
 
 from Cerberus.pluginDiscovery import PluginDiscovery
 from Cerberus.plugins.basePlugin import BasePlugin
-from Cerberus.plugins.common import NESIE_TYPES
+from Cerberus.plugins.common import PROD_ID_MAPPING
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
@@ -28,7 +28,7 @@ class PluginService:
         self._checIDkMapping()
 
     def _checIDkMapping(self):
-        for _, prodName in NESIE_TYPES.items():
+        for _, prodName in PROD_ID_MAPPING.items():
             if not self.findProduct(prodName):
                 logging.warning(f"Failed to find Product '{prodName}' in ProdIDMapping dictionary.")
 
