@@ -1,10 +1,12 @@
 import logging
-from typing import List, Optional, Type
+from typing import List, Optional, Type, TypeVar
 
 from Cerberus.plugins.basePlugin import BasePlugin
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 
 from .baseTestResult import BaseTestResult
+
+T = TypeVar("T", bound=BaseEquipment)
 
 
 class BaseTest(BasePlugin):
@@ -12,6 +14,7 @@ class BaseTest(BasePlugin):
         super().__init__(name, description)
         self.result: BaseTestResult | None = None
         self.requiredEquipment: List[Type[BaseEquipment]] = []
+        self._equipment: dict[type[BaseEquipment], BaseEquipment] = {}
 
     def initialise(self, init=None) -> bool:
         logging.debug("Initialise")
@@ -36,6 +39,15 @@ class BaseTest(BasePlugin):
 
     def _addRequirements(self, typeNames):
         self.requiredEquipment.extend(typeNames)
+
+    def provideEquip(self, equipment: dict[type[BaseEquipment], BaseEquipment]) -> None:
+        """Inject resolved equipment instances keyed by their required types."""
+        self._equipment = dict(equipment)
+
+    def getEquip(self, equip_type: Type[T]) -> T | None:
+        """Retrieve an injected equipment instance by its type."""
+        inst = self._equipment.get(equip_type)
+        return inst if isinstance(inst, equip_type) else None
 
     def run(self):
         logging.info(f"Running test: {self.name}")

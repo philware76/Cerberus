@@ -77,30 +77,27 @@ class PluginService:
 
         return plugins
 
-    def checkRequirements(self, test: BaseTest) -> Tuple[List[BaseEquipment], List[BaseEquipment]]:
-        missingEquipmentTypes = []
-        foundEquipment = []
+    def checkRequirements(self, test: BaseTest) -> Tuple[Dict[Type[BaseEquipment], List[BaseEquipment]], List[str]]:
+        """Return a mapping of required types to available equipment instances (not initialised), and a list of missing type names."""
+        req_map: Dict[Type[BaseEquipment], List[BaseEquipment]] = {}
+        missing: List[str] = []
 
         logging.warning(f"Checking requirements for test: {test.name}")
         equipmentRequirements: List[Type[BaseEquipment]] = test.requiredEquipment
-        equipmentList = self.equipPlugins.values()
+        equipmentList = list(self.equipPlugins.values())
 
         for equipType in equipmentRequirements:
             logging.debug(" - Required equipment: %s", equipType.__name__)
-
-            # Find all equipment instances matching this required type
-            matching_equips = [equip for equip in equipmentList if isinstance(equip, equipType)]
-
-            if matching_equips:
-                for equip in matching_equips:
+            matches = [equip for equip in equipmentList if isinstance(equip, equipType)]
+            if matches:
+                req_map[equipType] = matches
+                for equip in matches:
                     logging.debug(f"   - Found: {equip.name}")
-                    foundEquipment.append(equip)
-
             else:
                 logging.debug(f"   - Missing: {equipType.__name__}")
-                missingEquipmentTypes.append(equipType.__name__)
+                missing.append(equipType.__name__)
 
-        return foundEquipment, missingEquipmentTypes
+        return req_map, missing
 
     def getRequirements(self, test: BaseTest) -> dict[str, list[BaseEquipment]]:
         """Return a dict mapping required equipment type names to a list of matching equipment instances."""
