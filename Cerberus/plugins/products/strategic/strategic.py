@@ -1,0 +1,22 @@
+from Cerberus.plugins.basePlugin import hookimpl, singleton
+from Cerberus.plugins.products.baseProduct import BaseProduct
+from Cerberus.plugins.products.bist import StrategicBIST
+
+
+class BaseStrategic(BaseProduct, StrategicBIST):
+    def __init__(self, name: str, description: str | None = None):
+        super().__init__(name, description)
+
+
+@hookimpl
+@singleton
+def createProductPlugin():
+    return Strategic()
+
+
+class Strategic(BaseStrategic):
+    def __init__(self):
+        super().__init__("Strategic")
+
+    def Initialise(self) -> bool:
+        return super().initialise()

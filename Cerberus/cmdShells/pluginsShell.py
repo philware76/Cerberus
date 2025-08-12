@@ -30,7 +30,7 @@ class PluginsShell(BaseShell):
         """List all available plugins."""
         displayPluginCategory(self._plugin_type, self._plugins)
 
-    def do_load(self, name):
+    def do_load(self, name: str):
         """Load a specific plugin."""
         modName = ""
         className = ""
@@ -63,10 +63,10 @@ class PluginsShell(BaseShell):
         except Exception as e:
             print(f"Failed to create plugin shell: {modName}.{className} - {e}")
 
-    def do_open(self, arg):
+    def do_open(self, name):
         """Opens a new shell or the currently loaded shell"""
-        if self._shell is None and arg != '':
-            self.do_load(arg)
+        if self._shell is None and name != '':
+            self.do_load(name)
             if self._shell is None:
                 return
 

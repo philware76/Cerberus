@@ -62,12 +62,18 @@ class TelnetClient:
     # ----------------------------------------------------------------------------------
     # Core operations
     # ----------------------------------------------------------------------------------
-    def send(self, line: str) -> None:
+    def send(self, line: str) -> bool:
         """Send a line (appends newline)."""
         tn = self._require_open()
         data = (line + "\n").encode()
         logging.debug("-> %s", line)
-        tn.write(data)
+        try:
+            tn.write(data)
+            return True
+
+        except OSError as e:
+            logging.error(f"Telnet Write Error: {e}")
+            return False
 
     def query(self, line: str, *, timeout: Optional[float] = None, strip: bool = True) -> str:
         """Send a line and read a single response line.
