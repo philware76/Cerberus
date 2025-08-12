@@ -10,7 +10,8 @@ class EthDiscovery():
 
     KEYS = ('IP Address', 'Name', 'Mac Address', 'Type', 'ID', 'Group')
 
-    def search(self) -> List[Dict[str, str]]:
+    @classmethod
+    def search(cls, timeout: int = 2) -> List[Dict[str, str]]:
         """Search and return discovered devices"""
         results: List[Dict[str, str]] = []
         HOST = "0.0.0.0"
@@ -19,7 +20,7 @@ class EthDiscovery():
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 5)
-                sock.settimeout(3)
+                sock.settimeout(timeout)
 
                 sock.bind((HOST, PORT))
                 logging.debug(f'Broadcasting on 255.255.255.255, port {PORT} to find NESIE devices.')

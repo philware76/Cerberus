@@ -1,4 +1,5 @@
-from typing import Dict, List
+import shlex
+from typing import Dict, List, cast
 
 from tabulate import tabulate
 
@@ -8,8 +9,9 @@ from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
 from Cerberus.ethDiscovery import EthDiscovery
 from Cerberus.manager import Manager
+from Cerberus.plugins.common import prodIDMapping
 from Cerberus.plugins.products.baseProduct import BaseProduct
-from Cerberus.plugins.products.nesiePIC import NesiePIC
+from Cerberus.plugins.products.bist import BaseBIST
 
 
 class ProductsShell(PluginsShell):
@@ -17,40 +19,70 @@ class ProductsShell(PluginsShell):
         pluginService = manager.pluginService
         super().__init__(manager, pluginService.productPlugins, "Product")
 
-
-class ProductShell(RunCommandShell):
-    def __init__(self, product: BaseProduct, manager: Manager):
-        ProductShell.intro = f"Welcome to Cerberus {product.name} Product System. Type help or ? to list commands.\n"
-        ProductShell.prompt = f"{product.name}> "
-
-        super().__init__(product, manager)
-        self.product: BaseProduct = product
-        self.config = {}
-        self.nesies: List[Dict[str, str]] = []
         self.picIPAddress: str | None = None
-        self.daIPAddress: str | None = None
+        self.nesies: List[Dict[str, str]] = []
 
     def do_discover(self, arg):
-        """Discovery NESIE devices on the network.
-        You can specify the Key to sort on too."""
-        if arg is not None and arg != "":
-            sortField = arg
-        else:
-            sortField = "Name"
+        """Discover NESIE devices.
+        Usage:
+          - discover                         -> no filter, no sort
+          - discover <sortColumn>            -> sort by column
+          - discover <filterColumn> <value>  -> filter on column (contains, case-insensitive), then sort by Name
+        Examples:
+          - discover ID
+          - discover ID K
+        """
+        parts = shlex.split(arg) if arg else []
+        filter_col = None
+        filter_value = None
+        sort_field = None
 
-        self.nesies = EthDiscovery().search()
-        if self.nesies is not None and len(self.nesies) > 0:
-            # Sort first on requested field (if present in original records)
-            if sortField in self.nesies[0]:
-                self.nesies = sorted(self.nesies, key=lambda x: x[sortField])
+        if len(parts) == 0:
+            sort_field = "Name"
+        elif len(parts) == 1:
+            sort_field = parts[0]
+        elif len(parts) >= 2:
+            filter_col, filter_value = parts[0], parts[1]
+            sort_field = "Name"  # default sort after filtering
 
-            self.nesies = [{"Idx": str(i), **nesie} for i, nesie in enumerate(self.nesies)]
-            print(tabulate(self.nesies, headers="keys", tablefmt="pretty"))
-        else:
+        devices = EthDiscovery().search()
+        if not devices:
             print("No devices found!")
+            self.nesies = []
+            return
+
+        # Apply filter if requested
+        if filter_col and filter_value:
+            if filter_col not in devices[0]:
+                print(f"Unknown filter column '{filter_col}'. Available: {', '.join(devices[0].keys())}")
+                self.nesies = []
+                return
+            fv = str(filter_value).lower()
+
+            def _contains(v):
+                try:
+                    return fv in str(v).lower()
+                except Exception:
+                    return False
+            devices = [d for d in devices if _contains(d.get(filter_col, ""))]
+            if not devices:
+                print("No devices match the specified filter.")
+                self.nesies = []
+                return
+
+        # Optional sort
+        if sort_field:
+            if sort_field in devices[0]:
+                devices = sorted(devices, key=lambda x: x[sort_field])
+            else:
+                print(f"Unknown sort field '{sort_field}'. No sorting applied.")
+
+        # Reindex and place Idx first
+        self.nesies = [{"Idx": str(i), **nesie} for i, nesie in enumerate(devices)]
+        print(tabulate(self.nesies, headers="keys", tablefmt="pretty"))
 
     def do_select(self, arg):
-        """Select a device to use"""
+        """Select a device to use <IP | Idx>"""
         if arg is None or arg == "":
             print("You need to specify the IP Address of the device to select")
             return
@@ -74,27 +106,70 @@ class ProductShell(RunCommandShell):
             selected = matches[0]
 
         self.picIPAddress = selected["IP Address"]
-        ProductShell.prompt = f"{self.product.name} PIC@{self.picIPAddress}> "
+        self.productType = selected['Type']
+        self.productID = selected['ID']
+        ProductsShell.prompt = f"{self.productType} @{self.picIPAddress}> "
 
-    def do_openPIC(self, arg):
-        """Open the PIC to get the status and to power on/off"""
-        if self.picIPAddress is None or self.picIPAddress == "":
+    def do_connect(self, arg):
+        """Connects the selected device to a Product Plugin. Can select with Connect <IP | Idx> as well"""
+        if arg is not None and arg != "":
             self.do_select(arg)
 
+        productPluginName = prodIDMapping[self.productID]
+        super().do_load(productPluginName)
+        if self._shell is not None:
+            pShell = cast(ProductShell, self._shell)
+            pShell.picIPAddress = self.picIPAddress
+
+    def do_load(self, name):
+        print("Please use 'select' device and then 'connect'")
+
+    def do_open(self, name):
+        print("Please use 'select' device and then 'connect'")
+
+
+class ProductShell(RunCommandShell):
+    def __init__(self, product: BaseProduct, manager: Manager):
+        ProductShell.intro = f"Welcome to Cerberus {product.name} Product System. Type help or ? to list commands.\n"
+        ProductShell.prompt = f"{product.name}> "
+
+        super().__init__(product, manager)
+        self.product: BaseProduct = product
+        self.config = {}
+        self.nesies: List[Dict[str, str]] = []
+        self.picIPAddress: str | None = None
+        self.daIPAddress: str | None = None
+        self.bist: BaseBIST | None = None
+
+    def do_openPIC(self, arg):
         if self.picIPAddress is None:
             print("No selected PIC to open")
             return
 
         picShell = PICShell(self.manager, self.product.name, self.picIPAddress)
         self.daIPAddress = picShell.runLoop()
-        ProductShell.prompt = f"{self.product.name} PIC@{self.picIPAddress}> "
+        ProductShell.prompt = f"{self.product.name} @{self.picIPAddress}> "
 
-    def do_connectDA(self, arg):
+    def do_openDA(self, arg):
         """Connect to a Nesie with the selected IP """
         if self.daIPAddress is None or self.daIPAddress == "0.0.0.0":
             print("Device has not yet booted. Please boot device first using openPIC/powerON commands")
             return
 
-        self.product.initComms(host=self.daIPAddress)
-        self.product.openBIST()
+        # if it's the same connection, don't do anything
+        if self.bist is not None and self.bist.bistHost == self.daIPAddress:
+            ProductShell.prompt = f"{self.product.name} DA@{self.daIPAddress}> "
+            return
+
+        # If we have got a bist, and it's not the same as before, close the previous connection
+        if self.bist is not None:
+            print("Closing previous BIST connection...")
+            self.bist.closeBIST()
+
+        # Now open a new BIST telnet connection
+        self.bist = cast(BaseBIST, self.product)
+        self.bist.initComms(host=self.daIPAddress)
+        self.bist.openBIST()
+
+        ProductShell.prompt = f"{self.product.name} DA@{self.daIPAddress}> "
         ProductShell.prompt = f"{self.product.name} DA@{self.daIPAddress}> "

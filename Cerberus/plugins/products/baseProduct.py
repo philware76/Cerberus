@@ -2,10 +2,9 @@ import logging
 from typing import Any
 
 from Cerberus.plugins.basePlugin import BasePlugin
-from Cerberus.plugins.products.bist import Bist
 
 
-class BaseProduct(BasePlugin, Bist):
+class BaseProduct(BasePlugin):
     def __init__(self, name: str, description: str | None = None):
         super().__init__(name, description)
 
