@@ -2,12 +2,13 @@ import logging
 from typing import Any, ClassVar
 
 from Cerberus.plugins.basePlugin import BasePlugin
+from Cerberus.plugins.products.bandNames import BandNames
 
 
 class BaseProduct(BasePlugin):
     # Default class-level mappings; product implementations should override
-    SLOT_DETAILS_DICT: ClassVar[dict[int, str]] = {}
-    FILTER_DICT: ClassVar[dict[int, str]] = {}
+    SLOT_DETAILS_DICT: ClassVar[dict[int, BandNames]] = {}
+    FILTER_DICT: ClassVar[dict[int, BandNames]] = {}
 
     def __init__(self, name: str, description: str | None = None):
         super().__init__(name, description)

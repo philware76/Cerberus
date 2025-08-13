@@ -3,6 +3,7 @@ import logging
 from Cerberus.exceptions import TestError
 from Cerberus.manager import PluginService
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
 
@@ -36,9 +37,13 @@ class Executor:
         test.provideEquip(equip_map)
         return True
 
-    def runTest(self, test: BaseTest) -> bool:
-        """Run a single test"""
+    def runTest(self, test: BaseTest, product: BaseProduct) -> bool:
+        """Run a single test with an optional pre-configured product injected."""
         logging.debug(f"Running test: {test.name}")
+
+        # Inject product-under-test if provided
+        if product is not None:
+            test.provideProduct(product)
 
         # Check if the test can be initialized
         if not test.initialise():

@@ -154,12 +154,15 @@ class ProductShell(RunCommandShell):
 
         super().__init__(product, manager)
         self.product: BaseProduct = product
-        self.config = {}
-        self.nesies: list[dict[str, str]] = []
+
         self.picIPAddress: str | None = None
         self.daIPAddress: str | None = None
         self.bist: BaseBIST | None = None
-        self._eeprom_values: list[str] = []
+        self.eeprom: list[str] = []
+
+    def do_select(self, arg):
+        """Select this product as the Device Under Test (DUT)"""
+        self.manager.product = self.product
 
     def do_openPIC(self, arg):
         """Open the PIC controller"""
@@ -206,6 +209,7 @@ class ProductShell(RunCommandShell):
         if self.daIPAddress == "0.0.0.0":
             print("Device has not yet booted. Please boot device first using openPIC/powerON commands")
             return None
+
         return self.daIPAddress
 
     def do_stopNesie(self, arg):
@@ -242,7 +246,7 @@ class ProductShell(RunCommandShell):
         with SSHComms(host, username="root", key_path=key_path) as ssh:
             eep = EEPROM(ssh)
             values = eep.read()
-            self._eeprom_values = values or []
+            self.eeprom = values or []
 
             if values:
                 # Pretty print as rows of 8 words
@@ -259,7 +263,7 @@ class ProductShell(RunCommandShell):
         Usage: bandsFitted
         Note: Run readEEPROM first.
         """
-        if not self._eeprom_values:
+        if not self.eeprom:
             print("No EEPROM data cached. Run readEEPROM first.")
             return
 
@@ -269,14 +273,14 @@ class ProductShell(RunCommandShell):
             print("Product does not provide SLOT_DETAILS_DICT and FILTER_DICT")
             return
 
-        bands = FittedBands.bands(self._eeprom_values, slot_details, filter_dict)
+        bands = FittedBands.bands(self.eeprom, slot_details, filter_dict)
         if not bands:
             print("No fitted bands could be determined")
             return
 
         print(f"Fitted bands ({len(bands)}):")
-        for i, name in enumerate(bands, 1):
-            print(f"  {i:2d}. {name}")
+        for i, band in enumerate(bands, 1):
+            print(f"  {i:2d}. {band}")
 
     def do_slotDetails(self, arg):
         """Pretty-print the product's SLOT_DETAILS_DICT mapping of slot -> band name.

@@ -3,12 +3,14 @@ import logging
 from Cerberus.chamberService import ChamberService
 from Cerberus.database.storeageInterface import StorageInterface
 from Cerberus.planService import PlanService
+from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.pluginService import PluginService
 
 
 class Manager():
     def __init__(self, stationId: str, db: StorageInterface):
         logging.info("Starting TestManager...")
+        self.product: BaseProduct | None = None
         self.stationId = stationId
         self.db = db
 

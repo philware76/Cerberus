@@ -1,6 +1,7 @@
 import logging
 from typing import Protocol, runtime_checkable
 
+from Cerberus.plugins.products.bandNames import BandNames
 from Cerberus.telnetClient import TelnetClient, TelnetError
 
 
@@ -150,10 +151,9 @@ class DuplexerMixin:
     def get_duplex(self: _BISTIO,  side: str): return self._query(f"{side}:DUP?")
     def set_duplex(self: _BISTIO,  side: str, code: str): self._send(f"{side}:DUP {code}")
 
-    def set_duplexer(self: _BISTIO, band_name: str, *, TXorRX: str | None = None):
-        """Set duplexer path by band name and side.
-        TXorRX must be 'TX' or 'RX'. Band name must be one of the known slots.
-        Order-sensitive mapping follows legacy behavior.
+    def set_duplexer(self: _BISTIO, band: BandNames, *, TXorRX: str | None = None):
+        """Set duplexer path by band and side using Band enum.
+        TXorRX must be 'TX' or 'RX'.
         """
         if TXorRX not in ('TX', 'RX'):
             logging.debug('Select Transmit or Receive Path (TX/RX) ONLY')
@@ -162,9 +162,9 @@ class DuplexerMixin:
         names = ['LTE_7', 'LTE_20', 'GSM850', 'EGSM900', 'DCS1800', 'PCS1900',
                  'UMTS_1', 'SPARE', 'SPARE2', 'SPARE3', 'SPARE4', 'SPARE5']
         try:
-            slot_num = names.index(band_name)
+            slot_num = names.index(band.value)
         except ValueError:
-            logging.debug(f'Band name {band_name} not recognised')
+            logging.debug(f'Band name {band} not recognised')
             return
 
         # Single mapping for type and suffix; hundreds digit differs by TX/RX (1 vs 3)

@@ -5,6 +5,7 @@ from re import split
 
 import paramiko
 
+from Cerberus.plugins.products.bandNames import BandNames
 from Cerberus.plugins.products.sshComms import SSHComms
 
 
@@ -137,8 +138,8 @@ class FittedBands:
         bands = FittedBands.bands(values, slot_details, filters)
     where
         - values: list[str] from EEPROM.read() (each an 8-hex-digit string)
-        - slot_details: mapping of slot index -> default band name (first 7 slots may supply defaults)
-        - filters: mapping of filter code (int) -> band name
+        - slot_details: mapping of slot index -> default band (first 7 slots may supply defaults)
+        - filters: mapping of filter code (int) -> band (Band enum)
     """
 
     @staticmethod
@@ -147,7 +148,7 @@ class FittedBands:
         return [int(w[-2:], 16), int(w[-4:-2], 16), int(w[-6:-4], 16), int(w[-8:-6], 16)]
 
     @classmethod
-    def _slots_from_values(cls, values: list[str], filters: dict[int, str]) -> list[int]:
+    def _slots_from_values(cls, values: list[str], filters: dict[int, BandNames]) -> list[int]:
         if not values:
             return []
 
@@ -174,31 +175,30 @@ class FittedBands:
         return candidate
 
     @classmethod
-    def bands(cls, values: list[str], slot_details: dict[int, str], filters: dict[int, str]) -> list[str]:
+    def bands(cls, values: list[str], slot_details: dict[int, BandNames], filters: dict[int, BandNames]) -> list[BandNames]:
         slots = cls._slots_from_values(values, filters)
         if not slots:
             return []
 
         ST = len(slot_details)
-        reverse_filter = {v: k for k, v in filters.items()}
+        reverse_filter: dict[BandNames, int] = {v: k for k, v in filters.items()}
 
         # Apply default mapping for first 7 slots when value is 0xff
         converted: list[int] = []
         for i, x in enumerate(slots[:ST]):
             if i <= 6 and x == 0xFF:
-                default_name = slot_details.get(i)
-                code = reverse_filter.get(default_name) if default_name is not None else None
+                default_band = slot_details.get(i)
+                code = reverse_filter.get(default_band) if default_band is not None else None
                 converted.append(code if code is not None else 0xFF)
             else:
                 converted.append(x)
 
-        # Map codes to band names, ignore unknowns/0xff
-        result: list[str] = []
+        # Map codes to bands, ignore unknowns/0xff
+        result: list[BandNames] = []
         for i, code in enumerate(converted):
             if i >= ST:
                 break
-            name = filters.get(code)
-            if name:
-                result.append(name)
-        return result
+            band = filters.get(code)
+            if band:
+                result.append(band)
         return result
