@@ -115,7 +115,7 @@ class PaMixin:
 
 
 class AttenuationMixin:
-    def set_attn(self: _BISTIO,  value: int): self._send(f"TX:ATTN {value}")
+    def set_attn(self: _BISTIO,  value: float): self._send(f"TX:ATTN {value}")
     def get_attn(self: _BISTIO): return self._query("TX:ATTN?")
 
 
@@ -125,15 +125,15 @@ class TxFreqMixin:
 
 
 class TsSignalMixin:
-    def set_ts_on(self: _BISTIO): self._send("TX:TS:ENAB")
-    def set_ts_off(self: _BISTIO): self._send("TX:TS:DISA")
-    def set_ts_freq_set(self: _BISTIO,  mhz: float): self._send(f"TX:TS:FREQ {int(mhz*1e6)}")
-    def get_ts_freq_get(self: _BISTIO): return self._query("TX:TS:FREQ?")
+    def set_ts_enable(self: _BISTIO): self._send("TX:TS:ENAB")
+    def set_ts_disable(self: _BISTIO): self._send("TX:TS:DISA")
+    def set_ts_freq(self: _BISTIO,  mhz: float): self._send(f"TX:TS:FREQ {int(mhz*1e6)}")
+    def get_ts_freq(self: _BISTIO): return self._query("TX:TS:FREQ?")
 
 
 class RxControlMixin:
     def get_rx_freq(self: _BISTIO): return self._query("RX:FREQ?")
-    def set_set_rx_freq(self: _BISTIO,  mhz: float): self._send(f"RX:FREQ {int(mhz*1e6)}")
+    def set_rx_freq(self: _BISTIO,  mhz: float): self._send(f"RX:FREQ {int(mhz*1e6)}")
     def get_rx_gain(self: _BISTIO): return self._query("RX:GAIN?")
     def set_rx_gain(self: _BISTIO,  gain: int): self._send(f"RX:GAIN {gain}")
 

@@ -35,5 +35,7 @@ class BaseTactical(BaseProduct, TacticalBIST):
         7: BandNames.SPARE1, 8: BandNames.SPARE2, 9: BandNames.SPARE3, 10: BandNames.SPARE4, 11: BandNames.SPARE5,
     }
 
+    MAX_ATTENUATION = 89.75
+
     def __init__(self, name: str, description: str | None = None):
         super().__init__(name, description)
