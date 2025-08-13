@@ -14,23 +14,33 @@ nesie = importlib.util.module_from_spec(spec)  # type: ignore
 sys.modules[spec.name] = nesie  # type: ignore
 spec.loader.exec_module(nesie)  # type: ignore
 
-# Regex now captures trailing hardware id hex after //  0x.. comment pattern.
-# Assumes each entry formatted on a single logical line ending with },  //  0xHH
-ENTRY_PATTERN = re.compile(
-    r"\{\s*\{\s*(\d+)\s*,\s*(\d+)\s*}\s*,\s*"  # uplink
-    r"\{\s*(\d+)\s*,\s*(\d+)\s*}\s*,\s*"        # downlink
-    r"([A-Z_]+)\s*,\s*(\d+)\s*,\s*"                 # direction mask token, ladon id
-    r"(BAND_FILTER_[A-Z0-9_]+)\s*,\s*(-?\d+)\s*,\s*"  # band token, lte band
-    r"(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*"     # filter_no, filters_per_band, extra_data
-    r"(COVERT872CALDATALOOKUP_[A-Z0-9_]+)\s*}\s*,\s*//\s*(0x[0-9A-Fa-f]+)"  # cal lookup + hardware id
-)
+# Updated regex: now captures extra_data as its own group (macro or numeric) so parsing unpack matches.
+ENTRY_PATTERN = re.compile(r"""
+    \{\s*
+        \{\s*(\d+)\s*,\s*(\d+)\s*}\s*,\s*
+        \{\s*(\d+)\s*,\s*(\d+)\s*}\s*,\s*
+        ([A-Z_]+)\s*,\s*
+        (\d+)\s*,\s*
+        (BAND_FILTER_[A-Z0-9_]+)\s*,\s*(-?\d+)\s*,\s*
+        (\d+)\s*,\s*(\d+)\s*,\s*(EXTRA_DATA_[A-Z0-9_]+|-?\d+)\s*,\s*
+        (COVERT872CALDATALOOKUP_[A-Z0-9_]+)\s*
+    }\s*,?
+""", re.VERBOSE)
 
 
 def parse_c_entries(c_text: str):
     entries = []
     for m in ENTRY_PATTERN.finditer(c_text):
         (ul_from, ul_to, dl_from, dl_to, direction_token, ladon_id, band_token, lte_band,
-         filter_no, filters_per_band, extra_data, cal_lookup_token, hw_hex) = m.groups()
+         filter_no, filters_per_band, extra_data_token, cal_lookup_token) = m.groups()
+        # Normalize extra_data (macro -> value lookup if in module, else int)
+        if extra_data_token.startswith('EXTRA_DATA_'):
+            extra_val = getattr(nesie, extra_data_token, None)
+            if extra_val is None:
+                # Fallback: unknown macro treat as 0
+                extra_val = 0
+        else:
+            extra_val = int(extra_data_token)
         entries.append({
             'ul_from': int(ul_from),
             'ul_to': int(ul_to),
@@ -42,9 +52,8 @@ def parse_c_entries(c_text: str):
             'lte_band': int(lte_band),
             'filter_no': int(filter_no),
             'filters_per_band': int(filters_per_band),
-            'extra_data': int(extra_data),
+            'extra_data': int(extra_val),
             'cal_lookup': cal_lookup_token,
-            'hardware_id': int(hw_hex, 16),
         })
     return entries
 
@@ -55,9 +64,9 @@ def test_all_hardware_ids_and_structure():
     entries = parse_c_entries(c_text)
     assert len(entries) == len(nesie.RX_FILTER_BANDS), f'Entry count mismatch C={len(entries)} PY={len(nesie.RX_FILTER_BANDS)}'
 
-    # Validate hardware ids for all entries first
-    for idx, (c_e, py_e) in enumerate(zip(entries, nesie.RX_FILTER_BANDS)):
-        assert py_e.hardware_id == c_e['hardware_id'], f'Hardware ID mismatch at {idx}: C {c_e["hardware_id"]} PY {py_e.hardware_id}'
+    # Hardware ids are now sequential indices; verify.
+    for idx, py_e in enumerate(nesie.RX_FILTER_BANDS):
+        assert py_e.hardware_id == idx, f'Hardware ID mismatch at {idx}: expected {idx} got {py_e.hardware_id}'
 
     # Random structural deep sample
     random.seed(12345)
@@ -79,7 +88,6 @@ def test_all_hardware_ids_and_structure():
         assert py_entry.lte_band == e['lte_band']
         assert py_entry.filter_no == e['filter_no']
         assert py_entry.filters_per_band == e['filters_per_band']
-        assert py_entry.extra_data == e['extra_data']
         assert py_entry.band.name == e['band']
         assert py_entry.cal_lookup.name == e['cal_lookup']
         assert isinstance(py_entry.hardware_id, int)

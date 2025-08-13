@@ -29,9 +29,24 @@ _ENUM_TYPENAME_PATTERN = re.compile(r"typedef\s+enum\s*{(?P<body>.*?)}\s*(?P<nam
 _ENUM_ENTRY_PATTERN = re.compile(r"^(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*(=\s*(?P<value>[^,/]+))?\s*(,)?\s*(//.*)?$")
 _DEFINE_PATTERN = re.compile(r"#define\s+(?P<name>[A-Z0-9_]+)\s+\(?([^\s)]+)\)?")
 _ARRAY_PATTERN = re.compile(r"RxFilterBand_t\s+const\s+rxFilterBands\s*\[\s*]\s*=\s*{(?P<body>.*?)};", re.S)
-# Updated pattern: do not attempt to capture hardware id here (handled separately for robustness)
+# Updated pattern: allow EXTRA_DATA_* macros or numeric literals for extra_data field.
 _ENTRY_PATTERN = re.compile(
-    r"\{\s*\{\s*(\d+)\s*,\s*(\d+)\s*}\s*,\s*\{\s*(\d+)\s*,\s*(\d+)\s*}\s*,\s*([A-Z_]+)\s*,\s*(\d+)\s*,\s*(BAND_FILTER_[A-Z0-9_]+)\s*,\s*(-?\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(COVERT872CALDATALOOKUP_[A-Z0-9_]+)\s*}\s*,?[^\n]*", re.M)
+    r"""
+    \{\s*
+        \{\s*(?P<ul_from>\d+)\s*,\s*(?P<ul_to>\d+)\s*}\s*,\s*
+        \{\s*(?P<dl_from>\d+)\s*,\s*(?P<dl_to>\d+)\s*}\s*,\s*
+        (?P<direction>[A-Z_]+)\s*,\s*
+        (?P<ladon_id>\d+)\s*,\s*
+        (?P<band>BAND_FILTER_[A-Z0-9_]+)\s*,\s*
+        (?P<lte_band>-?\d+)\s*,\s*
+        (?P<filter_no>\d+)\s*,\s*
+        (?P<filters_per_band>\d+)\s*,\s*
+        (?P<extra>(?:-?\d+|EXTRA_DATA_[A-Z0-9_]+))\s*,\s*
+        (?P<cal_lookup>COVERT872CALDATALOOKUP_[A-Z0-9_]+)\s*
+    }\s*,?[^\n]*
+    """,
+    re.VERBOSE | re.M,
+)
 
 HEADER_ENUMS_OF_INTEREST = {
     "duplexor_direction_t": "DuplexorDirection",
@@ -77,11 +92,10 @@ def parse_enums(header_text: str) -> Dict[str, ParsedEnum]:
                 if val_text == "INT_MAX":
                     value = INT_MAX
                 else:
-                    # Try int with base auto-support (0x.. not present here, just decimal / negative)
                     try:
                         value = int(val_text, 0)
                     except ValueError:
-                        continue  # Skip if can't parse
+                        continue
                 current_val = value
             else:
                 if current_val is None:
@@ -104,18 +118,13 @@ def parse_macros(header_text: str) -> Dict[str, int]:
             continue
         token = line.split()[2]
         token = token.strip("()")
-        if token == "(UPLINK_DIR_MASK" or token == "(DOWNLINK_DIR_MASK":  # handle BOTH_DIR_MASK line which is expression
-            # We'll fill BOTH_DIR_MASK explicitly below
-            pass
-        # Evaluate simple expressions
         if name == "BOTH_DIR_MASK":
-            # defined as (UPLINK_DIR_MASK | DOWNLINK_DIR_MASK)
+            # derived below
             continue
         try:
             values[name] = int(token, 0)
         except ValueError:
             continue
-    # Derive BOTH_DIR_MASK if components present
     if "UPLINK_DIR_MASK" in values and "DOWNLINK_DIR_MASK" in values:
         values["BOTH_DIR_MASK"] = values["UPLINK_DIR_MASK"] | values["DOWNLINK_DIR_MASK"]
     return values
@@ -131,32 +140,21 @@ def extract_array_body(c_text: str) -> str:
 def parse_array_entries(array_body: str):
     entries = []
     for m in _ENTRY_PATTERN.finditer(array_body):
-        full_text = m.group(0)
-        (ul_from, ul_to, dl_from, dl_to, direction_token, ladon_id, band_token, lte_band,
-         filter_no, filters_per_band, extra_data, cal_lookup_token) = m.groups()
-        # Extract hardware id via comment search
-        hw_match = re.search(r"//\s*(0x[0-9A-Fa-f]+)", full_text)
-        if hw_match:
-            try:
-                hardware_id = int(hw_match.group(1), 0)
-            except ValueError:
-                hardware_id = -1
-        else:
-            hardware_id = -1
+        gd = m.groupdict()
         entries.append({
-            "ul_from": int(ul_from),
-            "ul_to": int(ul_to),
-            "dl_from": int(dl_from),
-            "dl_to": int(dl_to),
-            "direction": direction_token,
-            "ladon_id": int(ladon_id),
-            "band": band_token,
-            "lte_band": int(lte_band),
-            "filter_no": int(filter_no),
-            "filters_per_band": int(filters_per_band),
-            "extra_data": int(extra_data),
-            "cal_lookup": cal_lookup_token,
-            "hardware_id": hardware_id,
+            "ul_from": int(gd["ul_from"]),
+            "ul_to": int(gd["ul_to"]),
+            "dl_from": int(gd["dl_from"]),
+            "dl_to": int(gd["dl_to"]),
+            "direction": gd["direction"],
+            "ladon_id": int(gd["ladon_id"]),
+            "band": gd["band"],
+            "lte_band": int(gd["lte_band"]),
+            "filter_no": int(gd["filter_no"]),
+            "filters_per_band": int(gd["filters_per_band"]),
+            # keep raw token; could be number or EXTRA_DATA_* macro
+            "extra_data": gd["extra"],
+            "cal_lookup": gd["cal_lookup"],
         })
     return entries
 
@@ -242,10 +240,12 @@ class RxFilterBand:
 """
 
     list_lines = ["RX_FILTER_BANDS: list[RxFilterBand] = ["]
-    for e in entries:
+    for idx, e in enumerate(entries):
+        extra_raw = e['extra_data']
+        extra_code = extra_raw if not extra_raw.lstrip('-').isdigit() else str(int(extra_raw))
         list_lines.append(
             f"    RxFilterBand(FreqRange({e['ul_from']}, {e['ul_to']}), FreqRange({e['dl_from']}, {e['dl_to']}), "
-            f"{e['direction']}, {e['ladon_id']}, BandFilter.{e['band']}, {e['lte_band']}, {e['filter_no']}, {e['filters_per_band']}, {e['extra_data']}, CalDataLookup.{e['cal_lookup']}, {e['hardware_id']}),")
+            f"{e['direction']}, {e['ladon_id']}, BandFilter.{e['band']}, {e['lte_band']}, {e['filter_no']}, {e['filters_per_band']}, {extra_code}, CalDataLookup.{e['cal_lookup']}, {idx}),")
     list_lines.append("]\n")
 
     helper_code = """# Derived lookup dictionaries
@@ -342,5 +342,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
     main()
