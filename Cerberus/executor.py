@@ -41,20 +41,15 @@ class Executor:
         """Run a single test with an optional pre-configured product injected."""
         logging.debug(f"Running test: {test.name}")
 
-        # Inject product-under-test if provided
-        if product is not None:
-            test.provideProduct(product)
+        test.provideProduct(product)
 
-        # Check if the test can be initialized
         if not test.initialise():
             logging.error(f"Failed to initialize test: {test.name}")
             return False
 
-        # Prepare and inject equipment
         if not self._prepare_equipment(test):
             return False
 
-        # Run the actual test logic
         try:
             test.run()
 

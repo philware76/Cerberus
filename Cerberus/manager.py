@@ -10,7 +10,7 @@ from Cerberus.pluginService import PluginService
 class Manager():
     def __init__(self, stationId: str, db: StorageInterface):
         logging.info("Starting TestManager...")
-        self.product: BaseProduct | None = None
+        self.product: BaseProduct
         self.stationId = stationId
         self.db = db
 

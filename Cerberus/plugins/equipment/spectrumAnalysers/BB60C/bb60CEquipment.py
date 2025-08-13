@@ -57,6 +57,20 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         self._visa_finalise()
         return BaseSpecAnalyser.finalise(self)
 
+    def setBWS(self, shape: str) -> bool:
+        if shape not in ['FLAT', 'NUTT', 'GAUS']:
+            raise EquipmentError(f"Invalid input setting: {input}. Must be either INT or EXT")
+
+        cmd = f'ABND:SHAP {shape}'
+        return self.checkSend(cmd)
+
+    def setRefInput(self, input: str) -> bool:
+        if input not in ['INT', 'EXT']:
+            raise EquipmentError(f"Invalid input setting: {input}. Must be either INT or EXT")
+
+        cmd = f'ROSC:SOUR {input}'
+        return self.checkSend(cmd)
+
     def setRBW(self, bandwidth: float) -> bool:
         cmd = f'BAND:RES {bandwidth}KHz'
         return self.checkSend(cmd)

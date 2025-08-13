@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional, Type, TypeVar
 
+from Cerberus.exceptions import ExecutionError
 from Cerberus.plugins.basePlugin import BasePlugin
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
@@ -26,6 +27,7 @@ class BaseTest(BasePlugin):
         """Return injected product or raise if missing."""
         if self.product is None:
             raise RuntimeError("No product injected into test")
+
         return self.product
 
     def initialise(self, init=None) -> bool:
@@ -62,6 +64,9 @@ class BaseTest(BasePlugin):
         return inst if isinstance(inst, equip_type) else None
 
     def run(self):
+        if self.product is None:
+            raise ExecutionError("There is no product provided for test (DUT)")
+
         logging.info(f"Running test: {self.name}")
 
     def stop(self):

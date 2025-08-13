@@ -1,6 +1,8 @@
 import logging
 import time
+from typing import cast
 
+from Cerberus.exceptions import EquipmentError, ExecutionError
 from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
                                              OptionParameter)
 from Cerberus.plugins.basePlugin import hookimpl, singleton
@@ -8,6 +10,7 @@ from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
+from Cerberus.plugins.equipment.visaDevice import VISADevice
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 
@@ -42,8 +45,19 @@ class TxLevelTest(BaseTest):
     def run(self):
         super().run()
 
-        for i in range(20):
-            logging.info(f"Running TxLevelTest iteration {i + 1}")
-            time.sleep(.2)
+        self.configSpecAna()
 
         self.result = TxLevelTestResult(self.name, ResultStatus.PASSED)
+
+    def configSpecAna(self):
+        self.specAna = self.getEquip(BaseSpecAnalyser)
+        if self.specAna is None:
+            raise EquipmentError("Spectrum analyser is not found in equipement list")
+
+        cast(VISADevice, self.specAna).reset()
+        self.specAna.setRefInput("EXT")
+        self.specAna.setSpan(1)
+        self.specAna.setBWS("NUTT")
+        self.specAna.setRBW(10)
+        self.specAna.setVBW(10)
+        self.specAna.setRefLevel(20)

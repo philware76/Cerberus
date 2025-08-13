@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from logConfig import setupLogging
 
 from Cerberus.executor import Executor
+from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.pluginService import PluginService
 
