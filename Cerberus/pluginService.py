@@ -89,13 +89,6 @@ class PluginService:
 
         return plugins
 
-    # Deprecated: now delegates to getRequirements to preserve compatibility
-    def checkRequirements(self, test: BaseTest) -> Tuple[dict[Type[BaseEquipment], List[BaseEquipment]], List[str]]:
-        """Return a mapping of required types to available equipment instances (not initialised), and a list of missing type names."""
-        reqs = self.getRequirements(test)
-        missing_names = [t.__name__ for t in reqs.missing]
-        return reqs.candidates, missing_names
-
     # New unified API: compute candidates, missing, and a selection in one call
     def getRequirements(self, test: BaseTest) -> Requirements:
         """Return requirements info: candidates per type, missing types, and a selected instance per required type (not initialised)."""
@@ -121,10 +114,3 @@ class PluginService:
                 missing.append(equipType)
 
         return Requirements(candidates=candidates, missing=missing, selection=selection)
-
-    # Deprecated: now delegates to getRequirements to preserve compatibility
-    def selectEquipmentFor(self, test: BaseTest) -> dict[Type[BaseEquipment], BaseEquipment]:
-        """Choose one equipment instance per required type for the given test (no initialisation).
-        Current policy: pick the first available candidate for each required type.
-        """
-        return self.getRequirements(test).selection

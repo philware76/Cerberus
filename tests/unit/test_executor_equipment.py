@@ -4,6 +4,7 @@ from Cerberus.executor import Executor
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.equipment.simpleEquip.simple1Equipment import \
     SimpleEquip1
+from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.pluginService import PluginService
 
@@ -31,14 +32,16 @@ def test_executor_returns_false_when_missing_equipment():
     ps = PluginService()
     ex = Executor(ps)
     test = _DummyTestMissingEquip()
+    product = BaseProduct("Product1")
 
-    ok = ex.runTest(test)
+    ok = ex.runTest(test, product)
     assert ok is False
 
 
 def test_executor_returns_false_when_equipment_initialise_fails(monkeypatch):
     ps = PluginService()
     ex = Executor(ps)
+    product = BaseProduct("Product1")
 
     # Use an existing test that requires SimpleEquip1 (e.g., "Simple Test #1")
     test = ps.findTest("Simple Test #1")
@@ -50,6 +53,5 @@ def test_executor_returns_false_when_equipment_initialise_fails(monkeypatch):
 
     monkeypatch.setattr(SimpleEquip1, "initialise", _fail_initialise)
 
-    ok = ex.runTest(test)
-    assert ok is False
+    ok = ex.runTest(test, product)
     assert ok is False

@@ -46,13 +46,13 @@ async def run_test(test_name: str):
         return {"Error": f"Test plugin '{test_name}' not found."}
 
     # Check requirements first (not initialised here)
-    req_map, missing = pluginService.checkRequirements(test)
-    if missing:
-        logging.error(f"Current equipment does not meet the requirements for {test.name}: {missing}")
-        return {"Error": f"Missing required equipment: {missing}"}
+    requirements = pluginService.getRequirements(test)
+    if len(requirements.missing) > 0:
+        logging.error(f"Current equipment does not meet the requirements for {test.name}: {requirements.missing}")
+        return {"Error": f"Missing required equipment: {requirements.missing}"}
 
     # Execute via Executor (handles initialise/inject/finalise)
-    ok = executor.runTest(test)
+    ok = executor.runTest(test, None)
     result = test.getResult()
 
     return {

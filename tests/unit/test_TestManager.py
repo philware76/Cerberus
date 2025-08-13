@@ -1,9 +1,10 @@
 from Cerberus.executor import Executor
 from Cerberus.manager import Manager
+from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
 
 
-def test_NoMissingPlugins(manager:Manager):
+def test_NoMissingPlugins(manager: Manager):
     pluginService = manager.pluginService
     assert len(pluginService.missingPlugins) == 0
 
@@ -11,6 +12,7 @@ def test_NoMissingPlugins(manager:Manager):
 def test_Executor(manager: Manager):
     pluginService = manager.pluginService
     testRunner = Executor(pluginService)
+    product = BaseProduct("Product1")
 
     testName = "Simple Test #1"
     test = pluginService.findTest(testName)
@@ -19,7 +21,7 @@ def test_Executor(manager: Manager):
     test.config["Count"] = 100
     test.config["Sleep"] = 0.0
 
-    assert testRunner.runTest(test)
+    assert testRunner.runTest(test, product)
 
     result = test.getResult()
     assert result is not None

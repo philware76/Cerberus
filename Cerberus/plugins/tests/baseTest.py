@@ -3,6 +3,7 @@ from typing import List, Optional, Type, TypeVar
 
 from Cerberus.plugins.basePlugin import BasePlugin
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.products.baseProduct import BaseProduct
 
 from .baseTestResult import BaseTestResult
 
@@ -15,6 +16,17 @@ class BaseTest(BasePlugin):
         self.result: BaseTestResult | None = None
         self.requiredEquipment: List[Type[BaseEquipment]] = []
         self._equipment: dict[type[BaseEquipment], BaseEquipment] = {}
+        self.product: BaseProduct | None = None
+
+    def provideProduct(self, product: BaseProduct) -> None:
+        """Inject the product-under-test (already initialised/configured)."""
+        self.product = product
+
+    def requireProduct(self) -> BaseProduct:
+        """Return injected product or raise if missing."""
+        if self.product is None:
+            raise RuntimeError("No product injected into test")
+        return self.product
 
     def initialise(self, init=None) -> bool:
         logging.debug("Initialise")
