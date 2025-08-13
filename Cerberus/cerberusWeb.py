@@ -52,7 +52,7 @@ async def run_test(test_name: str):
         return {"Error": f"Missing required equipment: {requirements.missing}"}
 
     # Execute via Executor (handles initialise/inject/finalise)
-    ok = executor.runTest(test, None)
+    ok = executor.runTest(test, BaseProduct("Product1"))
     result = test.getResult()
 
     return {
