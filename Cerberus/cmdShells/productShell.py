@@ -13,8 +13,9 @@ from Cerberus.manager import Manager
 from Cerberus.plugins.common import PROD_ID_MAPPING
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.products.bist import BaseBIST
-from Cerberus.plugins.products.utilities import (EEPROM, FittedBands, NesieSSH,
-                                                 SSHComms)
+from Cerberus.plugins.products.eeprom import EEPROM, FittedBands
+from Cerberus.plugins.products.nesieSSH import NesieSSH
+from Cerberus.plugins.products.sshComms import SSHComms
 
 
 class ProductsShell(PluginsShell):
