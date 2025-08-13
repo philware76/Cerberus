@@ -50,6 +50,15 @@ class SimpleTest1(BaseTest):
     def run(self):
         super().run()
 
+        # Verify that required equipment was injected by the Executor
+        equip = self.getEquip(SimpleEquip1)
+        if equip is None:
+            logging.error("Required equipment SimpleEquip1 was not injected")
+            self.result = SimpleTestResult(self.name, ResultStatus.FAILED)
+            return
+        else:
+            logging.debug(f"Using injected equipment: {equip.name}")
+
         count = self.config.get("Count", 20)
         sleep = self.config.get("Sleep", 0.1)
 

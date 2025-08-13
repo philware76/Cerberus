@@ -38,7 +38,7 @@ class Executor:
 
     def runTest(self, test: BaseTest) -> bool:
         """Run a single test"""
-        logging.warning(f"Running test: {test.name}")
+        logging.debug(f"Running test: {test.name}")
 
         # Check if the test can be initialized
         if not test.initialise():
