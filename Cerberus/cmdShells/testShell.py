@@ -23,6 +23,5 @@ class TestShell(BasePluginShell):
 
     def do_run(self, arg):
         """Run the loaded test"""
-        # Build executor with the plugin service
         testRunner = Executor(self.manager.pluginService)
         testRunner.runTest(cast(BaseTest, self.plugin), product=self.manager.product)

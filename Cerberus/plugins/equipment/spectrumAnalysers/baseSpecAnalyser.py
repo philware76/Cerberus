@@ -10,28 +10,36 @@ class BaseSpecAnalyser(BaseEquipment, ABC):
     """
 
     @abstractmethod
+    def setBWS(self, shape: str) -> bool:
+        """Set the bandwdith filter shape"""
+
+    @abstractmethod
     def setRBW(self, bandwidth: float) -> bool:
-        '''Sets the resolution bandwidth of the spectrum analyser'''
+        '''Sets the resolution bandwidth (kHz) of the spectrum analyser'''
 
     @abstractmethod
     def setVBW(self, bandwidth: float) -> bool:
-        '''Sets the visual bandwidth of the spectrum analyser'''
+        '''Sets the visual bandwidth (kHz) of the spectrum analyser'''
 
     @abstractmethod
     def setCentre(self, frequency: float) -> bool:
-        '''Sets the centre frequency of the spectrum analyser'''
+        '''Sets the centre frequency (MHz) of the spectrum analyser'''
+
+    @abstractmethod
+    def setRefInput(self, input: str) -> bool:
+        """Sets the input reference type - INT or EXT"""
 
     @abstractmethod
     def setSpan(self, frequency: float) -> bool:
-        '''Sets the span frequency of the spectrum analyser'''
+        '''Sets the span frequency (MHz) of the spectrum analyser'''
 
     @abstractmethod
     def setStart(self, frequency: float) -> bool:
-        '''Sets the start frequency of the spectrum analyser'''
+        '''Sets the start frequency (MHz) of the spectrum analyser'''
 
     @abstractmethod
     def setStop(self, frequency: float) -> bool:
-        '''Sets the stop frequency of the spectrum analyser'''
+        '''Sets the stop frequency (MHz) of the spectrum analyser'''
 
     @abstractmethod
     def setRefLevel(self, refLevel: float) -> bool:
