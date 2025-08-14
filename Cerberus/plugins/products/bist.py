@@ -16,6 +16,10 @@ class BISTError(Exception):
     """Base exception for all BIST related errors."""
 
 
+class BISTCommandError(BISTError):
+    """Invalid command parameters"""
+
+
 class BISTNotInitializedError(BISTError):
     """Raised when an operation requires an open / initialised connection."""
 
@@ -38,22 +42,25 @@ class BaseBIST(_BISTIO):
         self._client: TelnetClient | None = None
         self.bistHost: str | None = None
 
-    def initComms(self,  host: str, port: int = 51234, timeout: float = 120.0):
+    def initBIST(self,  host: str, port: int = 51234, timeout: float = 120.0):
+        """Sets the Telnet client with host name"""
         self.bistHost = host
         self._client = TelnetClient(host, port, timeout=timeout)
 
-    def openBIST(self):
-        if self._client is None:
+    def openBIST(self) -> str:
+        """Opens the BIST telnet connection and returns the host name"""
+        if self._client is None or self.bistHost is None:
             raise BISTNotInitializedError("initComms must be called before openBIST().")
+
+        if self.isBISTOpen():
+            logging.debug("BIST was already open, closing previous connection...")
+            self.closeBIST()
 
         try:
             self._client.open()
             logging.debug("Waiting for OK back after opening telnet connection...")
-            # Some firmware expects an empty CR/LF to emit a prompt / OK - ignore errors quietly.
-            try:
-                self._query("TX:ENAB?")
-            except BISTQueryError:
-                pass
+            self._query("TX:ENAB?")
+            return self.bistHost
 
         except TelnetError as e:
             raise BISTConnectionError(f"Failed to open BIST connection: {e}") from e
@@ -62,11 +69,11 @@ class BaseBIST(_BISTIO):
         if self._client:
             self._client.close()
 
-    def is_open(self):
-        return bool(self._client and self._client.is_open())
+    def isBISTOpen(self):
+        return bool(self._client is not None and self._client.is_open())
 
     def _send(self,  cmd: str):
-        if not self.is_open():
+        if not self.isBISTOpen():
             raise BISTNotInitializedError("Telnet to BIST has not been opened yet.")
 
         try:
@@ -76,7 +83,7 @@ class BaseBIST(_BISTIO):
             raise BISTConnectionError(f"Send failed: {cmd}: {e}") from e
 
     def _query(self,  cmd: str) -> str:
-        if not self.is_open():
+        if not self.isBISTOpen():
             raise BISTNotInitializedError("Telnet to BIST has not been opened yet.")
 
         try:
@@ -129,6 +136,12 @@ class TsSignalMixin:
     def set_ts_disable(self: _BISTIO): self._send("TX:TS:DISA")
     def set_ts_freq(self: _BISTIO,  mhz: float): self._send(f"TX:TS:FREQ {int(mhz*1e6)}")
     def get_ts_freq(self: _BISTIO): return self._query("TX:TS:FREQ?")
+
+    def set_tx_fwd_rev(self: _BISTIO, state):
+        if state not in ['SET', 'CLEAR']:
+            raise BISTCommandError(f"Invalid command parameter: {state} - should be SET or CLEAR")
+
+        self._send(f"TX:FORREV {state}")
 
 
 class RxControlMixin:

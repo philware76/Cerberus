@@ -105,7 +105,7 @@ def runShell(argv):
         pass
 
     except Exception as e:
-        print(f"Shell Exception: {e}")
+        logging.exception("Unhandled exception in shell")
 
     finally:
         print("\nGoodbye")

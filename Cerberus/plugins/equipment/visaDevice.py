@@ -109,7 +109,7 @@ class VISADevice(CommsInterface):
 
         raise EquipmentError("Failed to get operation complete")
 
-    def reset(self, dwell=5):
+    def reset(self, dwell=2):
         self.write("*RST")
         common.dwell(dwell)
 

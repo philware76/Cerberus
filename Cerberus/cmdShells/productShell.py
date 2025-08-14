@@ -163,6 +163,7 @@ class ProductShell(RunCommandShell):
     def do_select(self, arg):
         """Select this product as the Device Under Test (DUT)"""
         self.manager.product = self.product
+        print(f"\n{self.product.name} is selected for test\n")
 
     def do_openPIC(self, arg):
         """Open the PIC controller"""
@@ -171,21 +172,18 @@ class ProductShell(RunCommandShell):
             return
 
         picShell = PICShell(self.manager, self.product.name, self.picIPAddress)
-        self.daIPAddress = picShell.runLoop()
+        daHost = picShell.runLoop()
+        self.product.setDAHost(daHost)
+
         ProductShell.prompt = f"{self.product.name} @{self.picIPAddress}> "
 
     def do_openDA(self, arg):
         """Connect to a Nesie with the selected IP """
-        host = self._require_da_ip()
-        if not host:
-            return
+        if self.product.isBISTOpen():
+            print("Closing previous BIST connection...")
+            self.product.closeBIST()
 
-        print("Closing previous BIST connection...")
-        self.product.closeBIST()
-
-        # Now open a new BIST telnet connection
-        self.product.initComms(host)
-        self.product.openBIST()
+        host = self.product.openBIST()
 
         ProductShell.prompt = f"{self.product.name} DA@{host}> "
 
@@ -228,48 +226,10 @@ class ProductShell(RunCommandShell):
             ok, _ = nesie.kill_nesie()
             print("killall nesie-daemon sent" if ok else "Failed to issue killall nesie-daemon")
 
-    def do_readEEPROM(self, arg):
-        """Read EEPROM contents from the DA via SSH."""
-        host = self._require_da_ip()
-        if not host:
-            return
-
-        key_path = self._resolve_key_path()
-        with SSHComms(host, username="root", key_path=key_path) as ssh:
-            eep = EEPROM(ssh)
-            values = eep.read()
-            self.eeprom = values or []
-
-            if values:
-                # Pretty print as rows of 8 words
-                row = 8
-                print("EEPROM 32-bit values ({} total):".format(len(values)))
-                for i in range(0, len(values), row):
-                    chunk = values[i:i+row]
-                    print("  " + "  ".join(chunk))
-            else:
-                print("Failed to read EEPROM or no data parsed")
-
-    def do_bandsFitted(self, arg):
-        """Show fitted bands from the last EEPROM read.
-        Usage: bandsFitted
-        Note: Run readEEPROM first.
-        """
-        if not self.eeprom:
-            print("No EEPROM data cached. Run readEEPROM first.")
-            return
-
-        slot_details = self.product.SLOT_DETAILS_DICT
-        filter_dict = self.product.FILTER_DICT
-        if not slot_details or not filter_dict:
-            print("Product does not provide SLOT_DETAILS_DICT and FILTER_DICT")
-            return
-
-        bands = FittedBands.bands(self.eeprom, slot_details, filter_dict)
-        if not bands:
-            print("No fitted bands could be determined")
-            return
-
+    def do_getBandsFitted(self, arg):
+        """Read the EEPROM and get the fitted bands"""
+        self.product.readFittedBands()
+        bands = self.product.getBands()
         print(f"Fitted bands ({len(bands)}):")
         for i, band in enumerate(bands, 1):
             print(f"  {i:2d}. {band}")
