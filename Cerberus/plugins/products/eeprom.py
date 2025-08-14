@@ -161,6 +161,7 @@ class FittedBands:
             bytes16: list[int] = []
             for w in window:
                 bytes16.extend(cls._bytes_from_word(w))
+
             # Heuristic: prefer windows that contain at least one known filter code
             if any(b in filter_keys for b in bytes16):
                 candidate = bytes16
@@ -170,12 +171,13 @@ class FittedBands:
             bytes16 = []
             for w in values[-4:]:
                 bytes16.extend(cls._bytes_from_word(w))
+
             candidate = bytes16
 
         return candidate
 
     @classmethod
-    def bands(cls, values: list[str], slot_details: dict[int, BandNames], filters: dict[int, BandNames]) -> list[BandNames]:
+    def bands(cls, values: list[str], slot_details: dict[int, BandNames], filters: dict[int, BandNames]) -> list[tuple[int, BandNames]]:
         slots = cls._slots_from_values(values, filters)
         if not slots:
             return []
@@ -194,11 +196,14 @@ class FittedBands:
                 converted.append(x)
 
         # Map codes to bands, ignore unknowns/0xff
-        result: list[BandNames] = []
+        result: list[tuple[int, BandNames]] = []
         for i, code in enumerate(converted):
             if i >= ST:
                 break
-            band = filters.get(code)
-            if band:
-                result.append(band)
+
+            band = filters.get(code, None)
+            if band is not None:
+                logging.debug(f"#{code}: {band}")
+                result.append((code, band))
+
         return result

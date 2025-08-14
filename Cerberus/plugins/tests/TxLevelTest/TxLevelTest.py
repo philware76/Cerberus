@@ -3,7 +3,7 @@ import time
 from typing import cast
 
 from Cerberus.common import dwell
-from Cerberus.exceptions import EquipmentError, ExecutionError
+from Cerberus.exceptions import EquipmentError
 from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
                                              OptionParameter)
 from Cerberus.plugins.basePlugin import hookimpl, singleton
@@ -12,7 +12,10 @@ from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
+from Cerberus.plugins.products.bandNames import RxFilterMapping
+from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.products.bist import TacticalBISTCmds
+from Cerberus.plugins.products.nesieFirmware import nesie_rx_filter_bands
 from Cerberus.plugins.products.tactical.tactical import BaseTactical
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import BaseTestResult, ResultStatus
@@ -44,7 +47,6 @@ class TxLevelTest(BaseTest):
     def __init__(self):
         super().__init__("Tx Level")
         self._addRequirements([BaseChamber, BaseSpecAnalyser, BaseSigGen])
-
         self.addParameterGroup(TxLevelTestParameters())
 
     def run(self):
@@ -54,12 +56,20 @@ class TxLevelTest(BaseTest):
         self.initProduct()
 
         # iterate through the bands fitted
+        for hwId, bandName in self.product.getBands():
+            logging.debug(f"Testing on Band {bandName}")
+            self.testBand(hwId, bandName)
 
         self.result = TxLevelTestResult(ResultStatus.PASSED)
 
-    def initProduct(self):
-        # product will be a particular BIST class
+    def testBand(self, hwId, bandName):
+        time.sleep(2)
 
+    def initProduct(self):
+        self.product = self.getProduct()
+        self.product.readFittedBands()
+
+        self.product.openBIST()
         prod = cast(TacticalBISTCmds, self.product)
         prod.set_attn(BaseTactical.MAX_ATTENUATION)
         prod.set_tx_enable()

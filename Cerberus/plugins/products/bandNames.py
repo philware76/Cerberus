@@ -1,5 +1,8 @@
 from enum import StrEnum
 
+from Cerberus.plugins.products.nesieFirmware.nesie_rx_filter_bands import \
+    BandFilter
+
 
 class BandNames(StrEnum):
     LTE7 = 'LTE_7'
@@ -33,6 +36,28 @@ class BandNames(StrEnum):
     LTE20Rev = 'LTE_20'
     LTE13Rev = 'LTE_13'
     LTE28ARev = 'LTE_28A'
+
+
+RxFilterMapping = {
+    BandNames.GSM850: BandFilter.BAND_FILTER_GSM850,
+    BandNames.EGSM900: BandFilter.BAND_FILTER_EGSM900,
+    BandNames.DCS1800: BandFilter.BAND_FILTER_DCS1800,
+    BandNames.PCS1900: BandFilter.BAND_FILTER_PCS1900,
+    BandNames.THREEGBAND1: BandFilter.BAND_FILTER_3GBAND1,
+    BandNames.LTE7: BandFilter.BAND_FILTER_LTE7,
+    BandNames.LTE20: BandFilter.BAND_FILTER_LTE20,
+    BandNames.LTE28: BandFilter.BAND_FILTER_LTE28,
+    BandNames.LTE12: BandFilter.BAND_FILTER_LTE12,
+    BandNames.LTE13: BandFilter.BAND_FILTER_LTE13,
+    BandNames.LTE17: BandFilter.BAND_FILTER_LTE17,
+    BandNames.LTE40: BandFilter.BAND_FILTER_LTE40,
+    BandNames.LTE38: BandFilter.BAND_FILTER_LTE38,
+    BandNames.LTE41: BandFilter.BAND_FILTER_LTE41,
+    BandNames.LTE25: BandFilter.BAND_FILTER_LTE25,
+    BandNames.LTE26: BandFilter.BAND_FILTER_LTE26,
+    BandNames.LTE71: BandFilter.BAND_FILTER_LTE71,
+    BandNames.N77: BandFilter.BAND_FILTER_N77
+}
 
 
 # Bands that have reversed/non-conventional orientation

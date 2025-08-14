@@ -17,7 +17,7 @@ class BaseTest(BasePlugin):
         self.result: BaseTestResult | None = None
         self.requiredEquipment: List[Type[BaseEquipment]] = []
         self._equipment: dict[type[BaseEquipment], BaseEquipment] = {}
-        self.product: BaseProduct | None = None
+        self.product: BaseProduct
 
     def setProduct(self, product: BaseProduct) -> None:
         """Inject the product-under-test (already initialised/configured)."""
