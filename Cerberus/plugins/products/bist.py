@@ -201,19 +201,19 @@ class LTEWaveformMixin:
 # Device variants -------------------------------------------------
 
 
-class TacticalBIST(BaseBIST, TxControlMixin, PaMixin, AttenuationMixin,
-                   TxFreqMixin, TsSignalMixin, RxControlMixin,
-                   BandwidthMixin, DuplexerMixin, TempsMixin, LTEWaveformMixin):
+class TacticalBISTCmds(_BISTIO, TxControlMixin, PaMixin, AttenuationMixin,
+                       TxFreqMixin, TsSignalMixin, RxControlMixin,
+                       BandwidthMixin, DuplexerMixin, TempsMixin, LTEWaveformMixin):
     """Collection of BIST commands (mixins) for Tactical"""
     pass
 
 
-class CovertBIST(BaseBIST, TxControlMixin, TxFreqMixin, RxControlMixin, TempsMixin):
+class CovertBISTCmds(_BISTIO, TxControlMixin, TxFreqMixin, RxControlMixin, TempsMixin):
     """Collection of BIST commands (mixins) for Covert"""
     pass
 
 
-class StrategicBIST(BaseBIST, TxControlMixin, PaMixin, TxFreqMixin, RxControlMixin,
-                    BandwidthMixin, TempsMixin, LTEWaveformMixin):
+class StrategicBISTCmds(_BISTIO, TxControlMixin, PaMixin, TxFreqMixin, RxControlMixin,
+                        BandwidthMixin, TempsMixin, LTEWaveformMixin):
     """Collection of BIST commands (mixins) for Strategic"""
     pass
