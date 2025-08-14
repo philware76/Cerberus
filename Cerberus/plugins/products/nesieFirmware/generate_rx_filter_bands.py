@@ -248,7 +248,10 @@ class RxFilterBand:
             f"{e['direction']}, {e['ladon_id']}, BandFilter.{e['band']}, {e['lte_band']}, {e['filter_no']}, {e['filters_per_band']}, {extra_code}, CalDataLookup.{e['cal_lookup']}, {idx}),")
     list_lines.append("]\n")
 
-    helper_code = """# Derived lookup dictionaries
+    helper_code = """# Fast lookup dictionary (hardware_id -> RxFilterBand)
+RX_FILTER_BANDS_BY_ID: dict[int, RxFilterBand] = {b.hardware_id: b for b in RX_FILTER_BANDS}
+
+# Derived lookup dictionaries
 BANDS_BY_FILTER: dict[BandFilter, list[RxFilterBand]] = {}
 FILTERS_BY_LTE_BAND: dict[int, list[RxFilterBand]] = {}
 FILTERS_BY_CAL_LOOKUP: dict[CalDataLookup, list[RxFilterBand]] = {}
@@ -320,7 +323,7 @@ def select_filter(freq_khz: int, bandwidth_khz: int, direction: DuplexorDirectio
         *list_lines,
         helper_code,
         "__all__ = ['DuplexorDirection','BandFilter','CalDataLookup','FreqRange','RxFilterBand',\n"
-        "           'RX_FILTER_BANDS','BANDS_BY_FILTER','FILTERS_BY_LTE_BAND','FILTERS_BY_CAL_LOOKUP',\n"
+        "           'RX_FILTER_BANDS','RX_FILTER_BANDS_BY_ID','BANDS_BY_FILTER','FILTERS_BY_LTE_BAND','FILTERS_BY_CAL_LOOKUP',\n"
         "           'select_filter','UPLINK_DIR_MASK','DOWNLINK_DIR_MASK','BOTH_DIR_MASK',\n"
         "           'EXTRA_DATA_FORREV_MASK','EXTRA_DATA_SWAP_FOR_AND_REV_MASK']",
     ]
