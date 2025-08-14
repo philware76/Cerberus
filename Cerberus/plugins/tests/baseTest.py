@@ -60,10 +60,12 @@ class BaseTest(BasePlugin):
 
     def getEquip(self, equip_type: Type[T]) -> T:
         """Retrieve an injected equipment instance by its type."""
-        inst = self._equipment.get(equip_type)
-        inst = inst if isinstance(inst, equip_type) else None
-        if inst is None:
+        instrument = self._equipment.get(equip_type)
+        instrument = instrument if isinstance(instrument, equip_type) else None
+        if instrument is None:
             raise EquipmentError(f"Failed to find {T}")
+
+        return instrument
 
     def run(self):
         if self.product is None:
