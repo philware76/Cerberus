@@ -14,7 +14,7 @@ class CommsInterface(ABC):
         """Close the device for communication"""
 
     @abstractmethod
-    def write(self, command) -> bool:
+    def write(self, command):
         """Write a command to the comms device"""
 
     @abstractmethod

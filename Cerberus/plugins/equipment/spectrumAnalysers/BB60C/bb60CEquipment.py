@@ -62,30 +62,30 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
             raise EquipmentError(f"Invalid input setting: {input}. Must be either INT or EXT")
 
         cmd = f'ABND:SHAP {shape}'
-        return self.checkSend(cmd)
+        return self.command(cmd)
 
     def setRefInput(self, input: str) -> bool:
         if input not in ['INT', 'EXT']:
             raise EquipmentError(f"Invalid input setting: {input}. Must be either INT or EXT")
 
         cmd = f'ROSC:SOUR {input}'
-        return self.checkSend(cmd)
+        return self.command(cmd)
 
     def setRBW(self, bandwidth: float) -> bool:
         cmd = f'BAND:RES {bandwidth}KHz'
-        return self.checkSend(cmd)
+        return self.command(cmd)
 
     def setVBW(self, bandwidth: float) -> bool:
         cmd = f'BAND:VID {bandwidth}KHz'
-        return self.checkSend(cmd)
+        return self.command(cmd)
 
     def setCentre(self, frequency: float) -> bool:
         cmd = f'FREQ:CENT {frequency}MHz'
-        return self.checkSend(cmd)
+        return self.command(cmd)
 
     def setSpan(self, frequency: float) -> bool:
         cmd = f'FREQ:SPAN {frequency}MHz'
-        return self.checkSend(cmd)
+        return self.command(cmd)
 
     def setStart(self, frequency: float) -> bool:
         '''Sets the start frequency of the spectrum analyser'''
@@ -98,7 +98,7 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
     def setRefLevel(self, refLevel: float) -> bool:
         '''Sets the power reference level of the spectrum analyser'''
         cmd = f"POW:RLEV {refLevel}"
-        return self.checkSend(cmd)
+        return self.command(cmd)
 
     def setMarker(self, frequency: float) -> bool:
         '''Sets the marker frequency position'''
@@ -106,4 +106,6 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
 
     def getMarker(self) -> float:
         '''Gets the marker value from the spectrum analyser'''
-        raise NotImplementedError("getMarker")
+        cmd = "CALC:MARK:MAX"
+        resp = self.query(cmd)
+        return int(resp)
