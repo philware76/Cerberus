@@ -95,9 +95,9 @@ class TxLevelTest(BaseTest):
 
         # set the forward/reverse
         if self.filt.extra_data & nesie_rx_filter_bands.EXTRA_DATA_SWAP_FOR_AND_REV_MASK:
-            self.bist.set_tx_fwd_rev("CLEAR")
-        else:
             self.bist.set_tx_fwd_rev("SET")
+        else:
+            self.bist.set_tx_fwd_rev("CLEAR")
 
         self.bist.set_tx_bw(5)
         self.bist.set_ts_freq(self.freqOffset)

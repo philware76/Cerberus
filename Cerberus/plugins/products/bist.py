@@ -120,9 +120,10 @@ class PaMixin:
         self._send("TX:PAEN PA_OFF")
         self._send("TX:PAPATH PA_OFF")
 
-    def get_pa_power(self: _BISTIO, *, freq=None):
+    def get_pa_power(self: _BISTIO, *, freq=None) -> float:
         type = "RAW" if freq is None else freq
-        return self._query('TX:PAPWR? {type}')
+        resp = self._query('TX:PAPWR? {type}')
+        return float(resp)
 
 
 class AttenuationMixin:
@@ -163,10 +164,7 @@ class BandwidthMixin:
 
 
 class DuplexerMixin:
-    DUP_NAMES_TX = [...]  # fill from PDF
-    DUP_NAMES_RX = [...]
     def get_duplex(self: _BISTIO,  side: str): return self._query(f"{side}:DUP?")
-    def set_duplex(self: _BISTIO,  side: str, code: str): self._send(f"{side}:DUP {code}")
 
     def set_duplexer(self: _BISTIO, band: BandNames, TXorRX: str):
         """Set duplexer path by band and side using Band enum.
@@ -190,7 +188,6 @@ class DuplexerMixin:
         hundreds = '1' if TXorRX == 'TX' else '3'
         selected_path = f"{kinds[slot_num]}{hundreds}{suffixes[slot_num]}"
 
-        logging.debug(f'Setting Duplexer Path To: {selected_path}')
         self._send(f'{TXorRX}:DUP {selected_path}')
 
 
