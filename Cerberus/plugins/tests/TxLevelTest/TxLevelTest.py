@@ -1,5 +1,6 @@
 import logging
 import time
+from dataclasses import asdict
 from typing import cast
 
 from Cerberus.common import dwell
@@ -12,7 +13,7 @@ from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
-from Cerberus.plugins.products.bandNames import RxFilterMapping
+from Cerberus.plugins.products.bandNames import BandNames, RxFilterMapping
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.products.bist import TacticalBISTCmds
 from Cerberus.plugins.products.nesieFirmware import nesie_rx_filter_bands
@@ -49,6 +50,10 @@ class TxLevelTest(BaseTest):
         self._addRequirements([BaseChamber, BaseSpecAnalyser, BaseSigGen])
         self.addParameterGroup(TxLevelTestParameters())
 
+        self.bist: TacticalBISTCmds
+        self.freqOffset = TxLevelTest.AD9361_DC_NOTCH_FREQ_OFFSET
+        self.specAna: BaseSpecAnalyser
+
     def run(self):
         super().run()
 
@@ -62,29 +67,57 @@ class TxLevelTest(BaseTest):
 
         self.result = TxLevelTestResult(ResultStatus.PASSED)
 
-    def testBand(self, hwId, bandName):
+    def testBand(self, hwId: int, bandName: BandNames):
+
+        self.configProductForFreq(hwId, bandName)
+        self.bist.set_attn(25)
+
+        time.sleep(0.5)
+
+        measuredPwr = self.specAna.getMarker()
+        detectedPwr = self.bist.get_pa_pwr()
+
         time.sleep(2)
+
+    def configProductForFreq(self, hwId: int, bandName: BandNames):
+        """Configures the product for a particular band"""
+        self.filt = nesie_rx_filter_bands.RX_FILTER_BANDS_BY_ID[hwId]
+        filt_dict = asdict(self.filt)
+        logging.debug("RxFilterBand: hw_id=%s band=%s", self.filt.hardware_id, self.filt.band.name)
+        for k, v in filt_dict.items():
+            logging.debug("  %s = %r", k, v)
+
+        # set duplexer
+        self.bist.set_duplexer(bandName, "TX")
+
+        # set the forward/reverse
+        if self.filt.extra_data & nesie_rx_filter_bands.EXTRA_DATA_SWAP_FOR_AND_REV_MASK:
+            self.bist.set_tx_fwd_rev("CLEAR")
+        else:
+            self.bist.set_tx_fwd_rev("SET")
+
+        self.bist.set_tx_bw(5)
+        self.bist.set_ts_freq(self.freqOffset)
+        self.bist.set_ts_enable()
 
     def initProduct(self):
         self.product = self.getProduct()
         self.product.readFittedBands()
 
         self.product.openBIST()
-        prod = cast(TacticalBISTCmds, self.product)
-        prod.set_attn(BaseTactical.MAX_ATTENUATION)
-        prod.set_tx_enable()
-        prod.set_tx_bw(5)
-        prod.set_ts_enable()
-        prod.set_ts_freq(TxLevelTest.AD9361_DC_NOTCH_FREQ_OFFSET)
+        self.bist = cast(TacticalBISTCmds, self.product)
+        self.bist.set_attn(BaseTactical.MAX_ATTENUATION)
+        self.bist.set_tx_enable()
+        self.bist.set_tx_bw(5)
+        self.bist.set_ts_enable()
+        self.bist.set_ts_freq(self.freqOffset)
 
         dwell(0.5)
 
     def configSpecAna(self):
         self.specAna = self.getEquip(BaseSpecAnalyser)
-        if self.specAna is None:
-            raise EquipmentError("Spectrum analyser is not found in equipement list")
-
         cast(VISADevice, self.specAna).reset()
+
         self.specAna.setRefInput("EXT")
         self.specAna.setSpan(1)
         self.specAna.setBWS("NUTT")

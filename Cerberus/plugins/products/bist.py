@@ -164,7 +164,7 @@ class DuplexerMixin:
     def get_duplex(self: _BISTIO,  side: str): return self._query(f"{side}:DUP?")
     def set_duplex(self: _BISTIO,  side: str, code: str): self._send(f"{side}:DUP {code}")
 
-    def set_duplexer(self: _BISTIO, band: BandNames, *, TXorRX: str | None = None):
+    def set_duplexer(self: _BISTIO, band: BandNames, TXorRX: str):
         """Set duplexer path by band and side using Band enum.
         TXorRX must be 'TX' or 'RX'.
         """
