@@ -19,11 +19,11 @@ class BaseTest(BasePlugin):
         self._equipment: dict[type[BaseEquipment], BaseEquipment] = {}
         self.product: BaseProduct | None = None
 
-    def provideProduct(self, product: BaseProduct) -> None:
+    def setProduct(self, product: BaseProduct) -> None:
         """Inject the product-under-test (already initialised/configured)."""
         self.product = product
 
-    def requireProduct(self) -> BaseProduct:
+    def getProduct(self) -> BaseProduct:
         """Return injected product or raise if missing."""
         if self.product is None:
             raise RuntimeError("No product injected into test")

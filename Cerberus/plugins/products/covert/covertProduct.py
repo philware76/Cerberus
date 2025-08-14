@@ -1,10 +1,10 @@
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.products.bandNames import BandNames
 from Cerberus.plugins.products.baseProduct import BaseProduct
-from Cerberus.plugins.products.bist import CovertBIST
+from Cerberus.plugins.products.bist import CovertBISTCmds
 
 
-class BaseCovert(BaseProduct, CovertBIST):
+class BaseCovert(BaseProduct, CovertBISTCmds):
     FILTER_DICT = {
         0x15: BandNames.LTE7,
         0x16: BandNames.DCS1800,

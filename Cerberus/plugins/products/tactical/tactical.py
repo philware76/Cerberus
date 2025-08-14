@@ -1,9 +1,9 @@
 from Cerberus.plugins.products.bandNames import BandNames
 from Cerberus.plugins.products.baseProduct import BaseProduct
-from Cerberus.plugins.products.bist import TacticalBIST
+from Cerberus.plugins.products.bist import TacticalBISTCmds
 
 
-class BaseTactical(BaseProduct, TacticalBIST):
+class BaseTactical(BaseProduct, TacticalBISTCmds):
     FILTER_DICT = {
         0x2F: BandNames.LTE7,
         0x30: BandNames.LTE20,

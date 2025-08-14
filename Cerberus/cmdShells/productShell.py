@@ -180,20 +180,12 @@ class ProductShell(RunCommandShell):
         if not host:
             return
 
-        # if it's the same connection, don't do anything
-        if self.bist is not None and self.bist.bistHost == host:
-            ProductShell.prompt = f"{self.product.name} DA@{host}> "
-            return
-
-        # If we have got a bist, and it's not the same as before, close the previous connection
-        if self.bist is not None:
-            print("Closing previous BIST connection...")
-            self.bist.closeBIST()
+        print("Closing previous BIST connection...")
+        self.product.closeBIST()
 
         # Now open a new BIST telnet connection
-        self.bist = cast(BaseBIST, self.product)
-        self.bist.initComms(host=host)
-        self.bist.openBIST()
+        self.product.initComms(host)
+        self.product.openBIST()
 
         ProductShell.prompt = f"{self.product.name} DA@{host}> "
 

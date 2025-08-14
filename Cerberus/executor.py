@@ -41,7 +41,7 @@ class Executor:
         """Run a single test with an optional pre-configured product injected."""
         logging.debug(f"Running test: {test.name}")
 
-        test.provideProduct(product)
+        test.setProduct(product)
 
         if not test.initialise():
             logging.error(f"Failed to initialize test: {test.name}")

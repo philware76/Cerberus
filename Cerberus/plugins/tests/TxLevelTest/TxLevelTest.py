@@ -12,7 +12,7 @@ from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
-from Cerberus.plugins.products.bist import TacticalBIST
+from Cerberus.plugins.products.bist import TacticalBISTCmds
 from Cerberus.plugins.products.tactical.tactical import BaseTactical
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import BaseTestResult, ResultStatus
@@ -53,16 +53,16 @@ class TxLevelTest(BaseTest):
         self.configSpecAna()
         self.initProduct()
 
+        # iterate through the bands fitted
+
         self.result = TxLevelTestResult(ResultStatus.PASSED)
 
     def initProduct(self):
         # product will be a particular BIST class
 
-        prod = cast(TacticalBIST, self.product)
+        prod = cast(TacticalBISTCmds, self.product)
         prod.set_attn(BaseTactical.MAX_ATTENUATION)
         prod.set_tx_enable()
-        prod.set_duplexer(band, "TX")
-        prod.set_forwardReverse("FWD")
         prod.set_tx_bw(5)
         prod.set_ts_enable()
         prod.set_ts_freq(TxLevelTest.AD9361_DC_NOTCH_FREQ_OFFSET)
