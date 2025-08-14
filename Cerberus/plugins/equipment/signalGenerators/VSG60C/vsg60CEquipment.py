@@ -40,46 +40,46 @@ class VSG60C(BaseSigGen, VISADevice, VisaInitMixin):
 
     # Library commands ---------------------------------------------------------------------------------------------
     def trigger(self) -> bool:
-        return self.checkSend('*TRG')
+        return self.command('*TRG')
 
     def output_on(self) -> bool:
-        return self.checkSend('OUTPUT ON')
+        return self.command('OUTPUT ON')
 
     def output_off(self) -> bool:
-        return self.checkSend('OUTPUT OFF')
+        return self.command('OUTPUT OFF')
 
     def Mod_on(self) -> bool:
-        return self.checkSend('OUTPUT:MOD ON')
+        return self.command('OUTPUT:MOD ON')
 
     def Mod_off(self) -> bool:
-        return self.checkSend('OUTPUT:MOD OFF')
+        return self.command('OUTPUT:MOD OFF')
 
     def set_freq(self, freq):
-        return self.checkSend(f'FREQ {freq}MHz')
+        return self.command(f'FREQ {freq}MHz')
 
     def get_freq(self) -> str | None:
         return self.query('FREQ?')
 
     def set_freq_step(self, freq):
-        return self.checkSend(f'FREQ:STEP {freq}MHz')
+        return self.command(f'FREQ:STEP {freq}MHz')
 
     def set_power(self, power_lvl):
-        return self.checkSend(f'POW {power_lvl}')
+        return self.command(f'POW {power_lvl}')
 
     def get_power(self) -> bool:
-        return self.checkSend('POW?')
+        return self.command('POW?')
 
     def set_power_step(self, power_step):
-        return self.checkSend(f'POW:STEP {power_step}')
+        return self.command(f'POW:STEP {power_step}')
 
     def stream_output(self, bool):
-        return self.checkSend(f'STREAMING {bool}')
+        return self.command(f'STREAMING {bool}')
 
     def set_stream_rate(self, freq):
-        return self.checkSend(f'STREAM:SRAT {freq}MHz')
+        return self.command(f'STREAM:SRAT {freq}MHz')
 
     def set_iq_scale(self, scale):
-        return self.checkSend(f'STREAM:IQ:SCALE {scale}')
+        return self.command(f'STREAM:IQ:SCALE {scale}')
 
     def load_iq(self, file, type):
         if type not in ['WAV', '16BIT', '32BIT']:
@@ -91,13 +91,13 @@ class VSG60C(BaseSigGen, VISADevice, VisaInitMixin):
         if type == '32BIT':
             type = 'BINFC'
 
-        return self.checkSend(f'STREAM:WAV:LOAD:{type} "{file}"')
+        return self.command(f'STREAM:WAV:LOAD:{type} "{file}"')
 
     def unload_iq(self) -> bool:
-        return self.checkSend('STREAM:WAV:UNLOAD')
+        return self.command('STREAM:WAV:UNLOAD')
 
     def arb_state(self, bool):
-        return self.checkSend(f'RAD:ARB {bool}')
+        return self.command(f'RAD:ARB {bool}')
 
     def arb_load_iq(self, file, type):
         if type not in ['WAV', '16BIT', '32BIT']:
@@ -109,22 +109,22 @@ class VSG60C(BaseSigGen, VISADevice, VisaInitMixin):
         if type == '32BIT':
             type = 'BINFC'
 
-        return self.checkSend(f'RAD:ARB:WAV:LOAD:{type} "{file}"')
+        return self.command(f'RAD:ARB:WAV:LOAD:{type} "{file}"')
 
     def arb_mode(self, mode):
-        return self.checkSend(f'RAD:ARB:TRIG:TYPE {mode}')
+        return self.command(f'RAD:ARB:TRIG:TYPE {mode}')
 
     def arb_sample_rate(self, freq):
-        return self.checkSend(f'RAD:ARB:SRAT {freq}MHz')
+        return self.command(f'RAD:ARB:SRAT {freq}MHz')
 
     def arb_iq_scale(self, scale):
-        return self.checkSend(f'RAD:ARB:IQ:SCALE {scale}')
+        return self.command(f'RAD:ARB:IQ:SCALE {scale}')
 
     def arb_auto_scale(self, bool):
-        return self.checkSend(f'RAD:ARB:IQ:SCALE:AUTO {bool}')
+        return self.command(f'RAD:ARB:IQ:SCALE:AUTO {bool}')
 
     def arb_unload(self) -> bool:
-        return self.checkSend('RAD:ARB:WAV:UNLOAD')
+        return self.command('RAD:ARB:WAV:UNLOAD')
 
     def arb_loaded(self) -> bool:
-        return self.checkSend('RAD:ARB:WAV:LOAD?')
+        return self.command('RAD:ARB:WAV:LOAD?')

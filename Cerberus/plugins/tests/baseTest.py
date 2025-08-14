@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional, Type, TypeVar
 
-from Cerberus.exceptions import ExecutionError
+from Cerberus.exceptions import EquipmentError, ExecutionError
 from Cerberus.plugins.basePlugin import BasePlugin
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
@@ -58,10 +58,12 @@ class BaseTest(BasePlugin):
         """Inject resolved equipment instances keyed by their required types."""
         self._equipment = dict(equipment)
 
-    def getEquip(self, equip_type: Type[T]) -> T | None:
+    def getEquip(self, equip_type: Type[T]) -> T:
         """Retrieve an injected equipment instance by its type."""
         inst = self._equipment.get(equip_type)
-        return inst if isinstance(inst, equip_type) else None
+        inst = inst if isinstance(inst, equip_type) else None
+        if inst is None:
+            raise EquipmentError(f"Failed to find {T}")
 
     def run(self):
         if self.product is None:

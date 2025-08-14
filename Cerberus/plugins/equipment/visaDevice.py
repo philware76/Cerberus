@@ -53,39 +53,27 @@ class VISADevice(CommsInterface):
             logging.error(f"Failed to close resource: {self.resource} - {e}")
             return False
 
-    def checkSend(self, cmd) -> bool:
+    def write(self, command: str):
         if self.instrument is None:
-            print("Device needs to be initialised with 'init' command")
-            return False
+            raise EquipmentError("Instrument is not instantiated.")
 
-        if not self.command(cmd):
-            logging.debug(f"Command {cmd} was not successful.")
-            return False
-
-        return True
-
-    def write(self, command: str) -> bool:
         logging.debug(f"{self.resource} - Write {command}")
+        if self.instrument.write(command) == 0:
+            raise EquipmentError(f"Failed to send {command}")
+
+    def query(self, command: str) -> str:
         if self.instrument is None:
-            logging.warning("VISA Device is not open, can't write to device.")
-            return False
+            raise EquipmentError("Instrument is not instantiated.")
 
-        self.instrument.write(command)
-        return True
-
-    def query(self, command: str) -> str | None:
         logging.debug(f"{self.resource} - Query {command}")
-        if self.instrument is None:
-            logging.warning("VISA Device is not open, can't query the device.")
-            return None
+        resp = self.instrument.query(command)
 
-        return self.instrument.query(command)
+        logging.debug(f"{self.resource} - Response {resp}")
+        return resp
 
     def operationComplete(self) -> bool:
         logging.debug("Waiting for operation complete...")
-        if not self.write("*OPC"):
-            logging.warning("Failed to send *OPC")
-            return False
+        self.write("*OPC")
 
         count = 0
         while count < 10:
@@ -99,6 +87,7 @@ class VISADevice(CommsInterface):
                 logging.debug(f"{self.resource} - *ESR? => {complete}")
                 if complete == 1:
                     return True
+
                 else:
                     common.dwell(0.1)
                     count += 1
@@ -113,16 +102,14 @@ class VISADevice(CommsInterface):
         self.write("*RST")
         common.dwell(dwell)
 
-    def command(self, command) -> bool:
-        if self.write(command):
-            return self.operationComplete()
-        else:
-            return False
+    def command(self, command):
+        self.write(command)
+        return self.operationComplete()
 
-    def identity(self) -> Identity | None:
+    def identity(self) -> Identity:
         cmd = "*IDN?"
         idResp = self.query(cmd)
         if idResp is None:
-            return None
+            raise EquipmentError("Failed to get *IDN? response!")
 
         return Identity(idResp)

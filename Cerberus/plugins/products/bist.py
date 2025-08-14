@@ -120,6 +120,10 @@ class PaMixin:
         self._send("TX:PAEN PA_OFF")
         self._send("TX:PAPATH PA_OFF")
 
+    def get_pa_power(self: _BISTIO, *, freq=None):
+        type = "RAW" if freq is None else freq
+        return self._query('TX:PAPWR? {type}')
+
 
 class AttenuationMixin:
     def set_attn(self: _BISTIO,  value: float): self._send(f"TX:ATTN {value}")

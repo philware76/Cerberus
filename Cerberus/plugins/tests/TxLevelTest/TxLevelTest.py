@@ -75,7 +75,10 @@ class TxLevelTest(BaseTest):
         time.sleep(0.5)
 
         measuredPwr = self.specAna.getMarker()
-        detectedPwr = self.bist.get_pa_pwr()
+        detectedPwr = self.bist.get_pa_power()
+        diff = detectedPwr - measuredPwr
+
+        print(f"Measured: {measuredPwr}, detected: {detectedPwr}, diff: {diff}")
 
         time.sleep(2)
 
