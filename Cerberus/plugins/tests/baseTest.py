@@ -3,20 +3,20 @@ from typing import List, Optional, Type, TypeVar
 
 from Cerberus.exceptions import EquipmentError, ExecutionError
 from Cerberus.plugins.basePlugin import BasePlugin
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 
 from .baseTestResult import BaseTestResult
 
-T = TypeVar("T", bound=BaseCommsEquipment)
+T = TypeVar("T", bound=BaseEquipment)
 
 
 class BaseTest(BasePlugin):
     def __init__(self, name, description: Optional[str] = None):
         super().__init__(name, description)
         self.result: BaseTestResult | None = None
-        self.requiredEquipment: List[Type[BaseCommsEquipment]] = []
-        self._equipment: dict[type[BaseCommsEquipment], BaseCommsEquipment] = {}
+        self.requiredEquipment: List[Type[BaseEquipment]] = []
+        self._equipment: dict[type[BaseEquipment], BaseEquipment] = {}
         self.product: BaseProduct
 
     def setProduct(self, product: BaseProduct) -> None:
@@ -54,7 +54,7 @@ class BaseTest(BasePlugin):
     def _addRequirements(self, typeNames):
         self.requiredEquipment.extend(typeNames)
 
-    def provideEquip(self, equipment: dict[type[BaseCommsEquipment], BaseCommsEquipment]) -> None:
+    def provideEquip(self, equipment: dict[type[BaseEquipment], BaseEquipment]) -> None:
         """Inject resolved equipment instances keyed by their required types."""
         self._equipment = dict(equipment)
 

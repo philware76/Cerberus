@@ -11,6 +11,8 @@ from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
                                              OptionParameter)
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.common import getSettledReading
+from Cerberus.plugins.equipment.cables.calibratedCableEquipment import \
+    CalibratedCable
 from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
@@ -65,7 +67,7 @@ class TxLevelTest(BaseTest):
 
     def __init__(self):
         super().__init__("Tx Level")
-        self._addRequirements([BaseChamber, BaseSpecAnalyser, BaseSigGen])
+        self._addRequirements([BaseSpecAnalyser, BaseSigGen, CalibratedCable])
         self.addParameterGroup(TxLevelTestParameters())
 
         self.bist: TacticalBISTCmds
@@ -189,4 +191,5 @@ class TxLevelTest(BaseTest):
         self.specAna.setBWS("NUTT")
         self.specAna.setRBW(10)
         self.specAna.setVBW(10)
+        self.specAna.setRefLevel(-10)
         self.specAna.setRefLevel(-10)

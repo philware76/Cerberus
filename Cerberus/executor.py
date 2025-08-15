@@ -2,7 +2,7 @@ import logging
 
 from Cerberus.exceptions import TestError
 from Cerberus.manager import PluginService
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
@@ -24,7 +24,7 @@ class Executor:
             return False
 
         # Initialise selected equipment instances now
-        equip_map: dict[type[BaseCommsEquipment], BaseCommsEquipment] = {}
+        equip_map: dict[type[BaseEquipment], BaseEquipment] = {}
         for req_type, equip in reqs.selection.items():
             if not equip.initialise():
                 logging.error(f"Failed to initialise {equip.name}, is it online?")

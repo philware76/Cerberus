@@ -3,6 +3,7 @@ import logging
 from Cerberus.chamberService import ChamberService
 from Cerberus.database.storeageInterface import StorageInterface
 from Cerberus.planService import PlanService
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.pluginService import PluginService
 
@@ -25,6 +26,7 @@ class Manager():
     def _applyPersistedEquipmentComms(self):
         try:
             equipment = self.db.listStationEquipment()
+
         except Exception as ex:
             logging.error(f"Failed to list station equipment: {ex}")
             return
@@ -36,7 +38,7 @@ class Manager():
         applied = 0
         for device in equipment:
             model = device['model']
-            equip = self.pluginService.findEquipment(model)
+            equip = self.pluginService.findEquipType(model, BaseCommsEquipment)
             if not equip:
                 logging.warning(f"No plugin found for model '{model}'")
                 continue
