@@ -1,5 +1,7 @@
 
 # Product ID to Product Plugin Name mapping.
+import logging
+
 PROD_ID_MAPPING = {
     "K": "Tactical_A_Controller",
     "I": "Tactical_G_Controller",
@@ -21,3 +23,45 @@ NESIE_TYPES = {
     'G': 'GAN',
     '': 'Other'
 }
+
+
+def getSettledReading(readValueFunc):
+    """Return a stable measurement using 99% confidence interval on the mean.
+
+        Strategy:
+          - Collect batches of readings (min_batch) from readValueFunc()
+          - After each batch, compute sample mean (m), sample standard deviation (s, ddof=1).
+          - 99% CI half-width = z * s / sqrt(n) with z≈2.576.
+          - Stop when half-width <= tolerance (abs or relative) OR max_samples reached.
+        """
+    import numpy as np
+
+    z = 2.576  # 99% two-sided z-score
+    tolerance_abs = 0.05  # dB absolute half-width target
+    tolerance_rel = 0.002  # 0.2% of mean as alternative stopping criterion
+    min_batch = 5
+    max_samples = 100
+
+    readings: list[float] = []
+    while True:
+        # acquire a batch
+        for _ in range(min_batch):
+            readings.append(readValueFunc())
+            if len(readings) >= max_samples:
+                break
+
+        n = len(readings)
+        if n < 2:
+            continue
+
+        arr = np.array(readings, dtype=float)
+        mean = float(arr.mean())
+        # sample std (ddof=1) guard small n
+        std = float(arr.std(ddof=1)) if n > 1 else 0.0
+        half_width = z * std / (n ** 0.5) if n > 1 else 0.0
+        rel_hw = half_width / abs(mean) if mean != 0 else float('inf')
+
+        logging.debug(f"SettledMeas n={n} mean={mean:.3f} std={std:.3f} hw99={half_width:.3f} rel={rel_hw:.4f}")
+
+        if (half_width <= tolerance_abs) or (rel_hw <= tolerance_rel) or n >= max_samples:
+            return mean
