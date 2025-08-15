@@ -25,10 +25,11 @@ class Database(StorageInterface):
             database=dbInfo.database
         )
 
-        # Ensure equipment table exists before station (FK dependency)
+        # Ensure tables exist (order so FKs have targets)
         self._ensure_station_table()
         self._ensure_testplans_table()
         self._ensure_equipment_table()
+        self._ensure_calcables_table()
         self._checkStationExists()
 
     def close(self):
@@ -146,6 +147,37 @@ class Database(StorageInterface):
             self.conn.commit()
         except mysql.connector.Error as err:
             logging.error(f"Error creating equipment table: {err}")
+        finally:
+            if cursor is not None:
+                cursor.close()
+
+    def _ensure_calcables_table(self):
+        cursor = None
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS calcables (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    station_identity VARCHAR(100) NOT NULL,
+                    role ENUM('TX','RX') NOT NULL,
+                    serial VARCHAR(100) NOT NULL,
+                    calibration_method VARCHAR(32) NOT NULL,
+                    degree INT NOT NULL,
+                    domain_min DOUBLE NOT NULL,
+                    domain_max DOUBLE NOT NULL,
+                    coeffs_json TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_calcable_station_role (station_identity, role),
+                    INDEX ix_calcable_station (station_identity),
+                    CONSTRAINT fk_calcables_station FOREIGN KEY (station_identity) REFERENCES station(identity)
+                )
+                """
+            )
+            self.conn.commit()
+        except mysql.connector.Error as err:
+            logging.error(f"Error creating calcables table: {err}")
         finally:
             if cursor is not None:
                 cursor.close()
@@ -414,4 +446,137 @@ class Database(StorageInterface):
         finally:
             if cursor is not None:
                 cursor.close()
+
+    # Calibration Cable management ----------------------------------------------------
+    def upsertCalCable(self, role: str, serial: str, *, method: str, degree: int,
+                       domain: tuple[float, float], coeffs: list[float]) -> int | None:
+        role_u = role.upper()
+        if role_u not in ("TX", "RX"):
+            raise ValueError("role must be 'TX' or 'RX'")
+
+        payload = {
+            "method": method,
+            "degree": degree,
+            "domain": list(domain),
+            "coeffs": coeffs
+        }
+        cursor = None
+        try:
+            cursor = self.conn.cursor(dictionary=True)
+            cursor.execute("SELECT id FROM calcables WHERE station_identity=%s AND role=%s", (self.stationId, role_u))
+            row = cursor.fetchone()
+            if row:
+                row_d = cast(dict[str, Any], row)
+                cid = int(row_d['id'])
+                cursor.execute(
+                    """UPDATE calcables SET serial=%s, calibration_method=%s, degree=%s, domain_min=%s, domain_max=%s, coeffs_json=%s WHERE id=%s""",
+                    (serial, method, degree, domain[0], domain[1], json.dumps(payload), cid)
+                )
+                self.conn.commit()
+                return cid
+            else:
+                cursor.execute(
+                    """INSERT INTO calcables (station_identity, role, serial, calibration_method, degree, domain_min, domain_max, coeffs_json)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    (self.stationId, role_u, serial, method, degree, domain[0], domain[1], json.dumps(payload))
+                )
+                self.conn.commit()
+                new_id = cursor.lastrowid
+                return int(new_id) if new_id is not None else None
+        except mysql.connector.Error as err:
+            logging.error(f"Error upserting cal cable {role_u}: {err}")
+            return None
+        finally:
+            if cursor is not None:
                 cursor.close()
+
+    def fetchCalCable(self, role: str) -> dict[str, Any] | None:
+        role_u = role.upper()
+        cursor = self.conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT * FROM calcables WHERE station_identity=%s AND role=%s", (self.stationId, role_u))
+            row = cursor.fetchone()
+            if row:
+                return cast(dict[str, Any], row)
+            return None
+        except mysql.connector.Error as err:
+            logging.error(f"Error fetching cal cable {role_u}: {err}")
+            return None
+        finally:
+            cursor.close()
+
+    def listCalCables(self) -> list[dict[str, Any]]:
+        cursor = self.conn.cursor(dictionary=True)
+        rows: list[dict[str, Any]] = []
+        try:
+            cursor.execute("SELECT * FROM calcables WHERE station_identity=%s ORDER BY role", (self.stationId,))
+            for r in cursor.fetchall():
+                rows.append(cast(dict[str, Any], r))
+            return rows
+        except mysql.connector.Error as err:
+            logging.error(f"Error listing cal cables: {err}")
+            return rows
+        finally:
+            cursor.close()
+
+    def deleteCalCable(self, role: str) -> bool:
+        role_u = role.upper()
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("DELETE FROM calcables WHERE station_identity=%s AND role=%s", (self.stationId, role_u))
+            self.conn.commit()
+            return cursor.rowcount > 0
+        except mysql.connector.Error as err:
+            logging.error(f"Error deleting cal cable {role_u}: {err}")
+            return False
+        finally:
+            cursor.close()
+
+    def buildCalCableChebyshev(self, role: str):
+        row = self.fetchCalCable(role)
+        if not row:
+            return None, None
+
+        coeffs_json = row.get("coeffs_json")
+        if not coeffs_json:
+            return None, None
+
+        try:
+            payload = json.loads(coeffs_json)
+            if payload.get("method") != "chebyshev":
+                logging.error("Unsupported calibration method %r", payload.get("method"))
+                return None, payload
+            from numpy.polynomial import Chebyshev
+            coeffs = payload["coeffs"]
+            domain = tuple(payload["domain"])
+            ch = Chebyshev(coeffs, domain=domain)
+            return ch, payload
+
+        except Exception as e:
+            logging.exception("Failed to rebuild Chebyshev for cal cable %s: %s", role, e)
+            return None, None
+
+    def buildCalCableLossFn(self, role: str):
+        ch, meta = self.buildCalCableChebyshev(role)
+        if ch is None:
+            return lambda _f: None, meta
+
+        return lambda f_mhz: float(ch(f_mhz)), meta
+
+    def fetchCable(self, role: str) -> dict[str, Any] | None:
+        """
+        role: 'TX' or 'RX' stored in model or a dedicated field.
+        Example: model='TX_CABLE' or 'RX_CABLE'.
+        """
+        cursor = self.conn.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                "SELECT * FROM equipment WHERE station_identity=%s AND equipment_type='CABLE' AND model=%s LIMIT 1",
+                (self.stationId, f"{role.upper()}_CABLE")
+            )
+            row = cursor.fetchone()
+            if row:
+                return cast(dict[str, Any], row)
+
+        finally:
+            cursor.close()

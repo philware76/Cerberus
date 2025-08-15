@@ -1,14 +1,10 @@
 import json
 import logging
 import os
-import sys
-from sys import path
 from typing import Any, Dict, List, Tuple
 
 from Cerberus.database.database import StorageInterface
 from Cerberus.plan import Plan
-
-# NOT SURE IF THIS WORKS YET - UNTESTED!
 
 
 class FileDatabase(StorageInterface):
@@ -22,6 +18,7 @@ class FileDatabase(StorageInterface):
         # Ensure mandatory containers (role-less)
         self._data.setdefault('test_plans', [])
         self._data.setdefault('equipment', [])
+        self._data.setdefault('calcables', [])  # list of {role, serial, calibration_method, degree, domain:[min,max], coeffs:[], created_at, updated_at}
         self._data.setdefault('testPlanId', None)
         self._save_data()
 
@@ -175,3 +172,88 @@ class FileDatabase(StorageInterface):
             if e.get('station_identity') == self.station_identity and e.get('model') == model:
                 return e.copy()
         return None
+
+    # --- Calibration Cable Management ---------------------------------------------------------------------------
+    def upsertCalCable(self, role: str, serial: str, *, method: str, degree: int,
+                       domain: tuple[float, float], coeffs: list[float]) -> int | None:
+        role_u = role.upper()
+        if role_u not in ("TX", "RX"):
+            raise ValueError("role must be 'TX' or 'RX'")
+        calcables: List[Dict[str, Any]] = self._data.get('calcables', [])
+        from time import time
+        now = int(time())
+        for c in calcables:
+            if c.get('role') == role_u:
+                c.update({
+                    'serial': serial,
+                    'calibration_method': method,
+                    'degree': degree,
+                    'domain': list(domain),
+                    'coeffs': list(coeffs),
+                    'updated_at': now
+                })
+                self._save_data()
+                return 1
+        # Insert new
+        calcables.append({
+            'role': role_u,
+            'serial': serial,
+            'calibration_method': method,
+            'degree': degree,
+            'domain': list(domain),
+            'coeffs': list(coeffs),
+            'created_at': now,
+            'updated_at': now
+        })
+        self._data['calcables'] = calcables
+        self._save_data()
+        return 1
+
+    def fetchCalCable(self, role: str) -> Dict[str, Any] | None:
+        role_u = role.upper()
+        for c in self._data.get('calcables', []):
+            if c.get('role') == role_u:
+                return c.copy()
+        return None
+
+    def listCalCables(self) -> List[Dict[str, Any]]:
+        return [c.copy() for c in self._data.get('calcables', [])]
+
+    def deleteCalCable(self, role: str) -> bool:
+        role_u = role.upper()
+        calcables: List[Dict[str, Any]] = self._data.get('calcables', [])
+        for i, c in enumerate(calcables):
+            if c.get('role') == role_u:
+                del calcables[i]
+                self._data['calcables'] = calcables
+                self._save_data()
+                return True
+        return False
+
+    def buildCalCableChebyshev(self, role: str):
+        row = self.fetchCalCable(role)
+        if not row:
+            return None, None
+
+        try:
+            if row.get('calibration_method') != 'chebyshev':
+                logging.error("Unsupported calibration method %r", row.get('calibration_method'))
+                return None, row
+            from numpy.polynomial import Chebyshev
+            coeffs = row.get('coeffs', [])
+            domain = tuple(row.get('domain', [])) if row.get('domain') else None
+            if not domain or len(domain) != 2:
+                logging.error("Invalid domain for cal cable %s", role)
+                return None, row
+            ch = Chebyshev(coeffs, domain=domain)
+            return ch, row
+
+        except Exception as e:
+            logging.exception("Failed to rebuild Chebyshev for cal cable %s: %s", role, e)
+            return None, None
+
+    def buildCalCableLossFn(self, role: str):
+        ch, meta = self.buildCalCableChebyshev(role)
+        if ch is None:
+            return lambda _f: None, meta
+        return lambda f_mhz: float(ch(f_mhz)), meta

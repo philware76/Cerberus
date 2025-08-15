@@ -1,7 +1,7 @@
-from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
 
 
-class BaseChamber(BaseEquipment):
+class BaseChamber(BaseCommsEquipment):
     """
     Base class for all chamber equipment plugins.
     This class should be extended by specific chamber equipment plugins.

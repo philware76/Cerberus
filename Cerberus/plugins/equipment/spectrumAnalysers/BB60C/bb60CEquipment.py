@@ -3,7 +3,7 @@ from typing import Any
 
 from Cerberus.exceptions import EquipmentError
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
@@ -29,7 +29,7 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         if not self._visa_initialise(init):
             return False
 
-        self._initialised = BaseEquipment.initialise(self)
+        self._initialised = BaseCommsEquipment.initialise(self)
         return self._initialised
 
     # This overrides the VISA operationComplete version

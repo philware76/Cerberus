@@ -5,7 +5,8 @@ from typing import Any
 import requests
 
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.equipment.baseEquipment import BaseEquipment, Identity
+from Cerberus.plugins.equipment.baseCommsEquipment import (BaseCommsEquipment,
+                                                           Identity)
 
 
 @hookimpl
@@ -14,7 +15,7 @@ def createEquipmentPlugin():
     return RFSwitch()
 
 
-class RFSwitch(BaseEquipment):
+class RFSwitch(BaseCommsEquipment):
     def __init__(self):
         super().__init__("RF Switch")
         self.identity: Identity | None
@@ -45,9 +46,9 @@ class RFSwitch(BaseEquipment):
 
     # Internal request helper using communication parameters
     def _request(self, path: str) -> Any:
-        ip = self.getParameterValue("Communication", "IP Address") or "127.0.0.1"
-        port = self.getParameterValue("Communication", "Port") or 80
-        timeout_ms = self.getParameterValue("Communication", "Timeout") or 1000
+        ip = self.getParameterValue("Communication", "IP Address", "127.0.0.1")
+        port = self.getParameterValue("Communication", "Port", 80)
+        timeout_ms = self.getParameterValue("Communication", "Timeout", 5000)
         timeout_s = float(timeout_ms) / 1000.0
 
         url = f"http://{ip}:{int(port)}/{path}" if int(port) not in (80, 443) else f"http://{ip}/{path}"
@@ -68,4 +69,5 @@ class RFSwitch(BaseEquipment):
                 logging.debug("Retrying RF Switch connection...")
 
         logging.debug('Failed to connect to RF switch after retries')
+        raise ConnectionError("RF Switch connection failed")
         raise ConnectionError("RF Switch connection failed")

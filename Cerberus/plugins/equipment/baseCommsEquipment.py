@@ -31,6 +31,29 @@ class Identity():
 class BaseEquipment(BasePlugin):
     def __init__(self, name: str):
         super().__init__(name)
+
+    def initialise(self, init: Any | None = None) -> bool:
+        """Initialises the equipment"""
+        logging.debug("Initialise")
+        return True
+
+    def configure(self, config: Any | None = None) -> bool:
+        """Configures the equipment"""
+        logging.debug("Configure")
+        return True
+
+    def finalise(self) -> bool:
+        """Finalises [closes] the equipment"""
+        logging.debug("Finalise")
+        self._initialised = False
+        self.configured = False
+        self.finalised = True
+        return True
+
+
+class BaseCommsEquipment(BaseEquipment):
+    def __init__(self, name: str):
+        super().__init__(name)
         self.identity = Identity("")
         self.addParameterGroup(CommsParams())
 
@@ -38,43 +61,3 @@ class BaseEquipment(BasePlugin):
         """Initialise communication parameters from a dict (keys: 'IP Address','Port','Timeout')."""
         if isinstance(comms, dict):
             self.updateParameters("Communication", comms)
-
-    def initialise(self, init: Any | None = None) -> bool:
-        """Initialises the communication information"""
-        logging.debug("Initialise")
-        return True
-
-    def configure(self, config: Any | None = None) -> bool:
-        logging.debug("Configure")
-        return True
-
-    def finalise(self) -> bool:
-        logging.debug("Finalise")
-        self._initialised = False
-        self.configured = False
-        self.finalised = True
-        return True
-
-    # --- Parameter Helpers -----------------------------------------------------------------------------------------
-    def getParameterValue(self, group: str, paramName: str) -> Any | None:
-        groupObj = self._groupParams.get(group)
-        if not groupObj:
-            return None
-        param = groupObj.get(paramName)
-        if not param:
-            return None
-        return param.value
-
-    def setParameterValue(self, group: str, paramName: str, value: Any) -> bool:
-        groupObj = self._groupParams.get(group)
-        if not groupObj:
-            return False
-        param = groupObj.get(paramName)
-        if not param:
-            return False
-        param.value = value
-        return True
-
-    def updateParameters(self, group: str, values: dict[str, Any]):
-        for k, v in values.items():
-            self.setParameterValue(group, k, v)
