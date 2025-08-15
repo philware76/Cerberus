@@ -62,17 +62,26 @@ class TelnetClient:
     # ----------------------------------------------------------------------------------
     # Core operations
     # ----------------------------------------------------------------------------------
-    def send(self, line: str) -> bool:
+    def _write(self, line: str) -> bool:
         """Send a line (appends newline)."""
         tn = self._require_open()
         data = (line + "\n").encode()
         logging.debug("-> %s", line)
         try:
             tn.write(data)
-            return True
 
         except OSError as e:
             logging.error(f"Telnet Write Error: {e}")
+            return False
+
+        return True
+
+    def send(self, line: str) -> bool:
+        """Send a command and wait for the "\n" OK back"""
+        if self._write(line):
+            resp = self.read_line()
+            return resp == ""
+        else:
             return False
 
     def query(self, line: str, *, timeout: Optional[float] = None, strip: bool = True) -> str:
@@ -81,7 +90,7 @@ class TelnetClient:
         timeout: overrides default timeout for this read only.
         strip: if True, rstrip CR/LF.
         """
-        self.send(line)
+        self._write(line)  # Don't use send()!!
         return self.read_line(timeout=timeout, strip=strip)
 
     def read_line(self, *, timeout: Optional[float] = None, strip: bool = True) -> str:

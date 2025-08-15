@@ -60,6 +60,7 @@ class BaseProduct(BasePlugin, BaseBIST):
             with SSHComms(self._DAHost, username="root", key_path=key_path) as ssh:
                 eep = EEPROM(ssh)
                 words = eep.read() or []
+
         except Exception as e:
             logging.warning("EEPROM read failed on %s: %s", self._DAHost, e)
             return False
