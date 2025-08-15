@@ -24,27 +24,27 @@ class Manager():
 
     def _applyPersistedEquipmentComms(self):
         try:
-            records = self.db.listStationEquipment()
+            equipment = self.db.listStationEquipment()
         except Exception as ex:
             logging.error(f"Failed to list station equipment: {ex}")
             return
 
-        if not records:
+        if not equipment:
             logging.debug("No equipment records attached to this station.")
             return
 
         applied = 0
-        for rec in records:
-            model = rec['model']
+        for device in equipment:
+            model = device['model']
             equip = self.pluginService.findEquipment(model)
             if not equip:
                 logging.warning(f"No plugin found for model '{model}'")
                 continue
 
             comms = {
-                'IP Address': rec.get('ip_address'),
-                'Port': int(rec.get('port', 0)),
-                'Timeout': int(rec.get('timeout_ms', 0)),
+                'IP Address': device.get('ip_address'),
+                'Port': int(device.get('port', 0)),
+                'Timeout': int(device.get('timeout_ms', 0)),
             }
             equip.initComms(comms)
             applied += 1

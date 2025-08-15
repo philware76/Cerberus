@@ -1,7 +1,7 @@
 import pytest
 
 from Cerberus.executor import Executor
-from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.simpleEquip.simple1Equipment import \
     SimpleEquip1
 from Cerberus.plugins.products.baseProduct import BaseProduct
@@ -10,7 +10,7 @@ from Cerberus.pluginService import PluginService
 
 
 # --- Helpers -----------------------------------------------------------------------------------------------------
-class _FakeEquip(BaseEquipment):
+class _FakeEquip(BaseCommsEquipment):
     def __init__(self):
         super().__init__("Fake Equipment (Not Registered)")
 

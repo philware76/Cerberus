@@ -156,8 +156,6 @@ def test_EquipmentCalibrationFields(db_env: Tuple[FileDatabase, PluginService, P
     assert rec.get('calibration_due') == new_due
 
 
-
-
 def test_FetchEquipmentByModel_not_attached(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
     db, _, _, _ = db_env
     serial = "FETCH-SN-1"
@@ -196,3 +194,61 @@ def test_FetchEquipmentByModel_after_attach(db_env: Tuple[FileDatabase, PluginSe
     assert rec is not None
     assert rec.get('serial') == serial
     assert rec.get('model') == model
+
+
+# --- Calibration Cable Tests ------------------------------------------------------------------------------------
+
+def test_CalCable_Insert_And_Fetch(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
+    db, *_ = db_env
+    tx_serial = "TXCAL-001"
+    rx_serial = "RXCAL-001"
+    tx_id = db.upsertCalCable('TX', tx_serial, method='chebyshev', degree=3, domain=(100.0, 6000.0), coeffs=[0.1, 0.01, -0.0005, 0.00001])
+    rx_id = db.upsertCalCable('RX', rx_serial, method='chebyshev', degree=2, domain=(100.0, 6000.0), coeffs=[0.2, 0.02, -0.0007])
+    assert tx_id is not None and rx_id is not None
+    tx_row = db.fetchCalCable('TX')
+    rx_row = db.fetchCalCable('RX')
+    assert tx_row is not None and rx_row is not None
+    assert tx_row.get('serial') == tx_serial
+    assert rx_row.get('serial') == rx_serial
+    assert tx_row.get('degree') == 3
+    assert rx_row.get('degree') == 2
+
+
+def test_CalCable_Update(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
+    db, *_ = db_env
+    # Update TX cable with new coeffs and degree
+    new_coeffs = [0.15, 0.012, -0.0004, 0.00002, -0.0000001]
+    tx_id2 = db.upsertCalCable('TX', 'TXCAL-001', method='chebyshev', degree=4, domain=(50.0, 8000.0), coeffs=new_coeffs)
+    assert tx_id2 is not None
+    tx_row = db.fetchCalCable('TX')
+    assert tx_row is not None
+    assert tx_row.get('degree') == 4
+    assert tx_row.get('domain') == [50.0, 8000.0]
+    assert tx_row.get('coeffs') == new_coeffs
+
+
+def test_CalCable_List(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
+    db, *_ = db_env
+    lst = db.listCalCables()
+    roles = {c['role'] for c in lst}
+    assert roles == {"TX", "RX"}
+
+
+def test_CalCable_LossFn(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
+    db, *_ = db_env
+    loss_fn, meta = db.buildCalCableLossFn('TX')
+    assert callable(loss_fn)
+    v = loss_fn(1000.0)
+    assert isinstance(v, float)
+    # Evaluate multiple points to ensure function responds
+    for f in [100.0, 500.0, 2500.0, 6000.0]:
+        val = loss_fn(f)
+        assert isinstance(val, float)
+
+
+def test_CalCable_Delete(db_env: Tuple[FileDatabase, PluginService, PlanService, ChamberService]):
+    db, *_ = db_env
+    assert db.deleteCalCable('RX')
+    assert db.fetchCalCable('RX') is None
+    # Recreate RX for potential later tests
+    db.upsertCalCable('RX', 'RXCAL-002', method='chebyshev', degree=2, domain=(100.0, 6000.0), coeffs=[0.25, 0.015, -0.0006])

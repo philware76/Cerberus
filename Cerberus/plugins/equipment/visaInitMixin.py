@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from Cerberus.plugins.equipment.baseEquipment import Identity
+from Cerberus.plugins.equipment.baseCommsEquipment import Identity
 from Cerberus.plugins.equipment.visaDevice import VISADevice
 
 

@@ -4,7 +4,7 @@ from typing import Any, cast  # added for identity check typing
 from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
 from Cerberus.manager import Manager
-from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.commsInterface import CommsInterface
 
 
@@ -15,12 +15,12 @@ class EquipShell(PluginsShell):
 
 
 class EquipmentShell(RunCommandShell):
-    def __init__(self, equip: BaseEquipment, manager: Manager):
+    def __init__(self, equip: BaseCommsEquipment, manager: Manager):
         EquipmentShell.intro = f"Welcome to Cerberus {equip.name} Equipment System. Type help or ? to list commands.\n"
         EquipmentShell.prompt = f"{equip.name}> "
 
         super().__init__(equip, manager)
-        self.equip: BaseEquipment = equip
+        self.equip: BaseCommsEquipment = equip
         self.config = {}
 
     def do_identity(self, arg):

@@ -7,7 +7,7 @@ from pyvisa.resources.tcpip import TCPIPInstrument
 
 from Cerberus import common
 from Cerberus.exceptions import EquipmentError
-from Cerberus.plugins.equipment.baseEquipment import Identity
+from Cerberus.plugins.equipment.baseCommsEquipment import Identity
 from Cerberus.plugins.equipment.commsInterface import CommsInterface
 
 

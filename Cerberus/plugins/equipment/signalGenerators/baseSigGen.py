@@ -1,9 +1,9 @@
 from abc import abstractmethod
 
-from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
 
 
-class BaseSigGen(BaseEquipment):
+class BaseSigGen(BaseCommsEquipment):
     """
     Base class for all signal generator equipment plugins.
     This class should be extended by specific signal generator equipment plugins.

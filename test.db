@@ -6,7 +6,7 @@
             "plan": {
                 "name": "Test Plan 1",
                 "user": "philw",
-                "date": "2025-08-15T16:36:02.498703",
+                "date": "2025-08-15T21:56:42.454310",
                 "tests": []
             }
         },
@@ -15,7 +15,7 @@
             "plan": {
                 "name": "Test Plan",
                 "user": "philw",
-                "date": "2025-08-15T16:36:02.505124",
+                "date": "2025-08-15T21:56:42.458317",
                 "tests": [
                     "Simple Test #1"
                 ]
@@ -127,6 +127,44 @@
             "timeout": 600,
             "calibration_date": null,
             "calibration_due": null
+        }
+    ],
+    "calcables": [
+        {
+            "role": "TX",
+            "serial": "TXCAL-001",
+            "calibration_method": "chebyshev",
+            "degree": 4,
+            "domain": [
+                50.0,
+                8000.0
+            ],
+            "coeffs": [
+                0.15,
+                0.012,
+                -0.0004,
+                2e-05,
+                -1e-07
+            ],
+            "created_at": 1755291402,
+            "updated_at": 1755291402
+        },
+        {
+            "role": "RX",
+            "serial": "RXCAL-002",
+            "calibration_method": "chebyshev",
+            "degree": 2,
+            "domain": [
+                100.0,
+                6000.0
+            ],
+            "coeffs": [
+                0.25,
+                0.015,
+                -0.0006
+            ],
+            "created_at": 1755291402,
+            "updated_at": 1755291402
         }
     ]
 }

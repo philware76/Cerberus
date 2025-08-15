@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 
-from Cerberus.plugins.equipment.baseEquipment import BaseEquipment, Identity
+from Cerberus.plugins.equipment.baseCommsEquipment import (BaseCommsEquipment,
+                                                           Identity)
 
 
-class BaseSpecAnalyser(BaseEquipment, ABC):
+class BaseSpecAnalyser(BaseCommsEquipment, ABC):
     """
     Base class for all spectrum analyser equipment plugins.
     This class should be extended by specific spectrum analyser equipment plugins.
@@ -51,4 +52,5 @@ class BaseSpecAnalyser(BaseEquipment, ABC):
 
     @abstractmethod
     def getMaxMarker(self) -> float:
+        '''Sets the marker to the Max and returns the value from the spectrum analyser'''
         '''Sets the marker to the Max and returns the value from the spectrum analyser'''

@@ -60,3 +60,29 @@ class StorageInterface(ABC):
     @abstractmethod
     def fetchStationEquipmentByModel(self, model: str) -> Dict[str, Any] | None:
         """Return a single equipment dict for this station matching model, or None if not attached."""
+
+    # --- Calibration Cable Management ---------------------------------------------------------------------------
+    @abstractmethod
+    def upsertCalCable(self, role: str, serial: str, *, method: str, degree: int,
+                       domain: tuple[float, float], coeffs: list[float]) -> int | None:
+        """Insert or update calibration cable (unique per station+role). Returns id/marker or None on failure."""
+
+    @abstractmethod
+    def fetchCalCable(self, role: str) -> Dict[str, Any] | None:
+        """Fetch calibration cable metadata for role ('TX'/'RX') or None."""
+
+    @abstractmethod
+    def listCalCables(self) -> List[Dict[str, Any]]:
+        """List all calibration cables for this station."""
+
+    @abstractmethod
+    def deleteCalCable(self, role: str) -> bool:
+        """Delete calibration cable for role; return True if existed."""
+
+    @abstractmethod
+    def buildCalCableChebyshev(self, role: str):
+        """Return (Chebyshev|None, metadata) for stored cable if method == chebyshev."""
+
+    @abstractmethod
+    def buildCalCableLossFn(self, role: str):
+        """Return (callable(freq_mhz)->loss or None, metadata)."""

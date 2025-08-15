@@ -8,23 +8,23 @@ import pluggy
 from Cerberus.pluginDiscovery import PluginDiscovery
 from Cerberus.plugins.basePlugin import BasePlugin
 from Cerberus.plugins.common import PROD_ID_MAPPING
-from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 
 # Generic type variable for equipment specialisation
-T = TypeVar("T", bound=BaseEquipment)
+T = TypeVar("T", bound=BaseCommsEquipment)
 
 
 # New unified requirements container
 @dataclass
 class Requirements:
     # All matching candidates per required equipment type
-    candidates: dict[Type[BaseEquipment], List[BaseEquipment]]
+    candidates: dict[Type[BaseCommsEquipment], List[BaseCommsEquipment]]
     # Types that have no candidates available
-    missing: List[Type[BaseEquipment]]
+    missing: List[Type[BaseCommsEquipment]]
     # Selected instance per required type based on current policy (not initialised)
-    selection: dict[Type[BaseEquipment], BaseEquipment]
+    selection: dict[Type[BaseCommsEquipment], BaseCommsEquipment]
 
 
 class PluginService:
@@ -33,7 +33,7 @@ class PluginService:
         self.missingPlugins = []
 
         # Expose as Mapping for covariance; internal structure remains mutable dict from discovery.
-        self.equipPlugins: Mapping[str, BaseEquipment] = cast(dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
+        self.equipPlugins: Mapping[str, BaseCommsEquipment] = cast(dict[str, BaseCommsEquipment], self._discover_plugins("Equipment", "equipment"))
         self.productPlugins: Mapping[str, BaseProduct] = cast(dict[str, BaseProduct], self._discover_plugins("Product", "products"))
         self.testPlugins: Mapping[str, BaseTest] = cast(dict[str, BaseTest], self._discover_plugins("Test", "tests"))
 
@@ -48,7 +48,7 @@ class PluginService:
         """Return a particular test"""
         return self.testPlugins.get(testName, None)
 
-    def findEquipment(self, equipName: str) -> BaseEquipment | None:
+    def findEquipment(self, equipName: str) -> BaseCommsEquipment | None:
         """Return a particular equipment instance"""
         return self.equipPlugins.get(equipName, None)
 
@@ -92,12 +92,12 @@ class PluginService:
     # New unified API: compute candidates, missing, and a selection in one call
     def getRequirements(self, test: BaseTest) -> Requirements:
         """Return requirements info: candidates per type, missing types, and a selected instance per required type (not initialised)."""
-        candidates: dict[Type[BaseEquipment], List[BaseEquipment]] = {}
-        missing: List[Type[BaseEquipment]] = []
-        selection: dict[Type[BaseEquipment], BaseEquipment] = {}
+        candidates: dict[Type[BaseCommsEquipment], List[BaseCommsEquipment]] = {}
+        missing: List[Type[BaseCommsEquipment]] = []
+        selection: dict[Type[BaseCommsEquipment], BaseCommsEquipment] = {}
 
         logging.warning(f"Checking requirements for test: {test.name}")
-        equipmentRequirements: List[Type[BaseEquipment]] = test.requiredEquipment
+        equipmentRequirements: List[Type[BaseCommsEquipment]] = test.requiredEquipment
         equipmentList = list(self.equipPlugins.values())
 
         for equipType in equipmentRequirements:
