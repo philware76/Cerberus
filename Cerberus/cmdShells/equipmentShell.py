@@ -69,10 +69,8 @@ class EquipmentShell(RunCommandShell):
         """Basic query command to device"""
         if isinstance(self.equip, CommsInterface):
             comms = cast(CommsInterface, self.equip)
-            if comms.write(command):
-                print("Successful")
-            else:
-                print("Unsuccessful")
+            comms.write(command)
+            print("Successful")
 
     def do_query(self, command):
         """Basic query command to device"""

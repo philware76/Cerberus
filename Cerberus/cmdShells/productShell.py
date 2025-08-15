@@ -173,6 +173,7 @@ class ProductShell(RunCommandShell):
 
         picShell = PICShell(self.manager, self.product.name, self.picIPAddress)
         daHost = picShell.runLoop()
+        self.daIPAddress = daHost
         self.product.setDAHost(daHost)
 
         ProductShell.prompt = f"{self.product.name} @{self.picIPAddress}> "

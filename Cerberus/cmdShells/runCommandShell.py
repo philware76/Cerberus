@@ -115,8 +115,7 @@ class RunCommandShell(BasePluginShell):
                 del arg_values['self']
 
             method = getattr(self.plugin, method_name)
-            if not method(**arg_values):
-                return True
+            method(**arg_values)
 
         except SystemExit:
             pass
@@ -142,6 +141,7 @@ class RunCommandShell(BasePluginShell):
                 if result:          # do_exit (or any command) signaled to stop
                     stop = True
                     break
+
             except Exception as e:
                 print(f"Command failed: {e}")
 

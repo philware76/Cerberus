@@ -71,27 +71,27 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         cmd = f'ROSC:SOUR {input}'
         return self.command(cmd)
 
-    def setRBW(self, bandwidth: float) -> bool:
-        cmd = f'BAND:RES {bandwidth}KHz'
+    def setRBW(self, bandwidthkHz: float) -> bool:
+        cmd = f'BAND:RES {bandwidthkHz}KHz'
         return self.command(cmd)
 
-    def setVBW(self, bandwidth: float) -> bool:
-        cmd = f'BAND:VID {bandwidth}KHz'
+    def setVBW(self, bandwidthkHz: float) -> bool:
+        cmd = f'BAND:VID {bandwidthkHz}KHz'
         return self.command(cmd)
 
-    def setCentre(self, frequency: float) -> bool:
-        cmd = f'FREQ:CENT {frequency}MHz'
+    def setCentre(self, frequencyMHz: float) -> bool:
+        cmd = f'FREQ:CENT {frequencyMHz}MHz'
         return self.command(cmd)
 
-    def setSpan(self, frequency: float) -> bool:
-        cmd = f'FREQ:SPAN {frequency}MHz'
+    def setSpan(self, frequencyMHz: float) -> bool:
+        cmd = f'FREQ:SPAN {frequencyMHz}MHz'
         return self.command(cmd)
 
-    def setStart(self, frequency: float) -> bool:
+    def setStart(self, frequencyMHz: float) -> bool:
         '''Sets the start frequency of the spectrum analyser'''
         raise NotImplementedError("setStart")
 
-    def setStop(self, frequency: float) -> bool:
+    def setStop(self, frequencyMHz: float) -> bool:
         '''Sets the stop frequency of the spectrum analyser'''
         raise NotImplementedError("setStop")
 
@@ -100,12 +100,12 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         cmd = f"POW:RLEV {refLevel}"
         return self.command(cmd)
 
-    def setMarker(self, frequency: float) -> bool:
+    def setMarker(self, frequencyMHz: float) -> bool:
         '''Sets the marker frequency position'''
         raise NotImplementedError("setMarker")
 
-    def getMarker(self) -> float:
+    def getMaxMarker(self) -> float:
         '''Gets the marker value from the spectrum analyser'''
-        cmd = "CALC:MARK:MAX"
-        resp = self.query(cmd)
-        return int(resp)
+        self.write("CALC:MARK:MAX")
+        resp = self.query("CALC:MARK:Y?")
+        return float(resp)

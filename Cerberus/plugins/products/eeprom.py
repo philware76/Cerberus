@@ -192,18 +192,26 @@ class FittedBands:
                 default_band = slot_details.get(i)
                 code = reverse_filter.get(default_band) if default_band is not None else None
                 converted.append(code if code is not None else 0xFF)
+
             else:
                 converted.append(x)
 
-        # Map codes to bands, ignore unknowns/0xff
+        # Build result preserving slot positions up to ST.
+        # For slots 0..6 we may have substituted defaults; for 7..ST-1 we must retain placeholders
+        # even when code is 0xFF (empty / not fitted).
         result: list[tuple[int, BandNames]] = []
         for i, code in enumerate(converted):
             if i >= ST:
                 break
 
-            band = filters.get(code, None)
+            band = filters.get(code)
             if band is not None:
-                logging.debug(f"#{code}: {band}")
+                logging.debug(f"slot {i}: 0x{code:02x} -> {band}")
                 result.append((code, band))
+
+            else:
+                # Preserve empty slot with code (likely 0xFF) by storing (code, None)
+                logging.debug(f"slot {i}: 0x{code:02x} -> empty/not recognised")
+                result.append((code, None))  # type: ignore[arg-type]
 
         return result

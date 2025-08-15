@@ -23,5 +23,9 @@ class TestShell(BasePluginShell):
 
     def do_run(self, arg):
         """Run the loaded test"""
+        if self.manager.product is None:
+            print("You must selecte the product in the product shell first")
+            return
+
         testRunner = Executor(self.manager.pluginService)
         testRunner.runTest(cast(BaseTest, self.plugin), product=self.manager.product)

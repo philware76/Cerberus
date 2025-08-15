@@ -71,16 +71,20 @@ class FreqRange:
 
     @property
     def low_mhz(self) -> float: return self.low_dmhz / 10.0
+
     @property
     def high_mhz(self) -> float: return self.high_dmhz / 10.0
+
     @property
     def low_hz(self) -> int: return self.low_dmhz * 100_000
+
     @property
     def high_hz(self) -> int: return self.high_dmhz * 100_000
 
     def contains_dmhz(self, v: int) -> bool:
         if self.low_dmhz == 0 and self.high_dmhz == 0:
             return False
+
         return self.low_dmhz <= v <= self.high_dmhz
 
 

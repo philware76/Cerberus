@@ -73,21 +73,22 @@ class BaseBIST(_BISTIO):
         return bool(self._client is not None and self._client.is_open())
 
     def _send(self,  cmd: str):
-        if not self.isBISTOpen():
+        if self._client is None or not self.isBISTOpen():
             raise BISTNotInitializedError("Telnet to BIST has not been opened yet.")
 
         try:
-            self._client.send(cmd)  # type: ignore[union-attr]
+            if not self._client.send(cmd):
+                raise BISTCommandError("Failed to get OK back from BIST")
 
         except TelnetError as e:
             raise BISTConnectionError(f"Send failed: {cmd}: {e}") from e
 
     def _query(self,  cmd: str) -> str:
-        if not self.isBISTOpen():
+        if self._client is None or not self.isBISTOpen():
             raise BISTNotInitializedError("Telnet to BIST has not been opened yet.")
 
         try:
-            return self._client.query(cmd).strip()  # type: ignore[union-attr]
+            return self._client.query(cmd).strip()
 
         except TelnetError as e:
             raise BISTConnectionError(f"Query failed: {cmd}: {e}") from e
@@ -112,7 +113,14 @@ class PaMixin:
     }
     def get_pa_path(self: _BISTIO): return self._query("TX:PAPATH?")
 
-    def set_pa_on(self: _BISTIO,  path: str):
+    def set_pa_on(self: _BISTIO,  freqMHz: float):
+        path = 'PA_LOW'
+        if 1000 < freqMHz < 3000:
+            path = 'PA_HIGH'
+
+        elif freqMHz >= 3000:
+            path = 'PA_3GHZ'
+
         self._send(f"TX:PAPATH {path}")
         self._send(f"TX:PAEN {path}")
 
@@ -120,9 +128,9 @@ class PaMixin:
         self._send("TX:PAEN PA_OFF")
         self._send("TX:PAPATH PA_OFF")
 
-    def get_pa_power(self: _BISTIO, *, freq=None) -> float:
-        type = "RAW" if freq is None else freq
-        resp = self._query('TX:PAPWR? {type}')
+    def get_pa_power(self: _BISTIO, freqMHz: int | None = None) -> float:
+        type = "RAW" if freqMHz is None else freqMHz
+        resp = self._query(f'TX:PAPWR? {type}')
         return float(resp)
 
 
@@ -164,9 +172,9 @@ class BandwidthMixin:
 
 
 class DuplexerMixin:
-    def get_duplex(self: _BISTIO,  side: str): return self._query(f"{side}:DUP?")
+    def get_duplexer(self: _BISTIO,  side: str): return self._query(f"{side}:DUP?")
 
-    def set_duplexer(self: _BISTIO, band: BandNames, TXorRX: str):
+    def set_duplexer(self: _BISTIO, slotNum: int, TXorRX: str):
         """Set duplexer path by band and side using Band enum.
         TXorRX must be 'TX' or 'RX'.
         """
@@ -174,19 +182,18 @@ class DuplexerMixin:
             logging.debug('Select Transmit or Receive Path (TX/RX) ONLY')
             return
 
-        names = ['LTE_7', 'LTE_20', 'GSM850', 'EGSM900', 'DCS1800', 'PCS1900',
-                 'UMTS_1', 'SPARE', 'SPARE2', 'SPARE3', 'SPARE4', 'SPARE5']
-        try:
-            slot_num = names.index(band.value)
-        except ValueError:
-            logging.debug(f'Band name {band} not recognised')
-            return
+        # names = ['LTE_7', 'LTE_20', 'GSM850', 'EGSM900', 'DCS1800', 'PCS1900', 'UMTS_1', 'SPARE1', 'SPARE2', 'SPARE3', 'SPARE4', 'SPARE5']
+        # try:
+        #     slot_num = names.index(band.value)
+        # except ValueError:
+        #     logging.debug(f'Band name {band} not recognised')
+        #     return
 
         # Single mapping for type and suffix; hundreds digit differs by TX/RX (1 vs 3)
         kinds = ['DUP', 'DUP', 'DUP', 'FIL', 'FIL', 'FIL', 'DUP', 'DUP', 'DUP', 'DUP', 'DUP', 'DUP']
         suffixes = ['00',  '01',  '02',  '00',  '01',  '02',  '03',  '04',  '05',  '06',  '07',  '08']
         hundreds = '1' if TXorRX == 'TX' else '3'
-        selected_path = f"{kinds[slot_num]}{hundreds}{suffixes[slot_num]}"
+        selected_path = f"{kinds[slotNum]}{hundreds}{suffixes[slotNum]}"
 
         self._send(f'{TXorRX}:DUP {selected_path}')
 
