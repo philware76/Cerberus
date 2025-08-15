@@ -14,4 +14,12 @@ class BaseSigGen(BaseEquipment):
 
     @abstractmethod
     def setOutputPower(self, level_dBm) -> bool:
-        """Sets the output power level"""
+        """Sets the output power level (dBm)"""
+
+    @abstractmethod
+    def setFrequency(self, frequencyMHz: int) -> bool:
+        """Sets the frequenecy (MHz)"""
+
+    @abstractmethod
+    def enablePower(self, state: bool) -> bool:
+        """Turns on or off the output power"""

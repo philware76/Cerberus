@@ -3,11 +3,14 @@ import time
 from dataclasses import asdict
 from typing import cast
 
+from numpy.polynomial import Chebyshev
+
 from Cerberus.common import dwell
 from Cerberus.exceptions import EquipmentError, TestError
 from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
                                              OptionParameter)
 from Cerberus.plugins.basePlugin import hookimpl, singleton
+from Cerberus.plugins.common import getSettledReading
 from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
@@ -37,9 +40,8 @@ class TxLevelTestParameters(BaseParameters):
     def __init__(self, ):
         super().__init__("RF Parameters")
 
-        self.addParameter(NumericParameter("Tx Level", 0.0, units="dBm", minValue=-30, maxValue=+23, description="Sets the Transmit power level"))
-        self.addParameter(NumericParameter("Start", -10.5, units="dBm", minValue=0, maxValue=25, description="Sets the Transmit power level"))
-        self.addParameter(OptionParameter("Enable Tx PA", True))
+        self.addParameter(NumericParameter("Tx Attn", 25, units="dB", minValue=0, maxValue=50, description="The TX Attenuation setting of NESIE"))
+        self.addParameter(NumericParameter("Cable Cal", 40.0, units="dB", minValue=0, maxValue=50, description="The loss of the connecting SMA cable"))
 
 
 class TxLevelTest(BaseTest):
@@ -73,14 +75,23 @@ class TxLevelTest(BaseTest):
     def run(self):
         super().run()
 
+        self.TxAttn: float = self.getParameterValue("RF Parameters", "Tx Attn", 25)
+        self.cableCal: float = self.getParameterValue("RF Parameters", "Cable Cal", 40.0)
+
         self.configSpecAna()
         self.initProduct()
+
+        self.cheb = self.getCheb()
 
         # iterate through the bands fitted
         slotNum: int = 0
         for hwId, bandName in self.product.getBands():
-            logging.debug(f"Testing Slot: {slotNum}, Band:{bandName}")
-            self.testBand(slotNum, hwId)
+            if hwId != 0xFF:
+                logging.debug(f"Testing Slot: {slotNum}, Band:{bandName}")
+                self.testBand(slotNum, hwId)
+            else:
+                logging.debug(f"Skipping slot: {slotNum} - Empty")
+
             slotNum += 1
 
         self.result = TxLevelTestResult(ResultStatus.PASSED)
@@ -90,6 +101,12 @@ class TxLevelTest(BaseTest):
         self.finaliseProduct()
         return super().finalise()
 
+    def getCheb(self) -> Chebyshev:
+        coeffs = [-41.050163553316416, -1.223352951884796, -0.046113614071520224, -0.04349724582375006, 0.1687123666141453, 0.05756109857165281, -0.026992299889912127, -0.05707854541034618, 0.0016636832612212716, -0.0032157438867030305,
+                  0.01920038523659272, 0.03717463796923275, 0.07374152755709508, 0.09264865048317557, 0.02034832268232638, -0.01478322226821526, -0.060596621395038915, -0.011138690543777637, 0.0077710190338166635, 0.023636552233819313, -0.011987505135510714]
+
+        return Chebyshev(coeffs, domain=[100, 3500])
+
     def testBand(self, slotNum: int, hwId: int):
         """Test a selected Slot"""
         freqMHz = self.configProductForFreq(slotNum, hwId)
@@ -97,11 +114,11 @@ class TxLevelTest(BaseTest):
         self.bist.set_attn(25)
 
         time.sleep(0.5)
-
-        measuredPwr = self.specAna.getMaxMarker()
+        calOffset = self.cheb(freqMHz + self.freqOffset)
+        measuredPwr = getSettledReading(self.specAna.getMaxMarker) - calOffset
         detectedPwr = self.bist.get_pa_power(freqMHz)
         diff = detectedPwr - measuredPwr
-        print(f"Frequency: {freqMHz} MHz, Measured: {measuredPwr}, detected: {detectedPwr}, diff: {diff}")
+        print(f"Slot: {slotNum}, Band: {self.filt.band.name}, Freq: {freqMHz} MHz, Measured: {measuredPwr} (cal: {calOffset}), detected: {detectedPwr}, diff: {diff}")
 
         time.sleep(1)
         self.bist.set_attn(BaseTactical.MAX_ATTENUATION)

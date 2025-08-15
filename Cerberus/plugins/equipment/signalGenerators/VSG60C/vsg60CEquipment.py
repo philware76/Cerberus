@@ -36,7 +36,19 @@ class VSG60C(BaseSigGen, VISADevice, VisaInitMixin):
 
     # --------------------------------------------------------------------------------------------------------------
     def setOutputPower(self, level_dBm) -> bool:
+        """Sets the output power (dBm)"""
         return self.set_power(level_dBm)
+
+    def setFrequency(self, frequencyMHz: int) -> bool:
+        """Sets the output frequency (MHz)"""
+        return self.set_freq(frequencyMHz)
+
+    def enablePower(self, state: bool) -> bool:
+        """Turns on or off the output power"""
+        if state:
+            return self.output_on()
+        else:
+            return self.output_off()
 
     # Library commands ---------------------------------------------------------------------------------------------
     def trigger(self) -> bool:
