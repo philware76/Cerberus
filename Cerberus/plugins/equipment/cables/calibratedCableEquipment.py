@@ -6,21 +6,29 @@ from numpy.polynomial import Chebyshev
 
 from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
                                              StringParameter)
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
+from Cerberus.plugins.basePlugin import hookimpl, singleton
+from Cerberus.plugins.equipment.baseCommsEquipment import BaseEquipment
+
+
+@hookimpl
+@singleton
+def createEquipmentPlugin():
+    return CalibratedCable()
 
 
 class CableParams(BaseParameters):
     def __init__(self):
         super().__init__("Cable")
         self.addParameter(StringParameter("Role", "TX", description="TX or RX"))
+        self.addParameter(StringParameter("Serial", "", description="Cable serial number"))
         self.addParameter(NumericParameter("MinFreq", 100.0, units="MHz"))
         self.addParameter(NumericParameter("MaxFreq", 3500.0, units="MHz"))
-        self.addParameter(StringParameter("Coeefs", "{[]}", description="Coeffs for the Chebyshev cal"))
+        self.addParameter(StringParameter("Coeffs", "{[]}", description="Coeffs for the Chebyshev cal"))
 
 
-class CalibratedCable(BaseCommsEquipment):
-    def __init__(self, name: str):
-        super().__init__(name)
+class CalibratedCable(BaseEquipment):
+    def __init__(self):
+        super().__init__("CAL CABLE")
         self.addParameterGroup(CableParams())
         self._cheb: Chebyshev | None = None
         self._cal_meta: dict[str, Any] = {}
@@ -33,15 +41,27 @@ class CalibratedCable(BaseCommsEquipment):
         try:
             data = json.loads(calibration_json)
             if data.get("method") == "chebyshev":
-                coeffs: Sequence[float] = data["coeffs"]
-                domain = tuple(data["domain"])
-                self._cheb = Chebyshev(coeffs, domain=domain)
-                self._cal_meta = data
+                self.loadChebyshev(data)
             else:
                 logging.error("Unsupported calibration method %r", data.get("method"))
 
         except Exception as e:
             logging.exception("Failed to parse calibration JSON: %s", e)
+
+    def loadChebyshev(self, data):
+        coeffs: Sequence[float] = data["coeffs"]
+        domain = tuple(data["domain"])
+        self._cheb = Chebyshev(coeffs, domain=domain)
+        self._cal_meta = data
+        # Update parameter view if present
+        try:
+            self.updateParameters("Cable", {
+                "MinFreq": float(domain[0]),
+                "MaxFreq": float(domain[1]),
+                "Coeffs": json.dumps(coeffs)
+            })
+        except Exception:
+            pass
 
     def loss_at(self, freq_mhz: float) -> float:
         if self._cheb is None:

@@ -101,9 +101,9 @@ class EquipmentShell(RunCommandShell):
             print(parser.format_usage().strip())
             return False
 
-        ip = str(self.equip.getParameterValue("Communication", "IP Address"))
-        port = int(self.equip.getParameterValue("Communication", "Port") or 5025)
-        timeout = int(self.equip.getParameterValue("Communication", "Timeout") or 1000)
+        ip = str(self.equip.getParameterValue("Communication", "IP Address", "127.0.0.1"))
+        port = int(self.equip.getParameterValue("Communication", "Port", 5025))
+        timeout = int(self.equip.getParameterValue("Communication", "Timeout",  5000))
 
         db = self.manager.db
         equip_id = db.upsertEquipment(

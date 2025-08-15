@@ -29,7 +29,7 @@ class PluginDiscovery(dict[str, BasePlugin]):
 
     def _getPluginFolders(self):
         for root, dirs, _ in os.walk(self.folder):
-            dirs[:] = [d for d in dirs if not d.startswith("__") and not d.startswith(".")]
+            dirs[:] = [d for d in dirs if not d.startswith("__") and not d.startswith(".") and not d == "keys" and not d.startswith("nesie")]
 
             if not dirs:  # This is a leaf folder
                 yield root
