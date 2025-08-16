@@ -13,11 +13,6 @@ class Manager():
         self.db = db
 
         self.pluginService = PluginService()
-        # Future service initialisation commented for now
-        # self.planService = PlanService(self.pluginService, self.db)
-        # self.chamberService = ChamberService(self.pluginService, self.db)
-        # self.calCableService = CalCableService(self.pluginService, self.db)
-
         # Load persisted parameter values for all plugin categories
         self._loadPersistedParameters()
 
