@@ -95,16 +95,16 @@ def runShell(argv):
         db = GenericDB(stationId, dbInfo)
         logging.info(f"Using MySQL: {dbInfo.host}:{dbInfo.port}")
 
-    manager = Manager(stationId, db)
+    with Manager(stationId, db) as manager:
 
-    try:
-        MainShell(manager).cmdloop()
-    except KeyboardInterrupt:
-        pass
+        try:
+            MainShell(manager).cmdloop()
 
-    except Exception as e:
-        logging.exception("Unhandled exception in shell")
+        except KeyboardInterrupt:
+            pass
 
-    finally:
-        print("\nGoodbye")
-        exit(0)
+        except Exception as e:
+            logging.exception("Unhandled exception in shell")
+
+        finally:
+            print("\nGoodbye")

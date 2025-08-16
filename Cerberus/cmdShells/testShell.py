@@ -16,7 +16,7 @@ class TestsShell(PluginsShell):
 
 class TestShell(BasePluginShell):
     def __init__(self, test: BaseTest, manager: Manager):
-        TestShell.intro = f"Welcome to Cerberus {test.name} Test System. Type help or ? to list commands.\n"
+        TestShell.intro = f"Welcome to Cerberus {test.name} Test shell. Type help or ? to list commands.\n"
         TestShell.prompt = f"{test.name}> "
 
         super().__init__(test, manager)

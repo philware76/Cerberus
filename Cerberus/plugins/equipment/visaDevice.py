@@ -1,5 +1,4 @@
 import logging
-import time
 from typing import cast
 
 import pyvisa as visa

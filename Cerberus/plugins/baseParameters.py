@@ -36,7 +36,7 @@ class BaseParameter(ABC):
         return cls(**data)
 
     def __str__(self) -> str:
-        return f"{self.name}:{self.value} {self.units}".strip()
+        return str(self.value)
 
     def __repr__(self):
         return repr(self.genRepr)
@@ -67,6 +67,34 @@ class BaseParameter(ABC):
                 return False
 
         return True
+
+    # Delegate common operations to the underlying value so the parameter
+    # instance can often be used interchangeably with its .value.
+    def __getattr__(self, name: str):
+        """If attribute isn't found on the parameter, delegate to the value."""
+        return getattr(self.value, name)
+
+    def __int__(self) -> int:  # pragma: no cover - trivial delegation
+        return int(self.value)
+
+    def __float__(self) -> float:  # pragma: no cover - trivial delegation
+        return float(self.value)
+
+    def __complex__(self) -> complex:  # pragma: no cover - trivial delegation
+        return complex(self.value)
+
+    def __bool__(self) -> bool:  # pragma: no cover - trivial delegation
+        return bool(self.value)
+
+    def __len__(self) -> int:  # pragma: no cover - trivial delegation
+        return len(self.value)
+
+    def __iter__(self):  # pragma: no cover - trivial delegation
+        return iter(self.value)
+
+    def __index__(self) -> int:  # pragma: no cover - trivial delegation for indexing
+        # __index__ should return an int for operations like slicing/indexing
+        return self.value.__index__()
 
 
 class NumericParameter(BaseParameter):

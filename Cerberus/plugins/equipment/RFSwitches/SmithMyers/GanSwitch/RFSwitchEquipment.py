@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 
 import requests
 
@@ -46,17 +46,19 @@ class RFSwitch(BaseCommsEquipment):
 
     # Internal request helper using communication parameters
     def _request(self, path: str) -> Any:
-        ip = self.getParameterValue("Communication", "IP Address", "127.0.0.1")
-        port = self.getParameterValue("Communication", "Port", 80)
-        timeout_ms = self.getParameterValue("Communication", "Timeout", 5000)
-        timeout_s = float(timeout_ms) / 1000.0
+        commsEquip = cast(BaseCommsEquipment, self)
+        comms = commsEquip.getGroupParameters("Communication")
+
+        port = int(comms["Port"])
+        ip = str(comms["IP Address"])
+        timeout = int(comms["Timeout"])
 
         url = f"http://{ip}:{int(port)}/{path}" if int(port) not in (80, 443) else f"http://{ip}/{path}"
         attempts = 0
         last_status: Any = None
         while attempts < 5:
             try:
-                resp = requests.get(url, timeout=timeout_s)
+                resp = requests.get(url, timeout=timeout)
                 logging.debug(f"RF Switch request '{url}' status: {resp.status_code}")
                 last_status = resp.status_code
                 return resp.text if path == "info" else last_status
@@ -69,5 +71,4 @@ class RFSwitch(BaseCommsEquipment):
                 logging.debug("Retrying RF Switch connection...")
 
         logging.debug('Failed to connect to RF switch after retries')
-        raise ConnectionError("RF Switch connection failed")
         raise ConnectionError("RF Switch connection failed")

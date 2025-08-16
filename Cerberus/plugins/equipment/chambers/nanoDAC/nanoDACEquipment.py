@@ -1,8 +1,11 @@
 import logging
 from typing import Optional
 
+from pyparsing import cast
+
 from Cerberus.plugins.baseParameters import BaseParameters, NumericParameter
 from Cerberus.plugins.basePlugin import hookimpl, singleton
+from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
 from Cerberus.plugins.equipment.modbusClient import (ModbusError,
                                                      ModbusTCPClient)
@@ -12,6 +15,7 @@ from Cerberus.plugins.equipment.modbusClient import (ModbusError,
 @singleton
 def createEquipmentPlugin():
     return NanoDAC()
+
 
 class NanoDAC(BaseChamber):
     def __init__(self):
@@ -32,11 +36,16 @@ class NanoDAC(BaseChamber):
     def _get_modbus_client(self) -> ModbusTCPClient:
         if self._client:
             return self._client
-        host = self.getParameterValue("Communication", "IP Address") or "127.0.0.1"
-        port = int(self.getParameterValue("Communication", "Port") or 502)
-        timeout_ms = int(self.getParameterValue("Communication", "Timeout") or 1000)
+
+        commsEquip = cast(BaseCommsEquipment, self)
+        comms = commsEquip.getGroupParameters("Communication")
+
+        port = int(comms["Port"])
+        host = str(comms["IP Address"])
+        timeout = int(comms["Timeout"])
+
         unit_id = int(self.getParameterValue("Modbus", "Unit ID") or 1)
-        timeout = max(0.05, timeout_ms / 1000.0)
+        timeout = max(0.05, timeout / 1000.0)
         self._client = ModbusTCPClient(host, port=port, unit_id=unit_id, timeout=timeout)
         try:
             self._client.connect()
@@ -88,6 +97,7 @@ class NanoDAC(BaseChamber):
 
     def setTemperature(self, temperature: float):  # type: ignore[override]
         value = int(round(temperature * 10))
+
         def op():
             client = self._get_modbus_client()
             client.write_single_register(self._REG_SETPOINT, value)

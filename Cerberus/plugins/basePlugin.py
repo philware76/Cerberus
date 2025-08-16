@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import pluggy
 
-from Cerberus.plugins.baseParameters import BaseParameters
+from Cerberus.plugins.baseParameters import BaseParameter, BaseParameters
 
 hookimpl = pluggy.HookimplMarker("cerberus")
 hookspec = pluggy.HookspecMarker("cerberus")
@@ -42,28 +42,28 @@ class BasePlugin(ABC):
         self._groupParams[group.groupName] = group
 
 # --- Parameter Helpers -----------------------------------------------------------------------------------------
-    def getParameterValue(self, group: str, paramName: str, default: Any) -> Any:
-        groupObj = self._groupParams.get(group)
-        if groupObj is None:
-            return default
+    def getGroupParameters(self, groupName: str) -> BaseParameters:
+        groupParams = self._groupParams.get(groupName)
+        if groupParams is None:
+            raise ValueError(f"Plugin: {self.name}, unknown parameter group: {groupName}")
 
-        param = groupObj.get(paramName)
+        return groupParams
+
+    def getParameter(self, groupName: str, paramName: str) -> BaseParameter:
+        groupParams = self.getGroupParameters(groupName)
+        param = groupParams.get(paramName)
         if param is None:
-            return default
+            raise ValueError(f"Plugin: {self.name}.{groupParams.groupName}, unknown parameter: {paramName}")
 
+        return param
+
+    def getParameterValue(self, groupName: str, paramName: str) -> Any:
+        param = self.getParameter(groupName, paramName)
         return param.value
 
-    def setParameterValue(self, group: str, paramName: str, value: Any) -> bool:
-        groupObj = self._groupParams.get(group)
-        if groupObj is None:
-            return False
-
-        param = groupObj.get(paramName)
-        if param is None:
-            return False
-
+    def setParameterValue(self, group: str, paramName: str, value: Any):
+        param = self.getParameter(group, paramName)
         param.value = value
-        return True
 
     def updateParameters(self, group: str, values: dict[str, Any]):
         for k, v in values.items():

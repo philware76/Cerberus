@@ -25,7 +25,7 @@ NESIE_TYPES = {
 }
 
 
-def getSettledReading(readValueFunc):
+def getSettledReading(readValueFunc, minSamples=10, maxSamples=100):
     """Return a stable measurement using 99% confidence interval on the mean.
 
         Strategy:
@@ -39,15 +39,13 @@ def getSettledReading(readValueFunc):
     z = 2.576  # 99% two-sided z-score
     tolerance_abs = 0.05  # dB absolute half-width target
     tolerance_rel = 0.002  # 0.2% of mean as alternative stopping criterion
-    min_batch = 5
-    max_samples = 100
 
     readings: list[float] = []
     while True:
         # acquire a batch
-        for _ in range(min_batch):
+        for _ in range(minSamples):
             readings.append(readValueFunc())
-            if len(readings) >= max_samples:
+            if len(readings) >= maxSamples:
                 break
 
         n = len(readings)
@@ -57,11 +55,11 @@ def getSettledReading(readValueFunc):
         arr = np.array(readings, dtype=float)
         mean = float(arr.mean())
         # sample std (ddof=1) guard small n
-        std = float(arr.std(ddof=1)) if n > 1 else 0.0
-        half_width = z * std / (n ** 0.5) if n > 1 else 0.0
+        std = float(arr.std(ddof=1))
+        half_width = z * std / (n ** 0.5)
         rel_hw = half_width / abs(mean) if mean != 0 else float('inf')
 
         logging.debug(f"SettledMeas n={n} mean={mean:.3f} std={std:.3f} hw99={half_width:.3f} rel={rel_hw:.4f}")
 
-        if (half_width <= tolerance_abs) or (rel_hw <= tolerance_rel) or n >= max_samples:
+        if (half_width <= tolerance_abs) or (rel_hw <= tolerance_rel) or n >= maxSamples:
             return mean

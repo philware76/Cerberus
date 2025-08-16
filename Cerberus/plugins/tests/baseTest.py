@@ -1,3 +1,4 @@
+import io
 import logging
 from typing import List, Optional, Type, TypeVar
 
@@ -18,6 +19,23 @@ class BaseTest(BasePlugin):
         self.requiredEquipment: List[Type[BaseEquipment]] = []
         self._equipment: dict[type[BaseEquipment], BaseEquipment] = {}
         self.product: BaseProduct
+
+        self.setLogging()
+
+    def setLogging(self):
+        # set up per-test logger with in-memory buffer
+        self._log_stream = io.StringIO()
+        self.logger = logging.getLogger(f"{self.name} Test")
+        self.logger.setLevel(logging.DEBUG)
+
+        self.logger.propagate = False
+
+        self._log_handler = logging.StreamHandler(self._log_stream)
+        self._log_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s"))
+        self.logger.addHandler(self._log_handler)
+
+    def getLog(self):
+        return self._log_stream.getvalue()
 
     def setProduct(self, product: BaseProduct) -> None:
         """Inject the product-under-test (already initialised/configured)."""

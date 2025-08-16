@@ -1,7 +1,8 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
-from Cerberus.plugins.equipment.baseEquipment import Identity
+from Cerberus.plugins.equipment.baseEquipment import (BaseCommsEquipment,
+                                                      Identity)
 from Cerberus.plugins.equipment.visaDevice import VISADevice
 
 
@@ -19,12 +20,13 @@ class VisaInitMixin:
 
     # --- Internal helpers -----------------------------------------------------------------------------------------
     def _visa_initialise(self, init: Any | None = None) -> bool:
-        # Fetch parameters (fallback defaults)
-        port = int(getattr(self, 'getParameterValue')("Communication", "Port") or 0)  # type: ignore[attr-defined]
-        ip = str(getattr(self, 'getParameterValue')("Communication", "IP Address") or "127.0.0.1")  # type: ignore[attr-defined]
-        timeout = int(getattr(self, 'getParameterValue')("Communication", "Timeout") or 1000)  # type: ignore[attr-defined]
+        commsEquip = cast(BaseCommsEquipment, self)
+        comms = commsEquip.getGroupParameters("Communication")
 
-        # (Re)initialise VISADevice portion explicitly
+        port = int(comms["Port"])
+        ip = str(comms["IP Address"])
+        timeout = int(comms["Timeout"])
+
         VISADevice.__init__(self, port=port, ipAddress=ip, timeout=timeout)  # type: ignore[misc]
         if VISADevice.open(self) is None:  # type: ignore[attr-defined]
             logging.error(f"Failed to open VISA resource {ip}:{port}")
@@ -32,10 +34,8 @@ class VisaInitMixin:
 
         self._visa_opened = True
 
-        # Identify instrument
         idn = VISADevice.query(self, '*IDN?')  # type: ignore[attr-defined]
         if idn:
-            # Identity attribute provided by BaseEquipment
             self.identity = Identity(idn)  # type: ignore[attr-defined]
             return True
 
@@ -50,4 +50,5 @@ class VisaInitMixin:
             try:
                 VISADevice.close(self)  # type: ignore[attr-defined]
             finally:
+                self._visa_opened = False
                 self._visa_opened = False
