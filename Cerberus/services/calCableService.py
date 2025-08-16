@@ -11,7 +11,7 @@ class CalCableService(dict[str, BaseCalCable]):
         self.loadCalibratedCables()
 
     def addCable(self, role: str):
-        cable = BaseCalCable()
+        cable = BaseCalCable(role)
         self[role] = cable
 
     def loadCalibratedCables(self):
@@ -19,7 +19,7 @@ class CalCableService(dict[str, BaseCalCable]):
         for row in rows:
             role = row['role'].upper()          # 'TX' / 'RX' / future
 
-            cable = BaseCalCable()
+            cable = BaseCalCable(role)
             cable.loadCalibrationFromJSON(row.get('coeffs_json'))
             self[role] = cable
 
