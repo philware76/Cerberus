@@ -6,6 +6,7 @@ from Cerberus.planService import PlanService
 from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.pluginService import PluginService
+from Cerberus.services.calCableService import CalCableService
 
 
 class Manager():
@@ -19,6 +20,7 @@ class Manager():
 
         self.planService = PlanService(self.pluginService, self.db)
         self.chamberService = ChamberService(self.pluginService, self.db)
+        self.calCableService = CalCableService(self.pluginService, self.db)
 
         # Load any persisted equipment comms settings for this station
         self._applyPersistedEquipmentComms()

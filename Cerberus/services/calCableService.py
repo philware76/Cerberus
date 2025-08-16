@@ -1,22 +1,25 @@
 from Cerberus.database.storeageInterface import StorageInterface
-from Cerberus.plugins.equipment.cables.calibratedCableEquipment import \
-    CalibratedCable
+from Cerberus.plugins.equipment.cables.baseCalCable import BaseCalCable
 from Cerberus.pluginService import PluginService
 
 
-class CalCableService(dict[str, CalibratedCable]):
+class CalCableService(dict[str, BaseCalCable]):
     def __init__(self, pluginService: PluginService, db: StorageInterface):
         self.database = db
         self.pluginService = pluginService
 
         self.loadCalibratedCables()
 
+    def addCable(self, role: str):
+        cable = BaseCalCable()
+        self[role] = cable
+
     def loadCalibratedCables(self):
         rows = self.database.listCalCables()
         for row in rows:
             role = row['role'].upper()          # 'TX' / 'RX' / future
 
-            cable = CalibratedCable()
+            cable = BaseCalCable()
             cable.loadCalibrationFromJSON(row.get('coeffs_json'))
             self[role] = cable
 

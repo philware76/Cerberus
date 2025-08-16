@@ -6,30 +6,23 @@ from numpy.polynomial import Chebyshev
 
 from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
                                              StringParameter)
-from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.equipment.baseCommsEquipment import BaseEquipment
 
 
-@hookimpl
-@singleton
-def createEquipmentPlugin():
-    return CalibratedCable()
-
-
 class CableParams(BaseParameters):
-    def __init__(self):
-        super().__init__("Cable")
-        self.addParameter(StringParameter("Role", "TX", description="TX or RX"))
+    def __init__(self, role: str = "TX"):
+        super().__init__("Cal Cable")
+        self.addParameter(StringParameter("Role", role, description="TX or RX"))
         self.addParameter(StringParameter("Serial", "", description="Cable serial number"))
         self.addParameter(NumericParameter("MinFreq", 100.0, units="MHz"))
         self.addParameter(NumericParameter("MaxFreq", 3500.0, units="MHz"))
         self.addParameter(StringParameter("Coeffs", "{[]}", description="Coeffs for the Chebyshev cal"))
 
 
-class CalibratedCable(BaseEquipment):
-    def __init__(self):
-        super().__init__("CAL CABLE")
-        self.addParameterGroup(CableParams())
+class BaseCalCable(BaseEquipment):
+    def __init__(self, name: str):
+        super().__init__(name + " Cal Cable")
+        self.addParameterGroup(CableParams(name))
         self._cheb: Chebyshev | None = None
         self._cal_meta: dict[str, Any] = {}
 

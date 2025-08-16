@@ -38,7 +38,6 @@ class BISTProtocolError(BISTError):
 
 class BaseBIST(_BISTIO):
     def __init__(self):
-        logging.debug("__init__")
         self._client: TelnetClient | None = None
         self.bistHost: str | None = None
 

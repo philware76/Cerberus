@@ -35,8 +35,6 @@ class BasePlugin(ABC):
 
         self._groupParams: dict[str, BaseParameters] = {}
 
-        logging.debug(f"__init__ {name}")
-
     def addParameterGroup(self, group: BaseParameters):
         if group.groupName in self._groupParams:
             logging.warning(f"Parameter group '{group.groupName}' already exists. Overwriting.")

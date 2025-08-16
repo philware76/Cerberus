@@ -6,20 +6,16 @@ from typing import cast
 from numpy.polynomial import Chebyshev
 
 from Cerberus.common import dwell
-from Cerberus.exceptions import EquipmentError, TestError
-from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
-                                             OptionParameter)
+from Cerberus.exceptions import TestError
+from Cerberus.plugins.baseParameters import BaseParameters, NumericParameter
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.common import getSettledReading
-from Cerberus.plugins.equipment.cables.calibratedCableEquipment import \
-    CalibratedCable
-from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
+from Cerberus.plugins.equipment.cables.RXCalCableEquipment import RXCalCable
+from Cerberus.plugins.equipment.cables.TXCalCableEquipment import TXCalCable
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
-from Cerberus.plugins.products.bandNames import BandNames, RxFilterMapping
-from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.products.bist import TacticalBISTCmds
 from Cerberus.plugins.products.nesieFirmware import nesie_rx_filter_bands
 from Cerberus.plugins.products.tactical.tactical import BaseTactical
@@ -67,7 +63,7 @@ class TxLevelTest(BaseTest):
 
     def __init__(self):
         super().__init__("Tx Level")
-        self._addRequirements([BaseSpecAnalyser, BaseSigGen, CalibratedCable])
+        self._addRequirements([BaseSpecAnalyser, BaseSigGen, TXCalCable, RXCalCable])
         self.addParameterGroup(TxLevelTestParameters())
 
         self.bist: TacticalBISTCmds
@@ -191,5 +187,6 @@ class TxLevelTest(BaseTest):
         self.specAna.setBWS("NUTT")
         self.specAna.setRBW(10)
         self.specAna.setVBW(10)
+        self.specAna.setRefLevel(-10)
         self.specAna.setRefLevel(-10)
         self.specAna.setRefLevel(-10)
