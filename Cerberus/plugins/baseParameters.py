@@ -103,22 +103,52 @@ class OptionParameter(BaseParameter):
 
 
 class EnumParameter(BaseParameter):
-    def __init__(self, name: str, value: Enum, enumType: Type[Enum], description: str = ""):
+    def __init__(self, name: str, value: Any, enumType: Any, description: str = ""):
+        # value may be an Enum instance or a primitive (legacy behaviour)
         super().__init__(name=name, value=value, units="", description=description)
+        # enumType may be either an Enum class or an iterable of allowed choice names
         self.enumType = enumType
         self.genRepr.addParam("enumType", self.enumType)
 
     def to_dict(self) -> dict:
         # Store only JSON-serializable primitives describing the enum
-        return {
+        d: dict = {
             "type": "enum",
             "name": self.name,
-            "value": self.value.value,          # underlying primitive value
-            "enumName": self.value.name,         # symbolic name (redundant but helpful for readability)
-            "enumType": self.enumType.__name__,  # class name
-            "enumModule": self.enumType.__module__,  # module path
+            # description included for compatibility
             "description": self.description,
         }
+
+        # If value is an Enum instance, store module/type info and underlying value
+        if isinstance(self.value, Enum):
+            d.update({
+                "value": self.value.value,
+                "enumName": self.value.name,
+            })
+            # If enumType is a class, store its module/name for reconstruction
+            if isinstance(self.enumType, type):
+                d["enumType"] = self.enumType.__name__
+                d["enumModule"] = self.enumType.__module__
+            else:
+                # Fallback: store choices list if provided instead of a real Enum class
+                try:
+                    d["enumType"] = list(self.enumType)
+                except Exception:
+                    d["enumType"] = []
+        else:
+            # value is a primitive (string/number) — allow legacy usage where enumType is a list
+            d["value"] = self.value
+            if isinstance(self.enumType, type):
+                d["enumType"] = self.enumType.__name__
+                d["enumModule"] = self.enumType.__module__
+            else:
+                # store the provided choices (if iterable) using legacy 'enumType' key
+                try:
+                    d["enumType"] = list(self.enumType)
+                except Exception:
+                    d["enumType"] = []
+
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "EnumParameter":  # type: ignore[override]
@@ -130,37 +160,45 @@ class EnumParameter(BaseParameter):
         name = data.get("name") or "<unnamed-enum>"
         description = data.get("description") or ""
 
-        if not enum_module or not enum_type_name:
-            raise ValueError("EnumParameter.from_dict missing enumModule/enumType")
-
-        try:
-            mod = importlib.import_module(enum_module)
-            enum_cls = getattr(mod, enum_type_name)
-        except Exception as ex:  # pragma: no cover
-            raise ValueError(f"Failed to import enum {enum_module}.{enum_type_name}: {ex}") from ex
-
-        # Attempt reconstruction using the stored raw numeric/value first, else fallback to enumName
-        enum_val = None
-        if raw_value is not None:
+        # If module and type name are provided, try to reconstruct the real Enum class.
+        if enum_module and enum_type_name:
             try:
-                enum_val = enum_cls(raw_value)
-            except Exception:
-                # Fallback: maybe raw_value itself is a name
-                try:
-                    enum_val = getattr(enum_cls, str(raw_value))
-                except Exception as ex:
-                    raise ValueError(f"Cannot reconstruct enum value for {enum_cls} from {raw_value}") from ex
-
-        elif enum_name:
-            try:
-                enum_val = getattr(enum_cls, enum_name)
+                mod = importlib.import_module(enum_module)
+                enum_cls = getattr(mod, enum_type_name)
             except Exception as ex:  # pragma: no cover
-                raise ValueError(f"Cannot reconstruct enum by name {enum_name} for {enum_cls}") from ex
+                raise ValueError(f"Failed to import enum {enum_module}.{enum_type_name}: {ex}") from ex
+            # Reconstruct true Enum subclass
+            if raw_value is not None:
+                try:
+                    enum_val = enum_cls(raw_value)
+                except Exception:
+                    try:
+                        enum_val = getattr(enum_cls, str(raw_value))
+                    except Exception as ex:
+                        raise ValueError(f"Cannot reconstruct enum value for {enum_cls} from {raw_value}") from ex
+            elif enum_name:
+                try:
+                    enum_val = getattr(enum_cls, enum_name)
+                except Exception as ex:  # pragma: no cover
+                    raise ValueError(f"Cannot reconstruct enum by name {enum_name} for {enum_cls}") from ex
+            else:
+                raise ValueError("EnumParameter.from_dict missing both value and enumName")
 
-        else:
-            raise ValueError("EnumParameter.from_dict missing both value and enumName")
+            return cls(name=name, value=enum_val, enumType=enum_cls, description=description)
 
-        return cls(name=name, value=enum_val, enumType=enum_cls, description=description)
+        # Else, handle legacy 'enumChoices' where enumType was a list of names
+        # Accept legacy shapes: either 'enumChoices' or a list-valued 'enumType'
+        enum_choices = data.get("enumChoices")
+        if enum_choices is None:
+            maybe_et = data.get("enumType")
+            if isinstance(maybe_et, (list, tuple)):
+                enum_choices = list(maybe_et)
+
+        if enum_choices is not None:
+            # raw_value may be primitive (string) — preserve as-is
+            return cls(name=name, value=raw_value, enumType=enum_choices, description=description)
+
+        raise ValueError("EnumParameter.from_dict could not determine enum type information")
 
 
 class StringParameter(BaseParameter):
