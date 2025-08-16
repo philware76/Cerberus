@@ -45,6 +45,9 @@ class FakeDB:
     def get_TestPlanForStation(self):
         return None
 
+    def listCalCables(self):
+        return []
+
     def get_ChamberForStation(self):
         return None
 
