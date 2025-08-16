@@ -2,7 +2,7 @@ import logging
 
 from Cerberus.exceptions import TestError
 from Cerberus.manager import PluginService
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import ResultStatus

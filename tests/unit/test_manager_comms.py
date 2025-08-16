@@ -1,7 +1,7 @@
 import pytest
 
 from Cerberus.manager import Manager
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 
 
 class FakeEquip(BaseCommsEquipment):

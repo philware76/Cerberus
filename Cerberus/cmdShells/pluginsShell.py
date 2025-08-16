@@ -66,9 +66,7 @@ class PluginsShell(BaseShell):
         """Opens a new shell or the currently loaded shell"""
         if self._shell is None:
             print("You need to load a shell first")
+            return
 
-        if self._shell is not None:
-            self._shell.cmdloop()
-            self._shell = None
-        else:
-            print("You need to load a shell first")
+        self._shell.cmdloop()
+        self._shell = None

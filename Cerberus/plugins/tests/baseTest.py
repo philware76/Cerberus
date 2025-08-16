@@ -3,7 +3,7 @@ from typing import List, Optional, Type, TypeVar
 
 from Cerberus.exceptions import EquipmentError, ExecutionError
 from Cerberus.plugins.basePlugin import BasePlugin
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 
 from .baseTestResult import BaseTestResult

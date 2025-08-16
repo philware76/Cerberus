@@ -3,7 +3,7 @@ from typing import Any
 
 from Cerberus.exceptions import EquipmentError
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice

@@ -1,8 +1,6 @@
 import logging
 from typing import Any
 
-from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
-                                             StringParameter)
 from Cerberus.plugins.basePlugin import BasePlugin
 from Cerberus.plugins.commsParams import CommsParams
 

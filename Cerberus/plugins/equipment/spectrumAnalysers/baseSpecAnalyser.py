@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from Cerberus.plugins.equipment.baseCommsEquipment import (BaseCommsEquipment,
-                                                           Identity)
+from Cerberus.plugins.equipment.baseEquipment import (BaseCommsEquipment,
+                                                      Identity)
 
 
 class BaseSpecAnalyser(BaseCommsEquipment, ABC):
