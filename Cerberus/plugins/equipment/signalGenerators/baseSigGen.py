@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 
 
 class BaseSigGen(BaseCommsEquipment):

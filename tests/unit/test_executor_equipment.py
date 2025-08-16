@@ -1,7 +1,7 @@
 import pytest
 
 from Cerberus.executor import Executor
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.simpleEquip.simple1Equipment import \
     SimpleEquip1
 from Cerberus.plugins.products.baseProduct import BaseProduct

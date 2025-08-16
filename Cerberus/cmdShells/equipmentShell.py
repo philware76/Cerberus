@@ -4,7 +4,7 @@ from typing import Any, cast  # added for identity check typing
 from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
 from Cerberus.manager import Manager
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.commsInterface import CommsInterface
 
 

@@ -1,3 +1,4 @@
+import importlib
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Optional, Self, Type
@@ -108,13 +109,58 @@ class EnumParameter(BaseParameter):
         self.genRepr.addParam("enumType", self.enumType)
 
     def to_dict(self) -> dict:
+        # Store only JSON-serializable primitives describing the enum
         return {
             "type": "enum",
             "name": self.name,
-            "value": self.value,
-            "enumType": self.enumType,
+            "value": self.value.value,          # underlying primitive value
+            "enumName": self.value.name,         # symbolic name (redundant but helpful for readability)
+            "enumType": self.enumType.__name__,  # class name
+            "enumModule": self.enumType.__module__,  # module path
             "description": self.description,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "EnumParameter":  # type: ignore[override]
+        """Reconstruct an EnumParameter from serialized dict produced by to_dict."""
+        enum_module = data.get("enumModule")
+        enum_type_name = data.get("enumType")
+        raw_value = data.get("value")
+        enum_name = data.get("enumName")
+        name = data.get("name") or "<unnamed-enum>"
+        description = data.get("description") or ""
+
+        if not enum_module or not enum_type_name:
+            raise ValueError("EnumParameter.from_dict missing enumModule/enumType")
+
+        try:
+            mod = importlib.import_module(enum_module)
+            enum_cls = getattr(mod, enum_type_name)
+        except Exception as ex:  # pragma: no cover
+            raise ValueError(f"Failed to import enum {enum_module}.{enum_type_name}: {ex}") from ex
+
+        # Attempt reconstruction using the stored raw numeric/value first, else fallback to enumName
+        enum_val = None
+        if raw_value is not None:
+            try:
+                enum_val = enum_cls(raw_value)
+            except Exception:
+                # Fallback: maybe raw_value itself is a name
+                try:
+                    enum_val = getattr(enum_cls, str(raw_value))
+                except Exception as ex:
+                    raise ValueError(f"Cannot reconstruct enum value for {enum_cls} from {raw_value}") from ex
+
+        elif enum_name:
+            try:
+                enum_val = getattr(enum_cls, enum_name)
+            except Exception as ex:  # pragma: no cover
+                raise ValueError(f"Cannot reconstruct enum by name {enum_name} for {enum_cls}") from ex
+
+        else:
+            raise ValueError("EnumParameter.from_dict missing both value and enumName")
+
+        return cls(name=name, value=enum_val, enumType=enum_cls, description=description)
 
 
 class StringParameter(BaseParameter):

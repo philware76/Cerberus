@@ -1,4 +1,4 @@
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseCommsEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 
 
 class BaseChamber(BaseCommsEquipment):

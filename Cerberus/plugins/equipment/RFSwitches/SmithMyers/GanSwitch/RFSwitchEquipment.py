@@ -5,8 +5,8 @@ from typing import Any
 import requests
 
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.equipment.baseCommsEquipment import (BaseCommsEquipment,
-                                                           Identity)
+from Cerberus.plugins.equipment.baseEquipment import (BaseCommsEquipment,
+                                                      Identity)
 
 
 @hookimpl

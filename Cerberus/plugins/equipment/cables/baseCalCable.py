@@ -6,7 +6,7 @@ from numpy.polynomial import Chebyshev
 
 from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
                                              StringParameter)
-from Cerberus.plugins.equipment.baseCommsEquipment import BaseEquipment
+from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 
 
 class CableParams(BaseParameters):
@@ -14,8 +14,8 @@ class CableParams(BaseParameters):
         super().__init__("Cal Cable")
         self.addParameter(StringParameter("Role", role, description="TX or RX"))
         self.addParameter(StringParameter("Serial", "", description="Cable serial number"))
-        self.addParameter(NumericParameter("MinFreq", 100.0, units="MHz"))
-        self.addParameter(NumericParameter("MaxFreq", 3500.0, units="MHz"))
+        self.addParameter(NumericParameter("Start", 100, minValue=100, maxValue=3500, units="MHz"))
+        self.addParameter(NumericParameter("Stop", 3500, minValue=100, maxValue=3500, units="MHz"))
         self.addParameter(StringParameter("Coeffs", "{[]}", description="Coeffs for the Chebyshev cal"))
 
 

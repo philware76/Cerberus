@@ -17,6 +17,7 @@ from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo
 from Cerberus.database.database import Database
 from Cerberus.database.fileDatabase import FileDatabase
+from Cerberus.database.genericDB import GenericDB
 from Cerberus.ethDiscovery import EthDiscovery
 from Cerberus.logConfig import setupLogging
 from Cerberus.manager import Manager
@@ -94,7 +95,8 @@ def runShell(argv):
         db = FileDatabase(args.filedb)
         logging.info(f"Using FileDatabase: {args.filedb}")
     else:
-        db = Database(stationId, dbInfo)
+        # db = Database(stationId, dbInfo)
+        db = GenericDB(stationId, dbInfo)
         logging.info(f"Using MySQL: {dbInfo.host}:{dbInfo.port}")
 
     manager = Manager(stationId, db)
