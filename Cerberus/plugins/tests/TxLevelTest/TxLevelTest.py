@@ -73,8 +73,9 @@ class TxLevelTest(BaseTest):
     def run(self):
         super().run()
 
-        self.TxAttn: float = self.getParameterValue("RF Parameters", "Tx Attn", 25)
-        self.cableCal: float = self.getParameterValue("RF Parameters", "Cable Cal", 40.0)
+        gp = self.getGroupParameters("RF Parameters")
+        self.TxAttn: float = float(gp["Tx Attn"])
+        self.cableCal: float = float(gp["Cable Cal"])
 
         self.configSpecAna()
         self.initProduct()
@@ -113,7 +114,8 @@ class TxLevelTest(BaseTest):
 
         time.sleep(0.5)
         calOffset = self.cheb(freqMHz + self.freqOffset)
-        measuredPwr = getSettledReading(self.specAna.getMaxMarker) - calOffset
+        self.specAna.setMarkerPeak()
+        measuredPwr = getSettledReading(self.specAna.getMarkerPower) - calOffset
         detectedPwr = self.bist.get_pa_power(freqMHz)
         diff = detectedPwr - measuredPwr
         print(f"Slot: {slotNum}, Band: {self.filt.band.name}, Freq: {freqMHz} MHz, Measured: {measuredPwr} (cal: {calOffset}), detected: {detectedPwr}, diff: {diff}")

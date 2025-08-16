@@ -148,7 +148,7 @@ class ProductsShell(PluginsShell):
 class ProductShell(RunCommandShell):
     def __init__(self, product: BaseProduct, manager: Manager):
         ProductShell.intro = f"""
-            Welcome to Cerberus {product.name} Product System. Type help or ? to list commands.
+            Welcome to Cerberus {product.name} Product shell. Type help or ? to list commands.
             Please use openPIC or openDA commands first\n
             """
 

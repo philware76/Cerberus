@@ -47,10 +47,13 @@ class BaseSpecAnalyser(BaseCommsEquipment, ABC):
         '''Sets the power reference level of the spectrum analyser'''
 
     @abstractmethod
-    def setMarker(self, frequencyMHz: float) -> bool:
-        '''Sets the marker frequency position'''
+    def setMarkerPeak(self) -> bool:
+        '''Sets the marker to the maximum/peak position'''
 
     @abstractmethod
-    def getMaxMarker(self) -> float:
-        '''Sets the marker to the Max and returns the value from the spectrum analyser'''
-        '''Sets the marker to the Max and returns the value from the spectrum analyser'''
+    def getMarkerFreq(self) -> float:
+        '''Gets the marker frequency value (X)'''
+
+    @abstractmethod
+    def getMarkerPower(self) -> float:
+        '''Gets the marker power value (X)'''

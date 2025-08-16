@@ -1,4 +1,5 @@
 import logging
+from typing import Self
 
 from Cerberus.database.baseDB import BaseDB
 from Cerberus.plugins.products.baseProduct import BaseProduct
@@ -15,6 +16,25 @@ class Manager():
         self.pluginService = PluginService()
         # Load persisted parameter values for all plugin categories
         self._loadPersistedParameters()
+
+    def __enter__(self) -> Self:
+        """Enable use as a context manager (with statement)."""
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        """On exiting the context, finalize the manager.
+
+        Exceptions from the with-block are not suppressed (return False).
+        Any errors raised during finalize are logged but ignored so exit
+        continues.
+        """
+        try:
+            self.finalize()
+        except Exception:
+            logging.exception("Exception during Manager.finalize() in __exit__")
+
+        # Do not suppress exceptions from the with-block
+        return False
 
     # ----------------------------------------------------------------------------------------------------------
     def _loadPersistedParameters(self) -> None:

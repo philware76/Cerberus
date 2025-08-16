@@ -32,7 +32,8 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         self._initialised = BaseCommsEquipment.initialise(self)
         return self._initialised
 
-    # This overrides the VISA operationComplete version
+    # This overrides the VISA operationComplete
+    # as the BBC60C does support *OPC?
     def operationComplete(self) -> bool:
         logging.debug("Waiting for operation complete...")
 
@@ -100,12 +101,16 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         cmd = f"POW:RLEV {refLevel}"
         return self.command(cmd)
 
-    def setMarker(self, frequencyMHz: float) -> bool:
-        '''Sets the marker frequency position'''
-        raise NotImplementedError("setMarker")
+    def setMarkerPeak(self) -> bool:
+        '''Sets the marker to the maximum/peak position'''
+        return self.command("CALC:MARK:MAX")
 
-    def getMaxMarker(self) -> float:
-        '''Gets the marker value from the spectrum analyser'''
-        self.write("CALC:MARK:MAX")
+    def getMarkerFreq(self) -> float:
+        '''Gets the marker frequency value (X)'''
+        resp = self.query("CALC:MARK:X?")
+        return float(resp)
+
+    def getMarkerPower(self) -> float:
+        '''Gets the marker power value (Y)'''
         resp = self.query("CALC:MARK:Y?")
         return float(resp)

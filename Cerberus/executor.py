@@ -54,15 +54,21 @@ class Executor:
             test.run()
 
         except TestError as e:
-            logging.error(f"Failed to run {test.name} with {e}")
+            logging.error(f"Failed to run {test.name} test with {e}")
 
         finally:
             test.finalise()
 
-        logging.info(f"Test {test.name} completed.")
+        logging.info("{test.name} test has completed.")
 
-        # Retrieve and log the result
-        result = test.getResult()
-        logging.info(f"Test {test.name} result: {result}")
+        if test.result is not None:
+            logging.info(f"{test.name} test result: {test.result}")
+            if test.result.log is not None:
+                print(test.result.log)
 
-        return bool(result and result.status == ResultStatus.PASSED)
+            return test.result.status == ResultStatus.PASSED or \
+                test.result.status == ResultStatus.SKIPPED
+
+        else:
+            print("Test did not produce and results (?!)")
+            return False

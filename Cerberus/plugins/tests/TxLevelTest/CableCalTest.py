@@ -1,6 +1,6 @@
+import logging
 from typing import cast
 
-import numpy as np
 from numpy.polynomial import Chebyshev
 
 from Cerberus.common import dwell
@@ -12,7 +12,7 @@ from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
 from Cerberus.plugins.tests.baseTest import BaseTest
-from Cerberus.plugins.tests.baseTestResult import BaseTestResult
+from Cerberus.plugins.tests.baseTestResult import BaseTestResult, ResultStatus
 
 
 @hookimpl
@@ -21,8 +21,8 @@ def createTestPlugin():
     return CableCalTest()
 
 
-class TxLevelTestResult(BaseTestResult):
-    def __init__(self, status):
+class CableCalTestResult(BaseTestResult):
+    def __init__(self, status: ResultStatus):
         super().__init__("TxLevelTest", status)
 
 
@@ -34,6 +34,9 @@ class CableCalTestParams(BaseParameters):
         self.addParameter(NumericParameter("Stop", 3500, units="MHz", minValue=100, maxValue=3500, description="Stop Frequency"))
         self.addParameter(NumericParameter("Step", 100, units="MHz", minValue=10, maxValue=500, description="Step Frequency"))
         self.addParameter(NumericParameter("Power", 0, units="dBm", minValue=-40, maxValue=20, description="Signal Generator Output Power"))
+
+        self.addParameter(NumericParameter("MinSamples", 10, minValue=5, maxValue=100, description="Minimum number of readings per measurement"))
+        self.addParameter(NumericParameter("Chebyshev Degree", 8, minValue=5, maxValue=30, description="Chebyshev degree of coeffs"))
 
 
 class CableCalTest(BaseTest):
@@ -53,38 +56,60 @@ class CableCalTest(BaseTest):
         self.specAna = self.configSpecAna()
         self.sigGen = self.configSigGen()
 
-        start = self.getParameterValue("Calibration", "Start", 100)
-        stop = self.getParameterValue("Calibration", "Stop", 3500)
-        step = self.getParameterValue("Calibration", "Step", 100)
-        pwr = self.getParameterValue("Calibration", "Power", 0)
+        self.gp = self.getGroupParameters("Calibration")
+        start = int(self.gp["Start"])
+        stop = int(self.gp["Stop"])
+        step = int(self.gp["Step"])
+        pwr = int(self.gp["Power"])
 
         self.sigGen.setOutputPower(pwr)
         self.sigGen.enablePower(True)
 
-        for freq in range(start, stop + step, step):
-            self.sigGen.setFrequency(freq)
-            self.specAna.setCentre(freq)
-            dwell(0.5)
-            meas = getSettledReading(self.specAna.getMaxMarker)
-            print(f"Freq: {freq} MHz, Power: {meas} dBm")
-            calData[freq] = meas
+        freqRange = range(start, stop + step, step)
+        for freq in freqRange:
+            self.takeMarkerMeas(calData, freq)
 
+        cheb = self.calcCalCoeffs(calData)
+        self.checkCalCoeffs(freqRange, calData, cheb)
+
+        self.result = CableCalTestResult(ResultStatus.PASSED)
+        self.result.log = self.getLog()
+
+    def checkCalCoeffs(self, freqRange, calData, cheb):
+        for freq in freqRange:
+            offset = float(cheb(freq))
+            diff = calData[freq] - offset
+            print(f"{freq} MHz => Cal diff: {diff:+.3f} dB Meas: {calData[freq]:.3f} vs Fit: {offset:.3f}")
+
+    def calcCalCoeffs(self, calData):
         # Chebyshev fit (more numerically stable than plain polynomial)
         freqs = sorted(calData.keys())
         powers = [calData[f] for f in freqs]
-        DEGREE = 20  # adjust if you need tighter error; must have len(freqs) > DEGREE
-        if len(freqs) <= DEGREE:
-            raise ValueError(f"Need more than {DEGREE} calibration points for Chebyshev degree {DEGREE}")
-        cheb = Chebyshev.fit(freqs, powers, DEGREE, domain=[min(freqs), max(freqs)])
-        print(f"Chebyshev degree {DEGREE} coefficients (ascending order for T_n):")
+        degree = int(self.gp["Chebyshev Degree"])
+
+        cheb = Chebyshev.fit(freqs, powers, degree, domain=[min(freqs), max(freqs)])
+        print(f"Chebyshev degree {degree} coefficients (ascending order for T_n):")
         print([float(c) for c in cheb.coef])
 
-        # Go back through the step points and output difference between
-        # measured and calibration Poly
-        for freq in range(start, stop + step, step):
-            offset = float(cheb(freq))
-            diff = calData[freq] - offset
-            print(f"{freq} MHz => Cal diff: {diff:+.3f} dB (meas {calData[freq]:.3f} vs fit {offset:.3f})")
+        return cheb
+
+    def takeMarkerMeas(self, calData, freq):
+        self.sigGen.setFrequency(freq)
+        self.specAna.setCentre(freq)
+        dwell(0.5)
+
+        self.specAna.setMarkerPeak()
+        dwell(0.5)
+
+        minSamples = minSamples = int(self.gp["MinSamples"])
+        markerPwr = getSettledReading(self.specAna.getMarkerPower, minSamples)
+        markerPwr = round(markerPwr, 2)
+
+        markerFreq = getSettledReading(self.specAna.getMarkerFreq, minSamples)
+        markerFreq = round(markerFreq/1e9, 2)
+
+        self.logger.info(f"Freq: {freq} MHz, MarkerFreq: {markerFreq} MHz, MarkerPower: {markerPwr} dBm")
+        calData[freq] = markerPwr
 
     def configSigGen(self) -> BaseSigGen:
         sigGen = self.getEquip(BaseSigGen)
@@ -103,6 +128,4 @@ class CableCalTest(BaseTest):
         specAna.setVBW(10)
         specAna.setRefLevel(-10)
 
-        return specAna
-        return specAna
         return specAna

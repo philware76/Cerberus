@@ -14,7 +14,7 @@ class PluginsShell(BaseShell):
         super().__init__(manager)
         self.pluginService = manager.pluginService
 
-        PluginsShell.intro = f"Welcome to Cerberus {plugin_type} System. Type help or ? to list commands.\n"
+        PluginsShell.intro = f"Welcome to Cerberus {plugin_type} shell. Type help or ? to list commands.\n"
         PluginsShell.prompt = f'{plugin_type}> '
 
         # Make a local copy to avoid mutability/type variance issues while allowing Mapping covariance.

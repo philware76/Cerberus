@@ -16,7 +16,7 @@ class EquipShell(PluginsShell):
 
 class EquipmentShell(RunCommandShell):
     def __init__(self, equip: BaseCommsEquipment, manager: Manager):
-        EquipmentShell.intro = f"Welcome to Cerberus {equip.name} Equipment System. Type help or ? to list commands.\n"
+        EquipmentShell.intro = f"Welcome to Cerberus {equip.name} Equipment shell. Type help or ? to list commands.\n"
         EquipmentShell.prompt = f"{equip.name}> "
 
         super().__init__(equip, manager)
