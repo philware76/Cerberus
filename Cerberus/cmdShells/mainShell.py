@@ -4,10 +4,8 @@ from typing import Tuple
 
 import iniconfig
 from PySide6.QtWidgets import QApplication
-from tabulate import tabulate
 
 from Cerberus.cmdShells.baseShell import BaseShell
-from Cerberus.cmdShells.common import is_valid_ip
 from Cerberus.cmdShells.databaseShell import DatabaseShell
 from Cerberus.cmdShells.equipmentShell import EquipShell
 from Cerberus.cmdShells.ManagerShell import ManagerShell
@@ -15,10 +13,8 @@ from Cerberus.cmdShells.planShell import PlanShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo
-from Cerberus.database.database import Database
 from Cerberus.database.fileDatabase import FileDatabase
 from Cerberus.database.genericDB import GenericDB
-from Cerberus.ethDiscovery import EthDiscovery
 from Cerberus.logConfig import setupLogging
 from Cerberus.manager import Manager
 

@@ -76,7 +76,7 @@ class PluginDiscovery(dict[str, BasePlugin]):
             if plugin is not None:
                 self[plugin.name] = plugin
         else:
-            pass  # logging.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
+            logging.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
 
     def __getitem__(self, key: str) -> BasePlugin:
         if key is None or key == "":
