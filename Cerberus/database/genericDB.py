@@ -50,12 +50,18 @@ class GenericDB(BaseDB):
 
     # ------------------------------------------------------------------------------------------------------------
     def _ensure_table(self):
-        """Create the settings table with new id + hash schema if missing."""
+        """Ensure new refactored tables exist.
+
+        Refactor: original single `settings` table has been split into:
+          - group_settings: immutable history of versions (one row per distinct content change)
+          - station_settings: pointer to current version (one row per station/plugin/group)
+        """
         cur = self.conn.cursor()
         try:
+            # Historical versions table (content-address-like via hash duplication avoidance handled in code)
             cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS settings (
+                CREATE TABLE IF NOT EXISTS group_settings (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     station_id VARCHAR(100) NOT NULL,
                     plugin_type VARCHAR(32) NOT NULL,
@@ -64,10 +70,30 @@ class GenericDB(BaseDB):
                     group_json JSON NOT NULL,
                     group_hash CHAR(64) NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    KEY idx_identity (station_id, plugin_type, plugin_name, group_name)
+                    KEY idx_group_identity (station_id, plugin_type, plugin_name, group_name),
+                    KEY idx_group_hash (group_hash)
                 )
                 """
             )
+
+            # Current version pointer table
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS station_settings (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    station_id VARCHAR(100) NOT NULL,
+                    plugin_type VARCHAR(32) NOT NULL,
+                    plugin_name VARCHAR(128) NOT NULL,
+                    group_name VARCHAR(128) NOT NULL,
+                    settingID BIGINT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_station_group (station_id, plugin_type, plugin_name, group_name),
+                    KEY idx_settingID (settingID),
+                    CONSTRAINT fk_station_settings_settingID FOREIGN KEY (settingID) REFERENCES group_settings(id)
+                )
+                """
+            )
+
             self.conn.commit()
         finally:
             cur.close()
@@ -146,10 +172,10 @@ class GenericDB(BaseDB):
         group_hash, canonical_json = self.compute_group_hash(values_map)
         cur = self.conn.cursor()
         try:
-            # Fetch latest group-level row
+            # Fetch latest stored hash for this group (if any)
             cur.execute(
                 """
-                SELECT group_hash FROM settings
+                SELECT group_hash FROM group_settings
                 WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s
                 ORDER BY id DESC LIMIT 1
                 """,
@@ -159,15 +185,27 @@ class GenericDB(BaseDB):
             if row and row[0] == group_hash:  # type: ignore[index]
                 return  # No change in content -> don't insert new version
 
-            # Insert new version row
+            # Insert new immutable version row
             cur.execute(
                 """
-                INSERT INTO settings (station_id, plugin_type, plugin_name, group_name, group_json, group_hash)
+                INSERT INTO group_settings (station_id, plugin_type, plugin_name, group_name, group_json, group_hash)
                 VALUES (%s,%s,%s,%s,%s,%s)
                 """,
                 (self.station_id, plugin_type, plugin_name, group_name, canonical_json, group_hash)
             )
-            logging.debug(f"Group: {group_name} for plugin {plugin_name} has changed, updating settings.")
+            new_id = cur.lastrowid
+
+            # Upsert pointer row for current version
+            cur.execute(
+                """
+                INSERT INTO station_settings (station_id, plugin_type, plugin_name, group_name, settingID)
+                VALUES (%s,%s,%s,%s,%s)
+                ON DUPLICATE KEY UPDATE settingID=VALUES(settingID)
+                """,
+                (self.station_id, plugin_type, plugin_name, group_name, new_id)
+            )
+
+            logging.debug(f"Group: {group_name} for plugin {plugin_name} changed, new settingID={new_id}.")
             self.conn.commit()
         except mysql.connector.Error as err:  # pragma: no cover - operational
             logging.error(f"Failed to save group {plugin_name}.{group_name}: {err}")
@@ -188,9 +226,10 @@ class GenericDB(BaseDB):
             try:
                 cur.execute(
                     """
-                    SELECT group_json FROM settings
-                    WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s
-                    ORDER BY id DESC LIMIT 1
+                    SELECT gs.group_json FROM station_settings ss
+                    INNER JOIN group_settings gs ON ss.settingID = gs.id
+                    WHERE ss.station_id=%s AND ss.plugin_type=%s AND ss.plugin_name=%s AND ss.group_name=%s
+                    LIMIT 1
                     """,
                     (self.station_id, plugin_type, plugin.name, group_name)
                 )
@@ -217,10 +256,13 @@ class GenericDB(BaseDB):
     def delete_plugin(self, plugin_type: str, plugin_name: str):
         cur = self.conn.cursor()
         try:
+            # Remove pointer row(s) then historical rows
             cur.execute(
-                """
-                DELETE FROM settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s
-                """,
+                """DELETE FROM station_settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s""",
+                (self.station_id, plugin_type, plugin_name)
+            )
+            cur.execute(
+                """DELETE FROM group_settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s""",
                 (self.station_id, plugin_type, plugin_name)
             )
             self.conn.commit()
@@ -231,9 +273,11 @@ class GenericDB(BaseDB):
         cur = self.conn.cursor()
         try:
             cur.execute(
-                """
-                DELETE FROM settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s
-                """,
+                """DELETE FROM station_settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s""",
+                (self.station_id, plugin_type, plugin_name, group_name)
+            )
+            cur.execute(
+                """DELETE FROM group_settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s""",
                 (self.station_id, plugin_type, plugin_name, group_name)
             )
             self.conn.commit()
@@ -248,7 +292,8 @@ class GenericDB(BaseDB):
         confirmation before invoking.
         """
         tables = [
-            'settings',
+            'station_settings',
+            'group_settings',
             'equipment',
             'station',
             'testplans',
