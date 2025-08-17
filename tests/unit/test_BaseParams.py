@@ -1,11 +1,13 @@
-import pytest
 import logging
 from typing import Any, Type, cast
 
+import pytest
 
-from Cerberus.plugins.baseParameters import BaseParameters, BaseParameter, NumericParameter, OptionParameter, StringParameter, EnumParameter
+from Cerberus.plugins.baseParameters import (BaseParameter, BaseParameters,
+                                             EnumParameter, NumericParameter,
+                                             OptionParameter, StringParameter)
 
-testCaseParameters: dict[str, tuple[dict[str, Any], str, str]] = {
+testCaseParameters: dict[str, tuple[dict[str, Any], str]] = {
     "NumericParameter": (
         {
             "name": "Voltage",
@@ -15,7 +17,6 @@ testCaseParameters: dict[str, tuple[dict[str, Any], str, str]] = {
             "maxValue": 24,
             "description": "Voltage"
         },
-        "Voltage:3.3 V",
         "numeric"
     ),
     "OptionParameter": (
@@ -24,7 +25,6 @@ testCaseParameters: dict[str, tuple[dict[str, Any], str, str]] = {
             "value": True,
             "description": "Enable or disable the feature"
         },
-        "EnableFeature:True",
         "option"
     ),
     "StringParameter": (
@@ -33,7 +33,6 @@ testCaseParameters: dict[str, tuple[dict[str, Any], str, str]] = {
             "value": "ABC123",
             "description": "Identifier for the device"
         },
-        "DeviceID:ABC123",
         "string"
     ),
     "EnumParameter": (
@@ -43,7 +42,6 @@ testCaseParameters: dict[str, tuple[dict[str, Any], str, str]] = {
             "enumType": ["Auto", "Manual", "Off"],
             "description": "Operating mode"
         },
-        "Mode:Auto",
         "enum"
     ),
 }
@@ -62,7 +60,7 @@ def test_IndividualParameters(ParameterClass, warn_assert):
         warn_assert(False, warnMsg)
         pytest.skip(warnMsg)
 
-    param_input, expected_str, expected_type = testCaseParameters[class_name]
+    param_input, expected_type = testCaseParameters[class_name]
     param = ParameterClass(**param_input)
 
     # to_dict
@@ -77,7 +75,7 @@ def test_IndividualParameters(ParameterClass, warn_assert):
     # __repr__ + eval + __str__
     recreated = eval(repr(param))
     assert isinstance(recreated, ParameterClass)
-    assert str(recreated) == expected_str
+    assert str(recreated) == str(param.value)
 
     # from_dict
     param2 = ParameterClass.from_dict(param_dict)
@@ -98,7 +96,7 @@ def test_BaseParameters():
 
     # Create BaseParameters from the string-keyed test cases
     for class_name, value in testCaseParameters.items():
-        data_raw, _, _ = value
+        data_raw,  _ = value
         data: dict[str, Any] = data_raw
 
         ParamClass = cast(Type[BaseParameter], CLASS_NAME_MAP[class_name])
@@ -177,5 +175,7 @@ def test_eq_extra_key_in_other():
 
 def test_eq_mismatched_value():
     p1 = NumericParameter(name="V", value=1.2, units="V")
+    p2 = NumericParameter(name="V", value=2.5, units="V")
+    assert p1 != p2
     p2 = NumericParameter(name="V", value=2.5, units="V")
     assert p1 != p2

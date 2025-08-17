@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 from dataclasses import dataclass
@@ -13,31 +14,20 @@ from Cerberus.plugins.basePlugin import BasePlugin
 
 @dataclass
 class SettingRecord:
+    id: int
     station_id: str
     plugin_type: str  # 'equipment' | 'product' | 'test'
     plugin_name: str
     group_name: str
-    parameter_name: str
-    parameter_json: str
+    group_json: str
+    param_hash: str
 
-    def key(self) -> tuple[str, str, str, str, str]:
-        return (self.station_id, self.plugin_type, self.plugin_name, self.group_name, self.parameter_name)
+    def key(self) -> tuple[str, str, str, str]:
+        return (self.station_id, self.plugin_type, self.plugin_name, self.group_name)
 
 
 class GenericDB(BaseDB):
     """Generic persistence for plugin parameter settings.
-
-    Schema design:
-      settings (
-          station_id VARCHAR(100),
-          plugin_type VARCHAR(32),    -- logical categorisation
-          plugin_name VARCHAR(128),   -- BasePlugin.name
-          group_name VARCHAR(128),    -- BaseParameters.groupName
-          parameter_name VARCHAR(128),
-          parameter_json JSON NOT NULL,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          PRIMARY KEY (station_id, plugin_type, plugin_name, group_name, parameter_name)
-      )
     """
 
     def __init__(self, station_id: str, dbInfo: DBInfo):
@@ -60,19 +50,21 @@ class GenericDB(BaseDB):
 
     # ------------------------------------------------------------------------------------------------------------
     def _ensure_table(self):
+        """Create the settings table with new id + hash schema if missing."""
         cur = self.conn.cursor()
         try:
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS settings (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     station_id VARCHAR(100) NOT NULL,
                     plugin_type VARCHAR(32) NOT NULL,
                     plugin_name VARCHAR(128) NOT NULL,
                     group_name VARCHAR(128) NOT NULL,
-                    parameter_name VARCHAR(128) NOT NULL,
-                    parameter_json JSON NOT NULL,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    PRIMARY KEY (station_id, plugin_type, plugin_name, group_name, parameter_name)
+                    group_json JSON NOT NULL,
+                    group_hash CHAR(64) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    KEY idx_identity (station_id, plugin_type, plugin_name, group_name)
                 )
                 """
             )
@@ -80,108 +72,147 @@ class GenericDB(BaseDB):
         finally:
             cur.close()
 
+    # --------------------------------------------------------------------------------------------------------
+    @staticmethod
+    def _canonical_json(d: dict) -> str:
+        """Return a deterministic JSON string for hashing (sorted keys, no spaces)."""
+        return json.dumps(d, sort_keys=True, separators=(",", ":"))
+
+    @classmethod
+    def compute_param_hash(cls, param: BaseParameter) -> tuple[str, str]:
+        """Compute the SHA256 hex digest for a parameter's JSON representation.
+
+        Returns (hash_hex, canonical_json_string)
+        """
+        pdata = param.to_dict()
+        canonical = cls._canonical_json(pdata)
+        h = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        return h, canonical
+
+    @classmethod
+    def compute_group_hash(cls, values_map: dict) -> tuple[str, str]:
+        """Compute SHA256 hash and canonical JSON for a mapping of parameter_name -> value."""
+        canonical = cls._canonical_json(values_map)
+        h = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        return h, canonical
+
+    @staticmethod
+    def _ensure_json_serializable(values: dict) -> dict:
+        """Return a copy of values where any non-JSON-serializable values are converted to strings.
+
+        This keeps persistence robust in case a plugin stores unusual Python objects as a value.
+        """
+        safe: dict = {}
+        for k, v in values.items():
+            try:
+                # Try to serialize single value
+                json.dumps(v)
+                safe[k] = v
+            except TypeError:
+                # Fall back to string representation
+                safe[k] = str(v)
+        return safe
+
+    @staticmethod
+    def compute_hash_from_json(group_json: str) -> str:
+        """Compute SHA256 hash for an arbitrary parameter JSON string.
+
+        The JSON string will be parsed and re-serialized with canonical formatting so
+        semantically equivalent inputs (ordering/whitespace differences) produce the
+        same hash.
+        """
+        try:
+            data = json.loads(group_json)
+        except Exception:  # pragma: no cover - defensive
+            # Hash raw string as fallback (should not normally happen if caller provides valid JSON)
+            return hashlib.sha256(group_json.encode("utf-8")).hexdigest()
+        canonical = json.dumps(data, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
     # ------------------------------------------------------------------------------------------------------------
-    def save_parameter(self, plugin_type: str, plugin_name: str, group_name: str, param: BaseParameter) -> None:
-        rec_json = json.dumps(param.to_dict())
+    def save_plugin(self, plugin_type: str, plugin: BasePlugin):
+        # Persist an entire parameter group as a single JSON blob mapping parameter_name->value.
+        for group_name, group in plugin._groupParams.items():  # noqa: SLF001 (internal access intentional)
+            # build mapping of name -> value and ensure JSON serializable
+            values = {pname: p.value for pname, p in group.items()}
+            safe_values = self._ensure_json_serializable(values)
+            self.save_group(plugin_type, plugin.name, group_name, safe_values)
+
+    def save_group(self, plugin_type: str, plugin_name: str, group_name: str, values_map: dict) -> None:
+        """
+        Save an entire parameter group as one row containing JSON mapping parameter_name->value.
+        If the content hash matches the latest stored version we skip inserting a new row.
+        """
+        group_hash, canonical_json = self.compute_group_hash(values_map)
         cur = self.conn.cursor()
         try:
+            # Fetch latest group-level row
             cur.execute(
                 """
-                INSERT INTO settings (station_id, plugin_type, plugin_name, group_name, parameter_name, parameter_json)
-                VALUES (%s,%s,%s,%s,%s,%s)
-                ON DUPLICATE KEY UPDATE parameter_json=VALUES(parameter_json)
+                SELECT group_hash FROM settings
+                WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s
+                ORDER BY id DESC LIMIT 1
                 """,
-                (self.station_id, plugin_type, plugin_name, group_name, param.name, rec_json)
+                (self.station_id, plugin_type, plugin_name, group_name)
             )
+            row = cur.fetchone()
+            if row and row[0] == group_hash:  # type: ignore[index]
+                return  # No change in content -> don't insert new version
+
+            # Insert new version row
+            cur.execute(
+                """
+                INSERT INTO settings (station_id, plugin_type, plugin_name, group_name, group_json, group_hash)
+                VALUES (%s,%s,%s,%s,%s,%s)
+                """,
+                (self.station_id, plugin_type, plugin_name, group_name, canonical_json, group_hash)
+            )
+            logging.debug(f"Group: {group_name} for plugin {plugin_name} has changed, updating settings.")
             self.conn.commit()
-        except mysql.connector.Error as err:
-            logging.error(f"Failed to save parameter {plugin_name}.{group_name}.{param.name}: {err}")
+        except mysql.connector.Error as err:  # pragma: no cover - operational
+            logging.error(f"Failed to save group {plugin_name}.{group_name}: {err}")
         finally:
             cur.close()
-
-    def save_plugin(self, plugin_type: str, plugin: BasePlugin):
-        for group_name, group in plugin._groupParams.items():  # noqa: SLF001 (internal access intentional)
-            for param in group.values():
-                self.save_parameter(plugin_type, plugin.name, group_name, param)
 
     def save_many(self, plugin_type: str, plugins: Iterable[BasePlugin]):
         for p in plugins:
             self.save_plugin(plugin_type, p)
 
     # ------------------------------------------------------------------------------------------------------------
-    def load_parameter(self, plugin_type: str, plugin_name: str, group_name: str, parameter_name: str) -> Optional[BaseParameter]:
-        cur = self.conn.cursor(dictionary=True)
-        try:
-            cur.execute(
-                """
-                SELECT parameter_json FROM settings
-                WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s AND parameter_name=%s
-                """,
-                (self.station_id, plugin_type, plugin_name, group_name, parameter_name)
-            )
-            row_any = cur.fetchone()
-            if not row_any:
-                return None
-
-            row = cast(dict[str, Any], row_any)
-            pdata = row.get('parameter_json')
-            if isinstance(pdata, (bytes, bytearray)):
-                pdata = pdata.decode('utf-8')
-
-            d = json.loads(cast(str, pdata))
-            p_type = d.get('type')
-            from Cerberus.plugins.baseParameters import PARAMETER_TYPE_MAP
-            cls = PARAMETER_TYPE_MAP.get(p_type)
-            if not cls:
-                logging.error(
-                    "Unknown parameter type %r while loading %s.%s.%s", p_type, plugin_name, group_name, parameter_name
-                )
-                return None
-
-            return cls.from_dict(d)
-
-        finally:
-            cur.close()
-
     def load_plugin_into(self, plugin_type: str, plugin: BasePlugin):
+        # Prefer group-level persisted entry (single JSON blob). Fall back to per-parameter rows
+        # for compatibility with old data.
         for group_name, group in plugin._groupParams.items():  # noqa: SLF001
-            for param_name, param in group.items():
-                restored = self.load_parameter(plugin_type, plugin.name, group_name, param_name)
-                if restored:
-                    # Replace value only; keep original instance object for references
-                    param.value = restored.value
-
-    def load_all_for_type(self, plugin_type: str) -> list[SettingRecord]:
-        cur = self.conn.cursor(dictionary=True)
-        try:
-            cur.execute(
-                """
-                SELECT station_id, plugin_type, plugin_name, group_name, parameter_name, parameter_json
-                FROM settings
-                WHERE station_id=%s AND plugin_type=%s
-                """,
-                (self.station_id, plugin_type)
-            )
-            rows_any = cur.fetchall() or []
-            result: list[SettingRecord] = []
-            for r_any in rows_any:
-                r = cast(dict[str, Any], r_any)
-                pj = r.get('parameter_json')
-                if isinstance(pj, (bytes, bytearray)):
-                    pj = pj.decode('utf-8')
-                result.append(
-                    SettingRecord(
-                        station_id=cast(str, r.get('station_id')),
-                        plugin_type=cast(str, r.get('plugin_type')),
-                        plugin_name=cast(str, r.get('plugin_name')),
-                        group_name=cast(str, r.get('group_name')),
-                        parameter_name=cast(str, r.get('parameter_name')),
-                        parameter_json=cast(str, pj),
-                    )
+            # Try to load a group-level blob
+            cur = self.conn.cursor(dictionary=True)
+            try:
+                cur.execute(
+                    """
+                    SELECT group_json FROM settings
+                    WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s
+                    ORDER BY id DESC LIMIT 1
+                    """,
+                    (self.station_id, plugin_type, plugin.name, group_name)
                 )
-            return result
-        finally:
-            cur.close()
+                row_any = cur.fetchone()
+            finally:
+                cur.close()
+
+            if row_any:
+                row = cast(dict[str, Any], row_any)
+                pdata = row.get('group_json')
+                if isinstance(pdata, (bytes, bytearray)):
+                    pdata = pdata.decode('utf-8')
+                try:
+                    mapping = json.loads(cast(str, pdata))
+                except Exception:
+                    logging.error("Failed to parse group JSON for %s.%s.%s", plugin_type, plugin.name, group_name)
+                    mapping = {}
+                # Apply values to existing BaseParameter instances if present
+                for param_name, param in group.items():
+                    if param_name in mapping:
+                        param.value = mapping[param_name]
+                continue
 
     def delete_plugin(self, plugin_type: str, plugin_name: str):
         cur = self.conn.cursor()
@@ -204,19 +235,6 @@ class GenericDB(BaseDB):
                 DELETE FROM settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s
                 """,
                 (self.station_id, plugin_type, plugin_name, group_name)
-            )
-            self.conn.commit()
-        finally:
-            cur.close()
-
-    def delete_parameter(self, plugin_type: str, plugin_name: str, group_name: str, parameter_name: str):
-        cur = self.conn.cursor()
-        try:
-            cur.execute(
-                """
-                DELETE FROM settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s AND parameter_name=%s
-                """,
-                (self.station_id, plugin_type, plugin_name, group_name, parameter_name)
             )
             self.conn.commit()
         finally:

@@ -93,6 +93,3 @@ class BaseTest(BasePlugin):
 
     def stop(self):
         logging.info(f"Stopping test: {self.name}")
-
-    def getResult(self) -> BaseTestResult | None:
-        return self.result

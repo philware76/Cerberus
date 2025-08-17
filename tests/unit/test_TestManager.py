@@ -23,7 +23,7 @@ def test_Executor(manager: Manager):
 
     assert testRunner.runTest(test, product)
 
-    result = test.getResult()
+    result = test.result
     assert result is not None
     assert result.name == testName
     assert result.status == ResultStatus.PASSED
