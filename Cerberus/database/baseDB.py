@@ -20,13 +20,6 @@ class BaseDB(ABC):
 
     # ---- Save single / bulk -------------------------------------------------
     @abstractmethod
-    def save_parameter(self,
-                       plugin_type: str,
-                       plugin_name: str,
-                       group_name: str,
-                       param: BaseParameter) -> None: ...
-
-    @abstractmethod
     def save_plugin(self, plugin_type: str, plugin: BasePlugin) -> None: ...
 
     @abstractmethod
@@ -44,13 +37,6 @@ class BaseDB(ABC):
 
     # ---- Load ---------------------------------------------------------------
     @abstractmethod
-    def load_parameter(self,
-                       plugin_type: str,
-                       plugin_name: str,
-                       group_name: str,
-                       parameter_name: str) -> Optional[BaseParameter]: ...
-
-    @abstractmethod
     def load_plugin_into(self, plugin_type: str, plugin: BasePlugin) -> None: ...
 
     @abstractmethod
@@ -62,23 +48,12 @@ class BaseDB(ABC):
     @abstractmethod
     def load_product_into(self, plugin: BasePlugin) -> None: ...
 
-    # ---- Query (raw) -------------------------------------------------------
-    @abstractmethod
-    def load_all_for_type(self, plugin_type: str) -> list[Any]: ...
-
     # ---- Delete -------------------------------------------------------------
     @abstractmethod
     def delete_plugin(self, plugin_type: str, plugin_name: str) -> None: ...
 
     @abstractmethod
     def delete_group(self, plugin_type: str, plugin_name: str, group_name: str) -> None: ...
-
-    @abstractmethod
-    def delete_parameter(self,
-                         plugin_type: str,
-                         plugin_name: str,
-                         group_name: str,
-                         parameter_name: str) -> None: ...
 
     # ---- Lifecycle ----------------------------------------------------------
     @abstractmethod

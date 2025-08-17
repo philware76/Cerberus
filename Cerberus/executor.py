@@ -62,7 +62,7 @@ class Executor:
         logging.info("{test.name} test has completed.")
 
         if test.result is not None:
-            logging.info(f"{test.name} test result: {test.result}")
+            logging.info(f"{test.name} test result: {test.result.status}")
             if test.result.log is not None:
                 print(test.result.log)
 

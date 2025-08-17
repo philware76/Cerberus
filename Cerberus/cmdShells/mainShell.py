@@ -50,12 +50,6 @@ class MainShell(BaseShell):
         """Go into the Plan shell subsystem"""
         PlanShell(self.manager).cmdloop()
 
-    def do_quit(self, arg):
-        """Quits the shell immediately"""
-        print("Exiting Cerberus shell...")
-        self.manager.finalize()
-        super().do_quit(arg)
-
 
 def loadIni(inifile: str = "cerberus.ini") -> Tuple[str, DBInfo]:
     ini = iniconfig.IniConfig(inifile)

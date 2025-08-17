@@ -106,7 +106,7 @@ class CableCalTest(BaseTest):
         markerPwr = round(markerPwr, 2)
 
         markerFreq = getSettledReading(self.specAna.getMarkerFreq, minSamples)
-        markerFreq = round(markerFreq/1e9, 2)
+        markerFreq = round(markerFreq/1e6, 2)
 
         self.logger.info(f"Freq: {freq} MHz, MarkerFreq: {markerFreq} MHz, MarkerPower: {markerPwr} dBm")
         calData[freq] = markerPwr
