@@ -1,9 +1,11 @@
 import logging
-from typing import cast
+import time
+from typing import TYPE_CHECKING, cast
 
 from numpy.polynomial import Chebyshev
 
 from Cerberus.common import dwell
+from Cerberus.gui.helpers import openMatPlotUI
 from Cerberus.plugins.baseParameters import BaseParameters, NumericParameter
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.common import getSettledReading
@@ -41,7 +43,7 @@ class CableCalTestParams(BaseParameters):
 
 class CableCalTest(BaseTest):
     def __init__(self):
-        super().__init__("Cable Calibration")
+        super().__init__("Cable Calibration", checkProduct=False)
         self._addRequirements([BaseSpecAnalyser, BaseSigGen])
         self.addParameterGroup(CableCalTestParams())
 
@@ -66,14 +68,40 @@ class CableCalTest(BaseTest):
         self.sigGen.enablePower(True)
 
         freqRange = range(start, stop + step, step)
+
+        # Axis ranges per requirement: X from (start - step) to (stop + step); Y from -43 to -39 dBm
+        xlim = (start - step, stop + step)
+        ylim = (-43, -39)
+
+        app, window, matplot = openMatPlotUI(
+            "Cable Calibration",
+            "Frequency (MHz)",
+            "Offset (dB)",
+            xlim=xlim,
+            ylim=ylim,
+            series=["Cal"],
+            window_title="Cable Calibration Live"
+        )
+
         for freq in freqRange:
-            self.takeMarkerMeas(calData, freq)
+            markerPwr = self.takeMarkerMeas(freq)
+            calData[freq] = markerPwr
+            matplot.append_point("Cal", freq, markerPwr)
+            app.processEvents()
 
         cheb = self.calcCalCoeffs(calData)
         self.checkCalCoeffs(freqRange, calData, cheb)
 
         self.result = CableCalTestResult(ResultStatus.PASSED)
         self.result.log = self.getLog()
+
+        try:
+            while window.isVisible():
+                app.processEvents()
+                time.sleep(0.05)
+
+        except Exception:
+            pass
 
     def checkCalCoeffs(self, freqRange, calData, cheb):
         for freq in freqRange:
@@ -93,7 +121,7 @@ class CableCalTest(BaseTest):
 
         return cheb
 
-    def takeMarkerMeas(self, calData, freq):
+    def takeMarkerMeas(self, freq):
         self.sigGen.setFrequency(freq)
         self.specAna.setCentre(freq)
         dwell(0.5)
@@ -105,11 +133,12 @@ class CableCalTest(BaseTest):
         markerPwr = getSettledReading(self.specAna.getMarkerPower, minSamples)
         markerPwr = round(markerPwr, 2)
 
-        markerFreq = getSettledReading(self.specAna.getMarkerFreq, minSamples)
+        markerFreq = self.specAna.getMarkerFreq()
         markerFreq = round(markerFreq/1e6, 2)
 
         self.logger.info(f"Freq: {freq} MHz, MarkerFreq: {markerFreq} MHz, MarkerPower: {markerPwr} dBm")
-        calData[freq] = markerPwr
+
+        return markerPwr
 
     def configSigGen(self) -> BaseSigGen:
         sigGen = self.getEquip(BaseSigGen)

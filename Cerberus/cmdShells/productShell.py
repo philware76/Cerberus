@@ -13,7 +13,6 @@ from Cerberus.manager import Manager
 from Cerberus.plugins.common import PROD_ID_MAPPING
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.products.bist import BaseBIST
-from Cerberus.plugins.products.eeprom import EEPROM, FittedBands
 from Cerberus.plugins.products.nesieSSH import NesieSSH
 from Cerberus.plugins.products.sshComms import SSHComms
 
@@ -247,3 +246,8 @@ class ProductShell(RunCommandShell):
         print(f"Slot details ({len(slot_details)}):")
         for idx in sorted(slot_details.keys()):
             print(f"  Slot {idx:2d}: {slot_details[idx]}")
+
+    def do_saveSettings(self, arg):
+        """Save the settings to the database"""
+        db = self.manager.db
+        db.save_products([self.plugin])

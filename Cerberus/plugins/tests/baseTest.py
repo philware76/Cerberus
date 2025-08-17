@@ -13,12 +13,13 @@ T = TypeVar("T", bound=BaseEquipment)
 
 
 class BaseTest(BasePlugin):
-    def __init__(self, name, description: Optional[str] = None):
+    def __init__(self, name, description: Optional[str] = None, checkProduct: Optional[bool] = True):
         super().__init__(name, description)
         self.result: BaseTestResult | None = None
         self.requiredEquipment: List[Type[BaseEquipment]] = []
         self._equipment: dict[type[BaseEquipment], BaseEquipment] = {}
-        self.product: BaseProduct
+        self.product: BaseProduct | None
+        self.checkProduct = checkProduct
 
         self.setLogging()
 
@@ -37,7 +38,7 @@ class BaseTest(BasePlugin):
     def getLog(self):
         return self._log_stream.getvalue()
 
-    def setProduct(self, product: BaseProduct) -> None:
+    def setProduct(self, product: BaseProduct | None) -> None:
         """Inject the product-under-test (already initialised/configured)."""
         self.product = product
 
@@ -86,7 +87,7 @@ class BaseTest(BasePlugin):
         return instrument
 
     def run(self):
-        if self.product is None:
+        if self.checkProduct and self.product is None:
             raise ExecutionError("There is no product provided for test (DUT)")
 
         logging.info(f"Running test: {self.name}")
