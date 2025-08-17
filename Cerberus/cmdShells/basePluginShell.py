@@ -92,8 +92,3 @@ class BasePluginShell(BaseShell):
         """Finalise (close) and exit the equipment shell"""
         self.do_finalise(arg)
         return super().do_exit(arg)
-
-    def do_saveSettings(self, arg):
-        """Save the settings to the database"""
-        db = self.manager.db
-        db.save_equipment([self.plugin])

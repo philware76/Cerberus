@@ -1,10 +1,10 @@
-from typing import Type, cast
+import logging
+from typing import cast
 
 from Cerberus.cmdShells.basePluginShell import BasePluginShell
 from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.executor import Executor
 from Cerberus.manager import Manager
-from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 
 
@@ -24,8 +24,12 @@ class TestShell(BasePluginShell):
     def do_run(self, arg):
         """Run the loaded test"""
         if self.manager.product is None:
-            print("You must selecte the product in the product shell first")
-            return
+            logging.warning("There is no selected product for this test, did you forget to select?")
 
         testRunner = Executor(self.manager.pluginService)
         testRunner.runTest(cast(BaseTest, self.plugin), product=self.manager.product)
+
+    def do_saveSettings(self, arg):
+        """Save the settings to the database"""
+        db = self.manager.db
+        db.save_tests([self.plugin])

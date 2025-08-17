@@ -1,5 +1,4 @@
-import argparse
-from typing import Any, cast  # added for identity check typing
+from typing import cast  # added for identity check typing
 
 from Cerberus.cmdShells.pluginsShell import PluginsShell
 from Cerberus.cmdShells.runCommandShell import RunCommandShell
@@ -81,3 +80,8 @@ class EquipmentShell(RunCommandShell):
                 print(resp)
             else:
                 print("Did not get a response")
+
+    def do_saveSettings(self, arg):
+        """Save the settings to the database"""
+        db = self.manager.db
+        db.save_equipment([self.plugin])

@@ -50,46 +50,58 @@ class GenericDB(BaseDB):
 
     # ------------------------------------------------------------------------------------------------------------
     def _ensure_table(self):
-        """Ensure new refactored tables exist.
+        """Ensure normalized tables exist (fresh schema, no migration needed).
 
-        Refactor: original single `settings` table has been split into:
-          - group_settings: immutable history of versions (one row per distinct content change)
-          - station_settings: pointer to current version (one row per station/plugin/group)
+        Normalized schema:
+          group_identity (unique per station/plugin/group)
+          group_settings (historical immutable versions referencing identity)
+          current_group_setting (pointer to latest version per identity)
         """
         cur = self.conn.cursor()
         try:
-            # Historical versions table (content-address-like via hash duplication avoidance handled in code)
+            # Identity table (one row per unique group at a station)
             cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS group_settings (
+                CREATE TABLE IF NOT EXISTS group_identity (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     station_id VARCHAR(100) NOT NULL,
                     plugin_type VARCHAR(32) NOT NULL,
                     plugin_name VARCHAR(128) NOT NULL,
                     group_name VARCHAR(128) NOT NULL,
-                    group_json JSON NOT NULL,
-                    group_hash CHAR(64) NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    KEY idx_group_identity (station_id, plugin_type, plugin_name, group_name),
-                    KEY idx_group_hash (group_hash)
+                    UNIQUE KEY uq_group_identity (station_id, plugin_type, plugin_name, group_name)
                 )
                 """
             )
 
-            # Current version pointer table
+            # Historical immutable versions
             cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS station_settings (
+                CREATE TABLE IF NOT EXISTS group_settings (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    station_id VARCHAR(100) NOT NULL,
-                    plugin_type VARCHAR(32) NOT NULL,
-                    plugin_name VARCHAR(128) NOT NULL,
-                    group_name VARCHAR(128) NOT NULL,
-                    settingID BIGINT NOT NULL,
+                    group_identity_id BIGINT NOT NULL,
+                    group_hash CHAR(64) NOT NULL,
+                    group_json JSON NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    KEY idx_gid_created (group_identity_id, id),
+                    KEY idx_gid_hash (group_identity_id, group_hash),
+                    CONSTRAINT fk_gs_identity FOREIGN KEY (group_identity_id)
+                        REFERENCES group_identity(id) ON DELETE CASCADE
+                )
+                """
+            )
+
+            # Pointer to current version
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS current_group_setting (
+                    group_identity_id BIGINT PRIMARY KEY,
+                    setting_id BIGINT NOT NULL,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    UNIQUE KEY uq_station_group (station_id, plugin_type, plugin_name, group_name),
-                    KEY idx_settingID (settingID),
-                    CONSTRAINT fk_station_settings_settingID FOREIGN KEY (settingID) REFERENCES group_settings(id)
+                    KEY idx_setting_id (setting_id),
+                    CONSTRAINT fk_cgs_identity FOREIGN KEY (group_identity_id)
+                        REFERENCES group_identity(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_cgs_setting FOREIGN KEY (setting_id)
+                        REFERENCES group_settings(id) ON DELETE CASCADE
                 )
                 """
             )
@@ -172,43 +184,60 @@ class GenericDB(BaseDB):
         group_hash, canonical_json = self.compute_group_hash(values_map)
         cur = self.conn.cursor()
         try:
-            # Fetch latest stored hash for this group (if any)
+            # Resolve / create identity (LAST_INSERT_ID trick returns existing id on duplicate)
             cur.execute(
                 """
-                SELECT group_hash FROM group_settings
-                WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s
-                ORDER BY id DESC LIMIT 1
+                INSERT INTO group_identity (station_id, plugin_type, plugin_name, group_name)
+                VALUES (%s,%s,%s,%s)
+                ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)
                 """,
                 (self.station_id, plugin_type, plugin_name, group_name)
             )
-            row = cur.fetchone()
-            if row and row[0] == group_hash:  # type: ignore[index]
-                return  # No change in content -> don't insert new version
+            gid = cur.lastrowid
 
-            # Insert new immutable version row
+            # Check for ANY existing version with same hash for this identity (dedupe historical content)
             cur.execute(
-                """
-                INSERT INTO group_settings (station_id, plugin_type, plugin_name, group_name, group_json, group_hash)
-                VALUES (%s,%s,%s,%s,%s,%s)
-                """,
-                (self.station_id, plugin_type, plugin_name, group_name, canonical_json, group_hash)
+                """SELECT id FROM group_settings WHERE group_identity_id=%s AND group_hash=%s LIMIT 1""",
+                (gid, group_hash)
+            )
+            existing = cur.fetchone()
+            if existing is not None:
+                # MySQL cursor returns a tuple; index 0 is the id
+                existing_id = int(existing[0])  # type: ignore[index,arg-type]
+                # Update pointer only if different
+                cur.execute(
+                    """
+                    INSERT INTO current_group_setting (group_identity_id, setting_id)
+                    VALUES (%s,%s)
+                    ON DUPLICATE KEY UPDATE setting_id=VALUES(setting_id)
+                    """,
+                    (gid, existing_id)
+                )
+                self.conn.commit()
+                logging.debug(
+                    f"Group: '{group_name}' for plugin '{plugin_name}' unchanged; reused setting_id={existing_id} (gid={gid})."
+                )
+                return
+
+            # No identical historical version found -> insert new version and update pointer
+            cur.execute(
+                """INSERT INTO group_settings (group_identity_id, group_hash, group_json) VALUES (%s,%s,%s)""",
+                (gid, group_hash, canonical_json)
             )
             new_id = cur.lastrowid
-
-            # Upsert pointer row for current version
             cur.execute(
-                """
-                INSERT INTO station_settings (station_id, plugin_type, plugin_name, group_name, settingID)
-                VALUES (%s,%s,%s,%s,%s)
-                ON DUPLICATE KEY UPDATE settingID=VALUES(settingID)
-                """,
-                (self.station_id, plugin_type, plugin_name, group_name, new_id)
+                """INSERT INTO current_group_setting (group_identity_id, setting_id) VALUES (%s,%s)
+                    ON DUPLICATE KEY UPDATE setting_id=VALUES(setting_id)""",
+                (gid, new_id)
+            )
+            self.conn.commit()
+            logging.debug(
+                f"Group: '{group_name}' for plugin '{plugin_name}' changed; created new setting_id={new_id} (gid={gid})."
             )
 
-            logging.debug(f"Group: {group_name} for plugin {plugin_name} changed, new settingID={new_id}.")
-            self.conn.commit()
         except mysql.connector.Error as err:  # pragma: no cover - operational
             logging.error(f"Failed to save group {plugin_name}.{group_name}: {err}")
+
         finally:
             cur.close()
 
@@ -226,9 +255,10 @@ class GenericDB(BaseDB):
             try:
                 cur.execute(
                     """
-                    SELECT gs.group_json FROM station_settings ss
-                    INNER JOIN group_settings gs ON ss.settingID = gs.id
-                    WHERE ss.station_id=%s AND ss.plugin_type=%s AND ss.plugin_name=%s AND ss.group_name=%s
+                    SELECT gs.group_json FROM group_identity gi
+                    JOIN current_group_setting cgs ON gi.id = cgs.group_identity_id
+                    JOIN group_settings gs ON cgs.setting_id = gs.id
+                    WHERE gi.station_id=%s AND gi.plugin_type=%s AND gi.plugin_name=%s AND gi.group_name=%s
                     LIMIT 1
                     """,
                     (self.station_id, plugin_type, plugin.name, group_name)
@@ -256,13 +286,8 @@ class GenericDB(BaseDB):
     def delete_plugin(self, plugin_type: str, plugin_name: str):
         cur = self.conn.cursor()
         try:
-            # Remove pointer row(s) then historical rows
             cur.execute(
-                """DELETE FROM station_settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s""",
-                (self.station_id, plugin_type, plugin_name)
-            )
-            cur.execute(
-                """DELETE FROM group_settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s""",
+                """DELETE FROM group_identity WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s""",
                 (self.station_id, plugin_type, plugin_name)
             )
             self.conn.commit()
@@ -273,11 +298,7 @@ class GenericDB(BaseDB):
         cur = self.conn.cursor()
         try:
             cur.execute(
-                """DELETE FROM station_settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s""",
-                (self.station_id, plugin_type, plugin_name, group_name)
-            )
-            cur.execute(
-                """DELETE FROM group_settings WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s""",
+                """DELETE FROM group_identity WHERE station_id=%s AND plugin_type=%s AND plugin_name=%s AND group_name=%s""",
                 (self.station_id, plugin_type, plugin_name, group_name)
             )
             self.conn.commit()
@@ -292,8 +313,9 @@ class GenericDB(BaseDB):
         confirmation before invoking.
         """
         tables = [
-            'station_settings',
+            'current_group_setting',
             'group_settings',
+            'group_identity',
             'equipment',
             'station',
             'testplans',

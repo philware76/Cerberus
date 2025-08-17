@@ -1,10 +1,14 @@
+"""
+Run this example app like this:
+py -m exampleCode.matplot 
+"""
 import random
 import sys
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QMainWindow
 
-from Cerberus.guimatplotWidget import MatplotWidget
+from Cerberus.gui.matplotWidget import MatplotWidget
 
 
 class GraphTestApp(QMainWindow):
@@ -55,7 +59,6 @@ class GraphTestApp(QMainWindow):
         raw_y = random.uniform(0, 2)
         alpha = 0.3
         state['y'] = alpha * raw_y + (1 - alpha) * state['y']
-
 
         if not name in self.graph.series_data.keys():
             self.graph.add_series(name)

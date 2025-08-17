@@ -37,7 +37,7 @@ class Executor:
         test.provideEquip(equip_map)
         return True
 
-    def runTest(self, test: BaseTest, product: BaseProduct) -> bool:
+    def runTest(self, test: BaseTest, product: BaseProduct | None) -> bool:
         """Run a single test with an optional pre-configured product injected."""
         logging.debug(f"Running test: {test.name}")
 
