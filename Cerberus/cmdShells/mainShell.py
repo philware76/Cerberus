@@ -3,6 +3,7 @@ import logging
 from typing import Tuple
 
 import iniconfig
+from PySide6.QtCore import QTimer
 
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.cmdShells.databaseShell import DatabaseShell
@@ -12,7 +13,7 @@ from Cerberus.cmdShells.ManagerShell import ManagerShell
 from Cerberus.cmdShells.planShell import PlanShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
-from Cerberus.common import DBInfo
+from Cerberus.common import DBInfo, dwell
 from Cerberus.database.fileDatabase import FileDatabase
 from Cerberus.database.genericDB import GenericDB
 from Cerberus.logConfig import setupLogging
@@ -74,8 +75,7 @@ def runShell(argv):
     parser.add_argument('-f', '--filedb', type=str, help='Use FileDatabase with the given filename')
     parser.add_argument('-i', '--inifile', type=str, default='cerberus.ini', help='configuration filename (default: cerberus.ini)')
     args, unknown = parser.parse_known_args(argv)
-
-    show_image_splash(argv)
+    splash = show_image_splash(argv)
 
     setupLogging(logging.DEBUG)
     stationId, dbInfo = loadIni(args.inifile)
@@ -89,7 +89,19 @@ def runShell(argv):
         db = GenericDB(stationId, dbInfo)
         logging.info(f"Using MySQL: {dbInfo.host}:{dbInfo.port}")
 
-    with Manager(stationId, db) as manager:
+    # Provide status callback if splash exists
+    def _status(msg: str):
+        if splash:
+            splash.update_status(msg)
+
+        # Instantiate manager (plugin discovery runs in constructor)
+    manager = Manager(stationId, db, status_callback=_status)
+
+    # Auto-hide splash after discovery completes
+    if splash:
+        QTimer.singleShot(1500, splash.close)
+
+    with manager:
 
         try:
             MainShell(manager).cmdloop()

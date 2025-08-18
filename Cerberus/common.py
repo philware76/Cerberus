@@ -29,10 +29,13 @@ class Spinner:
         return char
 
 
+MINIMUM_SLEEP_TIME = 0.005
+
+
 def dwell(period: float):
     period = time.perf_counter() + period
     while (time.perf_counter() < period):
-        time.sleep(0.1)
+        time.sleep(MINIMUM_SLEEP_TIME)
 
 
 def dwellStop(period: float, stopFunc=None):
@@ -42,7 +45,7 @@ def dwellStop(period: float, stopFunc=None):
 
     endTime = time.perf_counter() + period
     while (time.perf_counter() < endTime):
-        time.sleep(0.1)
+        time.sleep(MINIMUM_SLEEP_TIME)
         if stopFunc():
             break
 
@@ -54,7 +57,7 @@ def dwellEvent(period: float, stopEvent: Optional[Event] = None):
 
     endTime = time.perf_counter() + period
     while (time.perf_counter() < endTime):
-        if stopEvent.wait(0.1):
+        if stopEvent.wait(MINIMUM_SLEEP_TIME):
             break
 
 

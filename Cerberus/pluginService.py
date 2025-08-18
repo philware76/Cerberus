@@ -1,10 +1,11 @@
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Type, TypeVar, cast
+from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 import pluggy
 
+from Cerberus.logConfig import getLogger
 from Cerberus.pluginDiscovery import PluginDiscovery
 from Cerberus.plugins.basePlugin import BasePlugin
 from Cerberus.plugins.common import PROD_ID_MAPPING
@@ -28,9 +29,11 @@ class Requirements:
 
 
 class PluginService:
-    def __init__(self):
+    def __init__(self, status_callback: Optional[Callable[[str], None]] = None):
+        self._log = getLogger("pluginService")
         self.pm = pluggy.PluginManager("cerberus")
-        self.missingPlugins = []
+        self.missingPlugins: list[str] = []
+        self._status_cb = status_callback
 
         # Expose as Mapping for covariance; internal structure remains mutable dict from discovery.
         self.equipPlugins: Mapping[str, BaseEquipment] = cast(dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
@@ -81,11 +84,14 @@ class PluginService:
         }
 
     def _discover_plugins(self, pluginType: str, folder: str) -> dict[str, BasePlugin]:  # returns a mutable dict internally
-        plugins = PluginDiscovery(self.pm, pluginType, folder)
+        if self._status_cb:
+            self._status_cb(f"Discovering {pluginType} plugins...")
+
+        plugins = PluginDiscovery(self.pm, pluginType, folder, self._status_cb)
         self.missingPlugins = plugins.loadPlugins()
 
         if len(self.missingPlugins) > 0:
-            logging.warning(f"Missing plugins: {self.missingPlugins}")
+            self._log.warning(f"Missing plugins: {self.missingPlugins}")
 
         return plugins
 
