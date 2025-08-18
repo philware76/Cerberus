@@ -7,13 +7,12 @@ from Cerberus.pluginService import PluginService
 
 
 class Manager():
-    def __init__(self, stationId: str, db: BaseDB):
+    def __init__(self, stationId: str, db: BaseDB, status_callback=None):
         logging.info("Starting TestManager...")
         self.product: BaseProduct | None = None
         self.stationId = stationId
         self.db = db
-
-        self.pluginService = PluginService()
+        self.pluginService = PluginService(status_callback=status_callback)
         # Load persisted parameter values for all plugin categories
         self._loadPersistedParameters()
 

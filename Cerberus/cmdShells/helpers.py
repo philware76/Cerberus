@@ -1,11 +1,27 @@
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtCore import Qt as QtCoreQt
-from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QPixmap
 from PySide6.QtWidgets import (QApplication, QGraphicsDropShadowEffect,
-                               QHBoxLayout, QLabel, QSizePolicy, QSpacerItem,
-                               QVBoxLayout, QWidget)
+                               QHBoxLayout, QLabel, QVBoxLayout, QWidget)
+
+
+class SplashController:
+    """Controller for splash screen dynamic updates."""
+
+    def __init__(self, widget: QWidget, status_label: QLabel):
+        self._widget = widget
+        self._status_label = status_label
+
+    def update_status(self, text: str):
+        self._status_label.setText(text)
+        # Force repaint quickly
+        app = QApplication.instance()
+        if app:
+            app.processEvents()
+
+    def close(self):
+        self._widget.close()
 
 
 def show_image_splash(
@@ -14,7 +30,8 @@ def show_image_splash(
     line1: str = "SmithMyers 2025",
     line2: str = "v1.0.0b",
     scale: float = 0.5,
-) -> None:
+    with_status: bool = True,
+) -> SplashController | None:
     """Display a borderless window showing an image and two labels top-right.
 
     Closes when the user clicks anywhere on the window.
@@ -52,6 +69,8 @@ def show_image_splash(
         Qt.AspectRatioMode.KeepAspectRatio,
         Qt.TransformationMode.SmoothTransformation,
     )
+
+    status_label_holder: dict[str, QLabel] = {}
 
     class _Splash(QWidget):
         def __init__(self):
@@ -98,10 +117,26 @@ def show_image_splash(
 
             label_container.addWidget(_make_label(line1), alignment=Qt.AlignmentFlag.AlignRight)
             label_container.addWidget(_make_label(line2), alignment=Qt.AlignmentFlag.AlignRight)
+
             top_row.addLayout(label_container)
             top_row.addSpacing(6)
             overlay_layout.addLayout(top_row)
-            overlay_layout.addStretch(1)  # consume remaining vertical space below
+            overlay_layout.addStretch(1)  # push following bottom row to bottom
+
+            # Bottom-right status label
+            if with_status:
+                bottom_row = QHBoxLayout()
+                bottom_row.addStretch(1)
+                status = _make_label("")
+                f = status.font()
+                f.setPointSize(max(6, f.pointSize() - 2))
+                f.setBold(False)
+                status.setFont(f)
+                status.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                bottom_row.addWidget(status)
+                bottom_row.addSpacing(6)
+                overlay_layout.addLayout(bottom_row)
+                status_label_holder["label"] = status
 
             overlay.resize(self.pixmap.size())
 
@@ -129,9 +164,10 @@ def show_image_splash(
     splash.show()
 
     # If we created the app, exec its event loop until splash closed
+    # Process initial events
+    app.processEvents()
+    controller = SplashController(splash, status_label_holder.get("label", QLabel()))
     if app_created:
-        app.exec()
-    else:
-        # Process events so it paints if caller not entering event loop immediately
-        app.processEvents()
-        app.processEvents()
+        # If we created the app, caller must drive loop manually; we return controller
+        return controller
+    return controller
