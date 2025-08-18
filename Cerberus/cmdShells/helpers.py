@@ -26,7 +26,7 @@ class SplashController:
 
 def show_image_splash(
     argv: list[str],
-    image_path: str = "image1.png",
+    image_path: str = "image4.png",
     line1: str = "SmithMyers 2025",
     line2: str = "v1.0.0b",
     scale: float = 0.5,
