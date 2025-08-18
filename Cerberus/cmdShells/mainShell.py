@@ -93,6 +93,7 @@ def runShell(argv):
     def _status(msg: str):
         if splash:
             splash.update_status(msg)
+            dwell(0.05)
 
         # Instantiate manager (plugin discovery runs in constructor)
     manager = Manager(stationId, db, status_callback=_status)
