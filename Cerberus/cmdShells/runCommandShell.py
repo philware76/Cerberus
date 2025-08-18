@@ -13,7 +13,10 @@ def get_base_methods(base_cls):
     return {
         name: method
         for name, method in inspect.getmembers(base_cls, predicate=inspect.isfunction)
-        if not name.startswith('_') and (name.startswith("set") or name.startswith("get") or name.startswith("cmd"))
+        if not name.startswith('_') and (name.startswith("set") or
+                                         name.startswith("get") or
+                                         name.startswith("cmd") or
+                                         name == "reset")
     }
 
 

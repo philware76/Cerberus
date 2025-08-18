@@ -93,4 +93,3 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         '''Gets the marker power value (Y)'''
         resp = self.query("CALC:MARK:Y?")
         return float(resp)
-        return float(resp)
