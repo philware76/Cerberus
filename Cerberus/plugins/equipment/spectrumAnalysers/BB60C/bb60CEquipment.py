@@ -3,7 +3,8 @@ from typing import Any
 
 from Cerberus.exceptions import EquipmentError
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
+from Cerberus.plugins.equipment.baseEquipment import (BaseCommsEquipment,
+                                                      Identity)
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
@@ -31,28 +32,6 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
 
         self._initialised = BaseCommsEquipment.initialise(self)
         return self._initialised
-
-    # This overrides the VISA operationComplete
-    # as the BBC60C does support *OPC?
-    def operationComplete(self) -> bool:
-        logging.debug("Waiting for operation complete...")
-
-        resp = self.query("*OPC?")
-        if resp is None:
-            logging.debug("Failed to get response from *OPC?")
-            return False
-
-        try:
-            complete = int(resp)
-            logging.debug(f"{self.resource} - *OPC? => {complete}")
-            if complete == 1:
-                return True
-
-        except ValueError:
-            logging.error(f"{self.resource} Invalid response from *OPC? [{resp}]")
-            return False
-
-        raise EquipmentError("Failed to get operation complete")
 
     def finalise(self) -> bool:
         self._visa_finalise()
@@ -113,4 +92,5 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
     def getMarkerPower(self) -> float:
         '''Gets the marker power value (Y)'''
         resp = self.query("CALC:MARK:Y?")
+        return float(resp)
         return float(resp)

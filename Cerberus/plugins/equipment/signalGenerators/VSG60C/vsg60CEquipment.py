@@ -1,6 +1,9 @@
 import logging
 from typing import Any
 
+from Cerberus.common import dwell
+from Cerberus.exceptions import EquipmentError
+from Cerberus.plugins import common
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
@@ -34,6 +37,34 @@ class VSG60C(BaseSigGen, VISADevice, VisaInitMixin):
         self._visa_finalise()
         return BaseSigGen.finalise(self)
 
+    # VISA Overrides -----------------------------------------------------------------------------------------------
+    def operationComplete(self) -> bool:
+        logging.debug("Waiting for operation complete...")
+        self.write("*OPC")
+
+        count = 0
+        while count < 10:
+            resp = self.query("*ESR?")
+            if resp is None:
+                logging.debug("Failed to get response from *ESR?")
+                return False
+
+            try:
+                complete = int(resp)
+                logging.debug(f"{self.resource} - *ESR? => {complete}")
+                if complete == 1:
+                    return True
+
+                else:
+                    dwell(VISADevice.OPC_DWELL_TIME)
+                    count += 1
+
+            except ValueError:
+                logging.error(f"{self.resource} Invalid response from *ESR? [{resp}]")
+                return False
+
+        raise EquipmentError("Failed to get operation complete")
+
     # --------------------------------------------------------------------------------------------------------------
     def setOutputPower(self, level_dBm) -> bool:
         """Sets the output power (dBm)"""
@@ -43,7 +74,7 @@ class VSG60C(BaseSigGen, VISADevice, VisaInitMixin):
         """Sets the output frequency (MHz)"""
         return self.set_freq(frequencyMHz)
 
-    def enablePower(self, state: bool) -> bool:
+    def setPowerState(self, state: bool) -> bool:
         """Turns on or off the output power"""
         if state:
             return self.output_on()

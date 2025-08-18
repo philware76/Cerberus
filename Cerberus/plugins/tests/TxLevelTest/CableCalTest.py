@@ -1,6 +1,5 @@
-import logging
 import time
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from numpy.polynomial import Chebyshev
 
@@ -65,7 +64,7 @@ class CableCalTest(BaseTest):
         pwr = int(self.gp["Power"])
 
         self.sigGen.setOutputPower(pwr)
-        self.sigGen.enablePower(True)
+        self.sigGen.setPowerState(True)
 
         freqRange = range(start, stop + step, step)
 

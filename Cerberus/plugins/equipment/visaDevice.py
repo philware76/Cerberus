@@ -11,6 +11,8 @@ from Cerberus.plugins.equipment.commsInterface import CommsInterface
 
 
 class VISADevice(CommsInterface):
+    OPC_DWELL_TIME = 0.2
+
     def __init__(self, port, ipAddress=None, timeout=10000):
         self.port = port
         self.timeout = timeout
@@ -35,7 +37,7 @@ class VISADevice(CommsInterface):
             self.instrument.timeout = self.timeout
             return self.instrument
 
-        except Exception as e:
+        except (visa.errors.VisaIOError, Exception) as e:
             logging.error(f"Failed to open resource: {self.resource} - {e}")
             return None
 
@@ -48,7 +50,7 @@ class VISADevice(CommsInterface):
             self.instrument.close()
             return True
 
-        except Exception as e:
+        except (visa.errors.VisaIOError, Exception) as e:
             logging.error(f"Failed to close resource: {self.resource} - {e}")
             return False
 
@@ -57,43 +59,44 @@ class VISADevice(CommsInterface):
             raise EquipmentError("Instrument is not instantiated.")
 
         logging.debug(f"{self.resource} - Write {command}")
-        if self.instrument.write(command) == 0:
-            raise EquipmentError(f"Failed to send {command}")
+        try:
+            if self.instrument.write(command) == 0:
+                raise EquipmentError(f"Failed to send '{command}'")
+
+        except visa.errors.VisaIOError as e:
+            raise EquipmentError(f"Failed to send '{command}'") from e
 
     def query(self, command: str) -> str:
         if self.instrument is None:
             raise EquipmentError("Instrument is not instantiated.")
 
         logging.debug(f"{self.resource} - Query {command}")
-        resp = self.instrument.query(command)
+        try:
+            resp = self.instrument.query(command)
+
+        except visa.errors.VisaIOError as e:
+            raise EquipmentError(f"Failed to query '{command}'") from e
 
         logging.debug(f"{self.resource} - Response {resp}")
         return resp
 
     def operationComplete(self) -> bool:
         logging.debug("Waiting for operation complete...")
-        self.write("*OPC")
 
-        count = 0
-        while count < 10:
-            resp = self.query("*ESR?")
-            if resp is None:
-                logging.debug("Failed to get response from *ESR?")
-                return False
+        resp = self.query("*OPC?")
+        if resp is None:
+            logging.debug("Failed to get response from *OPC?")
+            return False
 
-            try:
-                complete = int(resp)
-                logging.debug(f"{self.resource} - *ESR? => {complete}")
-                if complete == 1:
-                    return True
+        try:
+            complete = int(resp)
+            logging.debug(f"{self.resource} - *OPC? => {complete}")
+            if complete == 1:
+                return True
 
-                else:
-                    common.dwell(0.1)
-                    count += 1
-
-            except ValueError:
-                logging.error(f"{self.resource} Invalid response from *ESR? [{resp}]")
-                return False
+        except ValueError:
+            logging.error(f"{self.resource} Invalid response from *OPC? [{resp}]")
+            return False
 
         raise EquipmentError("Failed to get operation complete")
 
@@ -111,4 +114,5 @@ class VISADevice(CommsInterface):
         if idResp is None:
             raise EquipmentError("Failed to get *IDN? response!")
 
+        return Identity(idResp)
         return Identity(idResp)

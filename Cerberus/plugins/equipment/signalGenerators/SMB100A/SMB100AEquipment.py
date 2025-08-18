@@ -42,7 +42,7 @@ class SMB100A(BaseSigGen, VISADevice, VisaInitMixin):
         """Sets the output frequency (MHz)"""
         return self.set_freq(frequencyMHz)
 
-    def enablePower(self, state: bool) -> bool:
+    def setPowerState(self, state: bool) -> bool:
         """Turns on or off the output power"""
         if state:
             return self.output_on()

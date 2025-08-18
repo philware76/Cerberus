@@ -15,27 +15,60 @@ class Executor:
         self.pluginService = pluginService
 
     def _prepare_equipment(self, test: BaseTest) -> bool:
-        """Resolve requirements, select, initialise equipment and inject into the test."""
-        # Get requirements (candidates, missing, and default selection in one call)
+        """Resolve and initialise required equipment then inject into the test.
+
+        Steps:
+          1. Query requirements (candidates + missing).
+          2. Fail fast if any requirement has zero candidates.
+          3. For each required abstract type, attempt to initialise candidates
+             in order until one succeeds (selection policy).  If none succeed
+             the whole preparation fails.
+        """
         reqs = self.pluginService.getRequirements(test)
-        if len(reqs.missing) > 0:
-            missing_names = [t.__name__ for t in reqs.missing]
-            logging.error(f"Missing required equipment for test: {test.name}. Missing: {missing_names}")
+
+        if reqs.missing:
+            self._log_missing_requirements(test, reqs.missing)
             return False
 
-        # Initialise selected equipment instances now
         equip_map: dict[type[BaseEquipment], BaseEquipment] = {}
-        for req_type, equip in reqs.selection.items():
-            if not equip.initialise():
-                logging.error(f"Failed to initialise {equip.name}, is it online?")
+        for req_type, candidates in reqs.candidates.items():
+            selected = self._initialise_first_online(req_type, candidates, test)
+            if selected is None:
                 return False
 
-            logging.debug(f"{equip.name} has been initialised (online)")
-            equip_map[req_type] = equip
+            equip_map[req_type] = selected
 
-        # Provide required equipment to test
         test.provideEquip(equip_map)
         return True
+
+    # --- Helpers -------------------------------------------------------------------------------------------------
+    @staticmethod
+    def _log_missing_requirements(test: BaseTest, missing: list[type[BaseEquipment]]) -> None:
+        missing_names = [t.__name__ for t in missing]
+        logging.error(
+            f"Missing required equipment for test: {test.name}. Missing: {missing_names}"  # noqa: E501
+        )
+
+    def _initialise_first_online(self, req_type: type[BaseEquipment], candidates: list[BaseEquipment], test: BaseTest) -> BaseEquipment | None:
+        """Try to initialise each candidate in order; return the first that succeeds.
+
+        Returns None (after logging) if all candidates fail.
+        """
+        for idx, candidate in enumerate(candidates, start=1):
+            if candidate.initialise():
+                logging.debug(
+                    f"{candidate.name} (#{idx}/{len(candidates)}) initialised for requirement {req_type.__name__}"  # noqa: E501
+                )
+                return candidate
+
+            logging.warning(
+                f"Candidate {candidate.name} (#{idx}/{len(candidates)}) failed to initialise for {req_type.__name__}"  # noqa: E501
+            )
+
+        logging.error(
+            f"All {len(candidates)} candidates failed for requirement {req_type.__name__} in test {test.name}"  # noqa: E501
+        )
+        return None
 
     def runTest(self, test: BaseTest, product: BaseProduct | None) -> bool:
         """Run a single test with an optional pre-configured product injected."""
