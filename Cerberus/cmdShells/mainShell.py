@@ -70,6 +70,9 @@ def loadIni(inifile: str = "cerberus.ini") -> Tuple[str, DBInfo]:
     return stationId, dbInfo
 
 
+SPLASH_DELAY = 0.05
+
+
 def runShell(argv):
     parser = argparse.ArgumentParser(description="Cerberus Shell")
     parser.add_argument('-f', '--filedb', type=str, help='Use FileDatabase with the given filename')
@@ -93,7 +96,7 @@ def runShell(argv):
     def _status(msg: str):
         if splash:
             splash.update_status(msg)
-            dwell(0.05)
+            dwell(SPLASH_DELAY)
 
         # Instantiate manager (plugin discovery runs in constructor)
     manager = Manager(stationId, db, status_callback=_status)
