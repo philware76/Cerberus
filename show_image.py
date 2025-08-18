@@ -126,4 +126,4 @@ def displayImage(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":  # CLI entry
-    raise SystemExit(main())
+    raise SystemExit(displayImage())
