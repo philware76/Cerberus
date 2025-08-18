@@ -25,7 +25,7 @@ def displayWidget(widget: QWidget):
     qapp.exec()
 
 
-def displayParametersUI(pluginName: str, groups: Dict[str, BaseParameters]):
+def displayParametersUI(pluginName: str, groups: Dict[str, BaseParameters], *, close_on_apply: bool = True):
     """Show a GUI for the parameters to edit"""
     # Make sure QApplication exists; create one if it doesn't
     qapp = QApplication.instance()
@@ -47,6 +47,9 @@ def displayParametersUI(pluginName: str, groups: Dict[str, BaseParameters]):
         for group in groups.values():
             for param in group.values():
                 print(f"{group.groupName} -> {param.name}: {param.value} {param.units}")
+
+        if close_on_apply:
+            window.close()
 
     apply_btn.clicked.connect(on_apply)
 
