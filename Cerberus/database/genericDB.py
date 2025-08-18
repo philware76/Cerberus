@@ -54,7 +54,8 @@ class GenericDB(BaseDB):
 
         Normalized schema:
           group_identity (unique per station/plugin/group)
-          group_settings (historical immutable versions referencing identity)
+          group_content  (unique JSON content canonicalized by hash; globally de-duplicated)
+          group_settings (historical immutable versions referencing identity + content)
           current_group_setting (pointer to latest version per identity)
         """
         cur = self.conn.cursor()
@@ -73,19 +74,32 @@ class GenericDB(BaseDB):
                 """
             )
 
-            # Historical immutable versions
+            # Global content table (one row per unique canonical JSON blob)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS group_content (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    group_hash CHAR(64) NOT NULL UNIQUE,
+                    group_json JSON NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+
+            # Historical immutable versions mapping identity -> content
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS group_settings (
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     group_identity_id BIGINT NOT NULL,
-                    group_hash CHAR(64) NOT NULL,
-                    group_json JSON NOT NULL,
+                    content_id BIGINT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     KEY idx_gid_created (group_identity_id, id),
-                    KEY idx_gid_hash (group_identity_id, group_hash),
+                    KEY idx_gid_content (group_identity_id, content_id),
                     CONSTRAINT fk_gs_identity FOREIGN KEY (group_identity_id)
-                        REFERENCES group_identity(id) ON DELETE CASCADE
+                        REFERENCES group_identity(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_gs_content FOREIGN KEY (content_id)
+                        REFERENCES group_content(id) ON DELETE RESTRICT
                 )
                 """
             )
@@ -178,8 +192,12 @@ class GenericDB(BaseDB):
 
     def save_group(self, plugin_type: str, plugin_name: str, group_name: str, values_map: dict) -> None:
         """
-        Save an entire parameter group as one row containing JSON mapping parameter_name->value.
-        If the content hash matches the latest stored version we skip inserting a new row.
+    Save an entire parameter group as a JSON mapping parameter_name->value.
+    Global de-duplication: any identical JSON content (by canonical hash) is stored only once
+    in group_content and reused across ANY plugin/group identity. Historical versions for an
+    identity point to content rows; if the same content hash recurs for that identity we reuse
+    the existing historical version (so we don't accumulate duplicates from toggling back and
+    forth).
         """
         group_hash, canonical_json = self.compute_group_hash(values_map)
         cur = self.conn.cursor()
@@ -195,44 +213,53 @@ class GenericDB(BaseDB):
             )
             gid = cur.lastrowid
 
-            # Check for ANY existing version with same hash for this identity (dedupe historical content)
+            # Upsert / locate global content row
             cur.execute(
-                """SELECT id FROM group_settings WHERE group_identity_id=%s AND group_hash=%s LIMIT 1""",
-                (gid, group_hash)
+                """
+                INSERT INTO group_content (group_hash, group_json)
+                VALUES (%s,%s)
+                ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)
+                """,
+                (group_hash, canonical_json)
             )
-            existing = cur.fetchone()
-            if existing is not None:
-                # MySQL cursor returns a tuple; index 0 is the id
-                existing_id = int(existing[0])  # type: ignore[index,arg-type]
-                # Update pointer only if different
+            content_id = cur.lastrowid
+
+            # Does this identity already have a historical setting pointing to this content?
+            cur.execute(
+                """SELECT id FROM group_settings WHERE group_identity_id=%s AND content_id=%s LIMIT 1""",
+                (gid, content_id)
+            )
+            existing_for_identity = cur.fetchone()
+            if existing_for_identity is not None:
+                setting_id = int(existing_for_identity[0])  # type: ignore[index,arg-type]
                 cur.execute(
                     """
                     INSERT INTO current_group_setting (group_identity_id, setting_id)
                     VALUES (%s,%s)
                     ON DUPLICATE KEY UPDATE setting_id=VALUES(setting_id)
                     """,
-                    (gid, existing_id)
+                    (gid, setting_id)
                 )
                 self.conn.commit()
                 logging.debug(
-                    f"Group: '{group_name}' for plugin '{plugin_name}' unchanged; reused setting_id={existing_id} (gid={gid})."
+                    f"Group: '{group_name}' for plugin '{plugin_name}' unchanged; reused existing setting_id={setting_id} (gid={gid}) hash={group_hash}."
                 )
                 return
 
-            # No identical historical version found -> insert new version and update pointer
+            # Insert new historical version referencing shared content
             cur.execute(
-                """INSERT INTO group_settings (group_identity_id, group_hash, group_json) VALUES (%s,%s,%s)""",
-                (gid, group_hash, canonical_json)
+                """INSERT INTO group_settings (group_identity_id, content_id) VALUES (%s,%s)""",
+                (gid, content_id)
             )
-            new_id = cur.lastrowid
+            new_setting_id = cur.lastrowid
             cur.execute(
                 """INSERT INTO current_group_setting (group_identity_id, setting_id) VALUES (%s,%s)
                     ON DUPLICATE KEY UPDATE setting_id=VALUES(setting_id)""",
-                (gid, new_id)
+                (gid, new_setting_id)
             )
             self.conn.commit()
             logging.debug(
-                f"Group: '{group_name}' for plugin '{plugin_name}' changed; created new setting_id={new_id} (gid={gid})."
+                f"Group: '{group_name}' for plugin '{plugin_name}' changed; created new setting_id={new_setting_id} (gid={gid}) hash={group_hash}."
             )
 
         except mysql.connector.Error as err:  # pragma: no cover - operational
@@ -255,9 +282,10 @@ class GenericDB(BaseDB):
             try:
                 cur.execute(
                     """
-                    SELECT gs.group_json FROM group_identity gi
+                    SELECT gc.group_json FROM group_identity gi
                     JOIN current_group_setting cgs ON gi.id = cgs.group_identity_id
                     JOIN group_settings gs ON cgs.setting_id = gs.id
+                    JOIN group_content gc ON gs.content_id = gc.id
                     WHERE gi.station_id=%s AND gi.plugin_type=%s AND gi.plugin_name=%s AND gi.group_name=%s
                     LIMIT 1
                     """,
@@ -315,6 +343,7 @@ class GenericDB(BaseDB):
         tables = [
             'current_group_setting',
             'group_settings',
+            'group_content',
             'group_identity',
             'equipment',
             'station',
