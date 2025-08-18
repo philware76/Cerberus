@@ -42,7 +42,7 @@ class PluginService:
         self.testPlugins: Mapping[str, BaseTest] = cast(dict[str, BaseTest], self._discover_plugins("Test", "tests"))
 
         if self._status_cb is not None:
-            self._status_cb(f"Finished plugin discovery - Tests: {len(self.testPlugins)}, Products: {len(self.productPlugins)}, Tests: {len(self.testPlugins)}")
+            self._status_cb(f"Finished plugin discovery - Equipment: {len(self.equipPlugins)}, Products: {len(self.productPlugins)}, Tests: {len(self.testPlugins)}")
 
         self._checIDkMapping()
 
