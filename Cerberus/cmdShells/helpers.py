@@ -2,8 +2,9 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QPixmap
-from PySide6.QtWidgets import (QApplication, QGraphicsDropShadowEffect,
-                               QHBoxLayout, QLabel, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QFrame, QGraphicsDropShadowEffect,
+                               QGroupBox, QHBoxLayout, QLabel, QVBoxLayout,
+                               QWidget)
 
 
 class SplashController:
@@ -15,7 +16,6 @@ class SplashController:
 
     def update_status(self, text: str):
         self._status_label.setText(text)
-        # Force repaint quickly
         app = QApplication.instance()
         if app:
             app.processEvents()
@@ -123,19 +123,32 @@ def show_image_splash(
             overlay_layout.addLayout(top_row)
             overlay_layout.addStretch(1)  # push following bottom row to bottom
 
-            # Bottom-right status label
+            # Bottom full-width group box containing status label
             if with_status:
-                bottom_row = QHBoxLayout()
-                bottom_row.addStretch(1)
-                status = _make_label("")
-                f = status.font()
-                f.setPointSize(max(6, f.pointSize() - 2))
+                group = QGroupBox()
+                group.setTitle("")
+                group.setStyleSheet(
+                    "QGroupBox {"
+                    "border: 1px solid #666;"
+                    "border-radius: 4px;"
+                    "margin-top: 0px;"
+                    "background-color: rgba(0,0,0,110);"
+                    "}"
+                )
+                g_layout = QHBoxLayout(group)
+                g_layout.setContentsMargins(6, 3, 6, 3)
+                g_layout.setSpacing(0)
+                status = QLabel("")
+                f = QFont()
+                f.setPointSize(10)
                 f.setBold(False)
                 status.setFont(f)
-                status.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                bottom_row.addWidget(status)
-                bottom_row.addSpacing(6)
-                overlay_layout.addLayout(bottom_row)
+                status.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                status.setStyleSheet("color: white; background: transparent; border: none; margin: 0; padding: 0;")
+                status.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+                status.setWordWrap(True)
+                g_layout.addWidget(status)
+                overlay_layout.addWidget(group)
                 status_label_holder["label"] = status
 
             overlay.resize(self.pixmap.size())
@@ -167,7 +180,4 @@ def show_image_splash(
     # Process initial events
     app.processEvents()
     controller = SplashController(splash, status_label_holder.get("label", QLabel()))
-    if app_created:
-        # If we created the app, caller must drive loop manually; we return controller
-        return controller
     return controller

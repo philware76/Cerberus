@@ -5,6 +5,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 import pluggy
 
+from Cerberus.common import dwell
 from Cerberus.logConfig import getLogger
 from Cerberus.pluginDiscovery import PluginDiscovery
 from Cerberus.plugins.basePlugin import BasePlugin
@@ -39,6 +40,9 @@ class PluginService:
         self.equipPlugins: Mapping[str, BaseEquipment] = cast(dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
         self.productPlugins: Mapping[str, BaseProduct] = cast(dict[str, BaseProduct], self._discover_plugins("Product", "products"))
         self.testPlugins: Mapping[str, BaseTest] = cast(dict[str, BaseTest], self._discover_plugins("Test", "tests"))
+
+        if self._status_cb is not None:
+            self._status_cb(f"Finished plugin discovery - Tests: {len(self.testPlugins)}, Products: {len(self.productPlugins)}, Tests: {len(self.testPlugins)}")
 
         self._checIDkMapping()
 

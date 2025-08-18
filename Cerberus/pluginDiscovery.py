@@ -67,8 +67,6 @@ class PluginDiscovery(dict[str, BasePlugin]):
             basePlugin = createFunc()
             txt = f" - Plugin registered: {basePlugin.name}"
             self._log.info(txt)
-            if self._status_callback is not None:
-                self._status_callback(txt)
 
             return basePlugin
 
@@ -76,18 +74,21 @@ class PluginDiscovery(dict[str, BasePlugin]):
             self._log.error(f"Failed to register plugin {pluginName}. Ensure plugins are correctly implemented.")
             return None
 
-    def _registerPlugin(self, pluginName, filePath):
+    def _registerPlugin(self, pluginName, filePath) -> BasePlugin | None:
         module = self._loadModule(pluginName, filePath)
         if module is None:
-            return
+            return None
 
+        plugin: BasePlugin | None = None
         if hasattr(module, self.createMethodName):
-            plugin: BasePlugin | None = self._createPlugin(pluginName, module)
+            plugin = self._createPlugin(pluginName, module)
             if plugin is not None:
                 self[plugin.name] = plugin
-                dwell(0.1)
+
         else:
             self._log.debug(f"Skipped {pluginName}: no '{self.createMethodName}' specification found")
+
+        return plugin
 
     def __getitem__(self, key: str) -> BasePlugin:
         if key is None or key == "":
@@ -134,7 +135,9 @@ class PluginDiscovery(dict[str, BasePlugin]):
                         rel_path = os.path.relpath(abs_plugin_path, abs_project_root)
                         module_name = rel_path.replace(os.sep, ".")[:-3]  # remove .py
 
-                        self._registerPlugin(module_name, entry.path)
+                        plugin = self._registerPlugin(module_name, entry.path)
+                        if plugin is not None and self._status_callback is not None:
+                            self._status_callback(f"{self.pluginType} - {plugin.name}")
 
                         self.registeredPlugins += 1
                         pluginCount += 1
