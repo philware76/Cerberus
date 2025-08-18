@@ -3,11 +3,11 @@ import logging
 from typing import Tuple
 
 import iniconfig
-from PySide6.QtWidgets import QApplication
 
 from Cerberus.cmdShells.baseShell import BaseShell
 from Cerberus.cmdShells.databaseShell import DatabaseShell
 from Cerberus.cmdShells.equipmentShell import EquipShell
+from Cerberus.cmdShells.helpers import show_image_splash
 from Cerberus.cmdShells.ManagerShell import ManagerShell
 from Cerberus.cmdShells.planShell import PlanShell
 from Cerberus.cmdShells.productShell import ProductsShell
@@ -70,14 +70,14 @@ def loadIni(inifile: str = "cerberus.ini") -> Tuple[str, DBInfo]:
 
 
 def runShell(argv):
-    setupLogging(logging.DEBUG)
-
     parser = argparse.ArgumentParser(description="Cerberus Shell")
     parser.add_argument('-f', '--filedb', type=str, help='Use FileDatabase with the given filename')
     parser.add_argument('-i', '--inifile', type=str, default='cerberus.ini', help='configuration filename (default: cerberus.ini)')
     args, unknown = parser.parse_known_args(argv)
 
-    app = QApplication(argv)
+    show_image_splash(argv)
+
+    setupLogging(logging.DEBUG)
     stationId, dbInfo = loadIni(args.inifile)
     logging.info(f"Cerberus:{stationId}")
 
