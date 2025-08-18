@@ -93,3 +93,14 @@ class BB60C(BaseSpecAnalyser, VISADevice, VisaInitMixin):
         '''Gets the marker power value (Y)'''
         resp = self.query("CALC:MARK:Y?")
         return float(resp)
+
+    # BasePowerMeter functions -------------------------------------------------------------------------------------
+
+    def getPowerReading(self) -> float:
+        return self.getMarkerFreq()
+
+    def setFrequency(self, freq: float) -> bool:
+        if self.setCentre(freq):
+            return self.setMarkerPeak()
+
+        return False

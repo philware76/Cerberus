@@ -1,13 +1,17 @@
 from abc import ABC, abstractmethod
 
-from Cerberus.plugins.equipment.baseEquipment import (BaseCommsEquipment,
-                                                      Identity)
+from Cerberus.plugins.equipment.powerMeters.basePowerMeters import \
+    BasePowerMeter
 
 
-class BaseSpecAnalyser(BaseCommsEquipment, ABC):
-    """
-    Base class for all spectrum analyser equipment plugins.
-    This class should be extended by specific spectrum analyser equipment plugins.
+class BaseSpecAnalyser(BasePowerMeter, ABC):
+    """Base class for all spectrum analyser equipment plugins.
+
+    Inherits from :class:`BasePowerMeter` so that any concrete spectrum analyser
+    implementation automatically satisfies the power meter interface
+    (``setFrequency`` / ``getPowerReading``). This reflects that a spectrum
+    analyser can perform the basic power measurement functions of a standalone
+    power meter.
     """
 
     @abstractmethod
