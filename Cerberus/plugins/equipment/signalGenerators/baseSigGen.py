@@ -21,5 +21,5 @@ class BaseSigGen(BaseCommsEquipment):
         """Sets the frequenecy (MHz)"""
 
     @abstractmethod
-    def enablePower(self, state: bool) -> bool:
+    def setPowerState(self, state: bool) -> bool:
         """Turns on or off the output power"""

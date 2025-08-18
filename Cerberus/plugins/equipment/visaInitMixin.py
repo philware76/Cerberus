@@ -1,6 +1,7 @@
 import logging
 from typing import Any, cast
 
+from Cerberus.exceptions import EquipmentError
 from Cerberus.plugins.equipment.baseEquipment import (BaseCommsEquipment,
                                                       Identity)
 from Cerberus.plugins.equipment.visaDevice import VISADevice
@@ -14,6 +15,9 @@ class VisaInitMixin:
       - Inherit from BaseEquipment (for getParameterValue/updateParameters & identity attribute)
       - Provide/update Communication parameter group (Port, IP Address, Timeout)
     """
+
+    # Provided by BaseEquipment/BasePlugin in concrete subclass
+    name: str
 
     def __init__(self):  # type: ignore[override]
         self._visa_opened = False
@@ -33,17 +37,21 @@ class VisaInitMixin:
             return False
 
         self._visa_opened = True
-
         idn = VISADevice.query(self, '*IDN?')  # type: ignore[attr-defined]
-        if idn:
-            self.identity = Identity(idn)  # type: ignore[attr-defined]
-            return True
+        if not idn:
+            logging.error("Did not receive *IDN? response; closing VISA resource")
+            self._visa_close_and_reset()
+            return False
 
-        logging.error("Did not receive *IDN? response; closing VISA resource")
-        VISADevice.close(self)  # type: ignore[attr-defined]
-        self._visa_opened = False
+        # Parse identity and validate model matches plugin name
+        self.identity = Identity(idn)
+        if self.identity.model != self.name:
+            self._visa_close_and_reset()
+            raise EquipmentError(
+                f"Device identity {self.identity.model} is not the same as the equipment plugin {self.name}"
+            )
 
-        return False
+        return True
 
     def _visa_finalise(self) -> None:
         if self._visa_opened:
@@ -51,4 +59,14 @@ class VisaInitMixin:
                 VISADevice.close(self)  # type: ignore[attr-defined]
             finally:
                 self._visa_opened = False
-                self._visa_opened = False
+
+    # --- Internal utility ---------------------------------------------------------------------------------------
+    def _visa_close_and_reset(self) -> None:
+        """Close VISA resource (if open) and reset internal flag (idempotent)."""
+        if self._visa_opened:
+            try:
+                VISADevice.close(self)  # type: ignore[attr-defined]
+            except Exception:
+                logging.debug("VISA close raised during cleanup", exc_info=True)
+
+        self._visa_opened = False
