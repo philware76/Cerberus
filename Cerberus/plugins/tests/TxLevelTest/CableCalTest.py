@@ -3,20 +3,18 @@ from typing import cast
 
 from numpy.polynomial import Chebyshev
 
-from Cerberus.common import dwell
 from Cerberus.gui.helpers import openMatPlotUI
 from Cerberus.logConfig import getLogger
 from Cerberus.plugins.baseParameters import BaseParameters, NumericParameter
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.common import getSettledReading
 from Cerberus.plugins.equipment.powerMeters.basePowerMeters import \
     BasePowerMeter
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
-from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
-    BaseSpecAnalyser
 from Cerberus.plugins.equipment.visaDevice import VISADevice
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import BaseTestResult, ResultStatus
+from Cerberus.plugins.tests.mixins.powerMeasurementMixin import \
+    PowerMeasurementMixin
 
 logger = getLogger("CableCalTest")
 
@@ -46,20 +44,22 @@ class CableCalTestParams(BaseParameters):
         self.addParameter(NumericParameter("Chebyshev Degree", 8, minValue=5, maxValue=30, description="Chebyshev degree of coeffs"))
 
 
-class CableCalTest(BaseTest):
+class CableCalTest(PowerMeasurementMixin, BaseTest):
+    powerMeter: BasePowerMeter
+    sigGen: BaseSigGen
+
     def __init__(self):
         super().__init__("Cable Calibration", checkProduct=False)
         self._addRequirements([BasePowerMeter, BaseSigGen])
         self.addParameterGroup(CableCalTestParams())
-
-        self.powerMeter: BasePowerMeter
-        self.sigGen: BaseSigGen
+        # Attributes set during configuration
+        self.powerMeter = cast(BasePowerMeter, None)
+        self.sigGen = cast(BaseSigGen, None)
 
     def run(self):
         super().run()
 
         calData: dict[int, float] = {}
-
         self.configEquipment()
 
         self.gp = self.getGroupParameters("Calibration")
@@ -73,8 +73,6 @@ class CableCalTest(BaseTest):
         self.sigGen.setPowerState(True)
 
         freqRange = range(start, stop + step, step)
-
-        # Axis ranges per requirement: X from (start - step) to (stop + step); Y from -43 to -39 dBm
         xlim = (start - step, stop + step)
         ylim = (1, -1)
 
@@ -90,11 +88,11 @@ class CableCalTest(BaseTest):
 
         for freq in freqRange:
             self.sigGen.setFrequency(freq)
-            pwr = self.takeMeasurement(freq) + atten
-            logger.debug(f"Set frequency: {freq}, Power: {pwr} dBm")
+            meas = self.takeMeasurement(freq) + atten
+            logger.debug(f"Set frequency: {freq}, Power: {meas} dBm")
 
-            calData[freq] = pwr
-            matplot.append_point("Cal", freq, pwr)
+            calData[freq] = meas
+            matplot.append_point("Cal", freq, meas)
             app.processEvents()
 
         polyFit = self.calcCalCoeffs(calData)
@@ -104,22 +102,16 @@ class CableCalTest(BaseTest):
         self.result.log = self.getLog()
 
         try:
-            while window.isVisible():
+            while window.isVisible():  # Keep UI responsive until closed
                 app.processEvents()
                 time.sleep(0.05)
-
         except Exception:
             pass
 
     def configEquipment(self):
         self.sigGen = self.configSigGen()
-
-        # The power meter could be either a normal power meter or a spectrum analyser
-        self.powerMeter = self.getEquip(BasePowerMeter)
-        if isinstance(self.powerMeter, BaseSpecAnalyser):
-            self.configSpecAna(self.powerMeter)
-        else:
-            self.configPowerMeter(self.powerMeter)
+        # Unified setup via mixin
+        self.setup_power_path()
 
     def checkCalCoeffs(self, freqRange, calData, cheb):
         for freq in freqRange:
@@ -140,32 +132,9 @@ class CableCalTest(BaseTest):
         return cheb
 
     def takeMeasurement(self, freq) -> float:
-        if isinstance(self.powerMeter, BaseSpecAnalyser):
-            return self.takeMarkerMeasSpecAna(freq)
-        else:
-            return self.takePowerReading(freq)
+        return self.take_power_measurement(freq)
 
-    def takePowerReading(self, freq) -> float:
-        self.powerMeter.setFrequency(freq)
-        dwell(0.5)
-        return self.powerMeter.getPowerReading()
-
-    def takeMarkerMeasSpecAna(self, freq) -> float:
-        specAna = cast(BaseSpecAnalyser, self.powerMeter)
-        specAna.setCentre(freq)
-        dwell(0.5)
-
-        specAna.setMarkerPeak()
-        dwell(0.5)
-
-        minSamples = minSamples = int(self.gp["MinSamples"])
-        markerPwr = getSettledReading(specAna.getMarkerPower, minSamples)
-        markerPwr = round(markerPwr, 2)
-
-        markerFreq = specAna.getMarkerFreq()
-        markerFreq = round(markerFreq/1e6, 2)
-
-        return markerPwr
+    # Legacy specific measurement helpers removed (now handled by mixin)
 
     def configSigGen(self) -> BaseSigGen:
         sigGen = self.getEquip(BaseSigGen)
@@ -173,18 +142,6 @@ class CableCalTest(BaseTest):
 
         return sigGen
 
-    def configSpecAna(self, specAna: BaseSpecAnalyser):
-        cast(VISADevice, specAna).reset()
+    # Equipment specific config now provided by mixin (see PowerMeasurementMixin)
 
-        specAna.setRefInput("INT")
-        specAna.setSpan(10)
-        specAna.setBWS("NUTT")
-        specAna.setRBW(10)
-        specAna.setVBW(10)
-        specAna.setRefLevel(-10)
-
-    def configPowerMeter(self, pwrMeter: BasePowerMeter):
-        visa = cast(VISADevice, pwrMeter)
-        visa.reset()
-
-        visa.command("INITiate:CONTinuous ON")
+    # Equipment specific config now provided by mixin (see PowerMeasurementMixin)

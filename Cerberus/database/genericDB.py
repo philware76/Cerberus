@@ -14,6 +14,7 @@ from Cerberus.plugins.baseParameters import BaseParameter
 from Cerberus.plugins.basePlugin import BasePlugin
 
 logger = getLogger("Database")
+logger.setLevel(logging.INFO)
 
 
 @dataclass
