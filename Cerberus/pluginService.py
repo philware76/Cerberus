@@ -31,6 +31,8 @@ class Requirements:
 class PluginService:
     def __init__(self, status_callback: Optional[Callable[[str], None]] = None):
         self._log = getLogger("pluginService")
+        # Expose singleton-style instance for simple global access (used by dependency resolver)
+        type(self)._instance = self  # type: ignore[attr-defined]
         self.pm = pluggy.PluginManager("cerberus")
         self.missingPlugins: list[str] = []
         self._status_cb = status_callback
@@ -78,6 +80,11 @@ class PluginService:
 
     def findProduct(self, productName: str) -> BaseProduct | None:
         return self.productPlugins.get(productName, None)
+
+    # Singleton accessor --------------------------------------------------------------------------------------
+    @classmethod
+    def instance(cls) -> "PluginService | None":  # type: ignore[override]
+        return getattr(cls, "_instance", None)
 
     def findProductTypes(self, classType) -> dict:
         """Return a dictionary of {name: instance} for products matching the given class type."""
