@@ -19,15 +19,10 @@ class SMB100A(BaseSigGen, VISADevice, VisaInitMixin):
         VisaInitMixin.__init__(self)
 
     def initialise(self, init: Any | None = None) -> bool:
-        if self._initialised:
-            logging.debug(f"{self.name} is already initialised.")
-            return True
-
         if not self._visa_initialise(init):
             return False
 
-        self._initialised = BaseSigGen.initialise(self)
-        return self._initialised
+        return BaseSigGen.initialise(self)
 
     def finalise(self) -> bool:
         self._visa_finalise()

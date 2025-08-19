@@ -26,7 +26,6 @@ class BasePlugin(ABC):
     def __init__(self, name: str, description: Optional[str] = None):
         self.name = name
         self.description = description
-        self._initialised = False
         self.configured = False
         self.finalised = False
 
@@ -68,9 +67,6 @@ class BasePlugin(ABC):
     def updateParameters(self, group: str, values: dict[str, Any]):
         for k, v in values.items():
             self.setParameterValue(group, k, v)
-
-    def isInitialised(self) -> bool:
-        return self._initialised
 
     @abstractmethod
     def initialise(self, init: Any = None) -> bool:
