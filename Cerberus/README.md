@@ -34,21 +34,15 @@ Below are Mermaid diagrams (GitHub and many Markdown renderers support these). P
 
 ### High-Level Component Interaction
 ```mermaid
-%% NOTE: Adjusted layout: use a vertical subgraph so Database sits above PluginService (reduces crowding)
+%% NOTE: Reverted grouping; rely on declaration order so Database appears above PluginService.
 flowchart LR
    subgraph CLI [CLI / Shell]
       MS[MainShell]
    end
-   %% Core runtime stack arranged vertically
-   subgraph CORE [Core Runtime]
-      direction TB
-      MGR[Manager]
-      DB[(Database)]
-      PS[PluginService]
-   end
-   MS --> MGR
-   MGR --> DB
-   MGR --> PS
+   MS --> MGR[Manager]
+   %% Declare DB link before PS to encourage vertical ordering (DB above PS)
+   MGR --> DB[(Database)]
+   MGR --> PS[PluginService]
    PS --> PD_E[Discovery Equip]
    PS --> PD_P[Discovery Products]
    PS --> PD_T[Discovery Tests]
