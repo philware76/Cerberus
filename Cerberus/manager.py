@@ -1,14 +1,16 @@
-import logging
 from typing import Self
 
 from Cerberus.database.baseDB import BaseDB
+from Cerberus.logConfig import getLogger
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.pluginService import PluginService
+
+logger = getLogger("Manager")
 
 
 class Manager():
     def __init__(self, stationId: str, db: BaseDB, status_callback=None):
-        logging.info("Starting TestManager...")
+        logger.info("Starting TestManager...")
         self.product: BaseProduct | None = None
         self.stationId = stationId
         self.db = db
@@ -30,7 +32,7 @@ class Manager():
         try:
             self.finalize()
         except Exception:
-            logging.exception("Exception during Manager.finalize() in __exit__")
+            logger.exception("Exception during Manager.finalize() in __exit__")
 
         # Do not suppress exceptions from the with-block
         return False
@@ -50,23 +52,23 @@ class Manager():
             try:
                 self.db.load_equipment_into(equip)
             except Exception as ex:
-                logging.warning(f"Failed to load persisted params for equipment '{equip.name}': {ex}")
+                logger.warning(f"Failed to load persisted params for equipment '{equip.name}': {ex}")
 
         # Tests
         for test in self.pluginService.testPlugins.values():
             try:
                 self.db.load_test_into(test)
             except Exception as ex:
-                logging.warning(f"Failed to load persisted params for test '{test.name}': {ex}")
+                logger.warning(f"Failed to load persisted params for test '{test.name}': {ex}")
 
         # Products
         for product in self.pluginService.productPlugins.values():
             try:
                 self.db.load_product_into(product)
             except Exception as ex:
-                logging.warning(f"Failed to load persisted params for product '{product.name}': {ex}")
+                logger.warning(f"Failed to load persisted params for product '{product.name}': {ex}")
 
-        logging.info("Persisted parameters loaded into plugins (equipment/tests/products).")
+        logger.info("Persisted parameters loaded into plugins (equipment/tests/products).")
 
     # ----------------------------------------------------------------------------------------------------------
     def saveAll(self) -> None:
@@ -75,15 +77,15 @@ class Manager():
             self.db.save_equipment(self.pluginService.equipPlugins.values())
             self.db.save_tests(self.pluginService.testPlugins.values())
             self.db.save_products(self.pluginService.productPlugins.values())
-            logging.info("All plugin parameters saved to DB.")
+            logger.info("All plugin parameters saved to DB.")
 
         except Exception as ex:
-            logging.error(f"Failed to save plugin parameters: {ex}")
+            logger.error(f"Failed to save plugin parameters: {ex}")
 
     # ----------------------------------------------------------------------------------------------------------
     def finalize(self):
         """Final cleanup before exiting the application."""
-        logging.debug("Finalizing Cerberus manager...")
+        logger.debug("Finalizing Cerberus manager...")
 
         # Optionally persist before closing
         try:
@@ -94,8 +96,8 @@ class Manager():
         if self.db:
             try:
                 self.db.close()
-                logging.debug("Database connection closed.")
+                logger.debug("Database connection closed.")
             except Exception:
-                logging.debug("Database close raised but ignored.")
+                logger.debug("Database close raised but ignored.")
 
-        logging.debug("Cerberus manager finalized.")
+        logger.debug("Cerberus manager finalized.")

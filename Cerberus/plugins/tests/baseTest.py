@@ -70,7 +70,18 @@ class BaseTest(BasePlugin):
         self.finalised = True
         return True
 
-    def _addRequirements(self, typeNames):
+    def _addRequirements(self, typeNames: List[Type[BaseEquipment]]) -> None:
+        """Register required equipment types for this test.
+
+        Each entry must be a class (not an instance) that ultimately derives
+        from BaseEquipment. The executor / plugin service will locate concrete
+        plugin instances satisfying these types (``isinstance`` check) and
+        inject initialised instances prior to ``run``.
+        """
+        # Defensive: ignore accidental None or non-iterable input.
+        if not typeNames:
+            return
+
         self.requiredEquipment.extend(typeNames)
 
     def provideEquip(self, equipment: dict[type[BaseEquipment], BaseEquipment]) -> None:

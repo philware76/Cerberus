@@ -2,14 +2,18 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, cast
+from typing import Any, Iterable, cast
 
 import mysql.connector
+from mysql.connector import errorcode
 
 from Cerberus.common import DBInfo
 from Cerberus.database.baseDB import BaseDB
+from Cerberus.logConfig import getLogger
 from Cerberus.plugins.baseParameters import BaseParameter
 from Cerberus.plugins.basePlugin import BasePlugin
+
+logger = getLogger("Database")
 
 
 @dataclass
@@ -40,7 +44,16 @@ class GenericDB(BaseDB):
             password=dbInfo.password,
             database=dbInfo.database
         )
-        self._ensure_table()
+        self._ensure_tables()
+
+        invalidContent = self.checkGroupContentIntegrity()
+        if len(invalidContent) > 0:
+            logger.error("Database integrity: Broken!")
+            logger.error("Group Content is invalid on these entries:")
+            for id, badHash, goodHash in invalidContent:
+                logger.error(f"ID:{id}: {badHash} should be: {goodHash}")
+        else:
+            logger.info("Database integrity: OK")
 
     def close(self):
         try:
@@ -49,7 +62,7 @@ class GenericDB(BaseDB):
             pass
 
     # ------------------------------------------------------------------------------------------------------------
-    def _ensure_table(self):
+    def _ensure_tables(self):
         """Ensure normalized tables exist (fresh schema, no migration needed).
 
         Normalized schema:
@@ -94,6 +107,7 @@ class GenericDB(BaseDB):
                     group_identity_id BIGINT NOT NULL,
                     content_id BIGINT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_gid_content (group_identity_id, content_id),
                     KEY idx_gid_created (group_identity_id, id),
                     KEY idx_gid_content (group_identity_id, content_id),
                     CONSTRAINT fk_gs_identity FOREIGN KEY (group_identity_id)
@@ -103,6 +117,12 @@ class GenericDB(BaseDB):
                 )
                 """
             )
+
+            # In case table pre-existed without the UNIQUE key, attempt to add it (ignore if already there)
+            try:  # pragma: no cover - migration path
+                cur.execute("ALTER TABLE group_settings ADD UNIQUE KEY uq_gid_content (group_identity_id, content_id)")
+            except Exception:
+                pass
 
             # Pointer to current version
             cur.execute(
@@ -192,14 +212,40 @@ class GenericDB(BaseDB):
 
     def save_group(self, plugin_type: str, plugin_name: str, group_name: str, values_map: dict) -> None:
         """
-    Save an entire parameter group as a JSON mapping parameter_name->value.
-    Global de-duplication: any identical JSON content (by canonical hash) is stored only once
-    in group_content and reused across ANY plugin/group identity. Historical versions for an
-    identity point to content rows; if the same content hash recurs for that identity we reuse
-    the existing historical version (so we don't accumulate duplicates from toggling back and
-    forth).
+        Save an entire parameter group as a JSON mapping parameter_name->value.
+        Global de-duplication: any identical JSON content (by canonical hash) is stored only once
+        in group_content and reused across ANY plugin/group identity. Historical versions for an
+        identity point to content rows; if the same content hash recurs for that identity we reuse
+        the existing historical version (so we don't accumulate duplicates from toggling back and
+        forth).
         """
         group_hash, canonical_json = self.compute_group_hash(values_map)
+        # Fast path: attempt to read existing current hash and skip all writes if identical.
+        read_cur = self.conn.cursor()
+        try:
+            read_cur.execute(
+                """
+                SELECT gc.group_hash
+                FROM group_identity gi
+                JOIN current_group_setting cgs ON gi.id = cgs.group_identity_id
+                JOIN group_settings gs ON cgs.setting_id = gs.id
+                JOIN group_content gc ON gs.content_id = gc.id
+                WHERE gi.station_id=%s AND gi.plugin_type=%s AND gi.plugin_name=%s AND gi.group_name=%s
+                LIMIT 1
+                """,
+                (self.station_id, plugin_type, plugin_name, group_name)
+            )
+            row = read_cur.fetchone()
+            if row:
+                existing_hash = str(row[0])  # type: ignore[index]
+                if existing_hash == group_hash:
+                    logger.debug(
+                        f"Group: '{group_name}' for plugin '{plugin_name}' unchanged (hash match); skipped DB writes. hash={group_hash}"
+                    )
+                    return
+        finally:
+            read_cur.close()
+
         cur = self.conn.cursor()
         try:
             # Resolve / create identity (LAST_INSERT_ID trick returns existing id on duplicate)
@@ -213,16 +259,29 @@ class GenericDB(BaseDB):
             )
             gid = cur.lastrowid
 
-            # Upsert / locate global content row
-            cur.execute(
-                """
-                INSERT INTO group_content (group_hash, group_json)
-                VALUES (%s,%s)
-                ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)
-                """,
-                (group_hash, canonical_json)
-            )
-            content_id = cur.lastrowid
+            # Locate or insert global content row WITHOUT burning an AUTO_INCREMENT value when
+            # the hash already exists. The prior ON DUPLICATE KEY pattern allocates and discards
+            # ids on duplicates, creating large gaps. This SELECT -> INSERT approach reduces (but
+            # cannot eliminate) gaps. A race where another session inserts the same hash between
+            # our SELECT and INSERT is handled by catching ER_DUP_ENTRY and re-selecting.
+            cur.execute("SELECT id FROM group_content WHERE group_hash=%s", (group_hash,))
+            row = cur.fetchone()
+            if row:
+                content_id = int(row[0])  # type: ignore[index]
+            else:
+                try:
+                    cur.execute(
+                        "INSERT INTO group_content (group_hash, group_json) VALUES (%s,%s)",
+                        (group_hash, canonical_json)
+                    )
+                    content_id = cur.lastrowid
+                except mysql.connector.Error as e:  # pragma: no cover - race condition path
+                    if getattr(e, "errno", None) == errorcode.ER_DUP_ENTRY:
+                        # Another connection inserted concurrently; fetch the id now present.
+                        cur.execute("SELECT id FROM group_content WHERE group_hash=%s", (group_hash,))
+                        content_id = int(cur.fetchone()[0])  # type: ignore[index]
+                    else:
+                        raise
 
             # Does this identity already have a historical setting pointing to this content?
             cur.execute(
@@ -230,40 +289,76 @@ class GenericDB(BaseDB):
                 (gid, content_id)
             )
             existing_for_identity = cur.fetchone()
+
             if existing_for_identity is not None:
                 setting_id = int(existing_for_identity[0])  # type: ignore[index,arg-type]
+                # Only change current_group_setting if it is missing or points at a different setting.
+                # 1. Try to update only when different (prevents bumping updated_at when unchanged)
                 cur.execute(
                     """
-                    INSERT INTO current_group_setting (group_identity_id, setting_id)
-                    VALUES (%s,%s)
-                    ON DUPLICATE KEY UPDATE setting_id=VALUES(setting_id)
+                    UPDATE current_group_setting
+                    SET setting_id=%s
+                    WHERE group_identity_id=%s AND setting_id<>%s
                     """,
-                    (gid, setting_id)
+                    (setting_id, gid, setting_id)
                 )
+                if cur.rowcount == 0:
+                    # Either the pointer already matches (no action needed) OR the row is absent.
+                    # 2. Insert it if absent (IGNORE avoids error if it actually existed and matched).
+                    cur.execute(
+                        """
+                        INSERT IGNORE INTO current_group_setting (group_identity_id, setting_id)
+                        VALUES (%s,%s)
+                        """,
+                        (gid, setting_id)
+                    )
                 self.conn.commit()
-                logging.debug(
+                logger.debug(
                     f"Group: '{group_name}' for plugin '{plugin_name}' unchanged; reused existing setting_id={setting_id} (gid={gid}) hash={group_hash}."
                 )
                 return
 
-            # Insert new historical version referencing shared content
+            # Insert (or reuse existing) historical version referencing shared content.
+            # UNIQUE (group_identity_id, content_id) ensures only one row per pair; the ON DUPLICATE clause
+            # fetches existing id without creating a duplicate row.
             cur.execute(
-                """INSERT INTO group_settings (group_identity_id, content_id) VALUES (%s,%s)""",
+                """
+                INSERT INTO group_settings (group_identity_id, content_id) VALUES (%s,%s)
+                ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)
+                """,
                 (gid, content_id)
             )
             new_setting_id = cur.lastrowid
+
+            # Point current_group_setting at the new/reused setting only if different or missing.
             cur.execute(
-                """INSERT INTO current_group_setting (group_identity_id, setting_id) VALUES (%s,%s)
-                    ON DUPLICATE KEY UPDATE setting_id=VALUES(setting_id)""",
-                (gid, new_setting_id)
+                """
+                UPDATE current_group_setting
+                SET setting_id=%s
+                WHERE group_identity_id=%s AND setting_id<>%s
+                """,
+                (new_setting_id, gid, new_setting_id)
             )
+            if cur.rowcount == 0:
+                cur.execute(
+                    """
+                    INSERT IGNORE INTO current_group_setting (group_identity_id, setting_id)
+                    VALUES (%s,%s)
+                    """,
+                    (gid, new_setting_id)
+                )
+
             self.conn.commit()
-            logging.debug(
+            logger.debug(
                 f"Group: '{group_name}' for plugin '{plugin_name}' changed; created new setting_id={new_setting_id} (gid={gid}) hash={group_hash}."
             )
 
         except mysql.connector.Error as err:  # pragma: no cover - operational
-            logging.error(f"Failed to save group {plugin_name}.{group_name}: {err}")
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            logger.error(f"Failed to save group {plugin_name}.{group_name}: {err}")
 
         finally:
             cur.close()
@@ -303,7 +398,7 @@ class GenericDB(BaseDB):
                 try:
                     mapping = json.loads(cast(str, pdata))
                 except Exception:
-                    logging.error("Failed to parse group JSON for %s.%s.%s", plugin_type, plugin.name, group_name)
+                    logger.error("Failed to parse group JSON for %s.%s.%s", plugin_type, plugin.name, group_name)
                     mapping = {}
                 # Apply values to existing BaseParameter instances if present
                 for param_name, param in group.items():
@@ -355,10 +450,192 @@ class GenericDB(BaseDB):
             for t in tables:
                 try:
                     cur.execute(f"DROP TABLE IF EXISTS {t}")
-                    logging.warning(f"Dropped table if existed: {t}")
+                    logger.warning(f"Dropped table if existed: {t}")
                 except Exception as ex:  # pragma: no cover - defensive
-                    logging.error(f"Failed to drop table {t}: {ex}")
+                    logger.error(f"Failed to drop table {t}: {ex}")
             self.conn.commit()
+        finally:
+            cur.close()
+
+    # ------------------------------------------------------------------------------------------------------------
+    def checkGroupContentIntegrity(self) -> list[tuple[int, str, str]]:
+        """Verify each row in group_content matches its stored SHA256 hash.
+
+        Returns list of (content_id, stored_hash, recomputed_hash) for mismatches.
+        Empty list means all rows verified. Warns via logging on mismatch.
+        """
+        cur = self.conn.cursor()
+        mismatches: list[tuple[int, str, str]] = []
+        total = 0
+        try:
+            cur.execute("SELECT id, group_hash, group_json FROM group_content")
+            rows = cur.fetchall()  # type: ignore[assignment]  # (id, group_hash, group_json)
+            for cid_raw, stored_hash_raw, group_json in rows:
+                # Assume DB returns correct types; coerce to str/int defensively
+                try:
+                    cid: int = int(cast(Any, cid_raw))
+                except Exception:
+                    continue
+                stored_hash = str(stored_hash_raw)
+                total += 1
+                # group_json may arrive as dict (already decoded) or string
+                try:
+                    if isinstance(group_json, (dict, list)):
+                        obj = group_json
+                    elif isinstance(group_json, (bytes, bytearray, memoryview)):
+                        obj = json.loads(bytes(group_json).decode('utf-8'))
+                    else:
+                        obj = json.loads(str(group_json))
+
+                except Exception:
+                    mismatches.append((cid, stored_hash, '<unparseable>'))
+                    continue
+
+                canonical = json.dumps(obj, sort_keys=True, separators=(",", ":"))
+                recomputed = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+                if recomputed != stored_hash:
+                    mismatches.append((cid, stored_hash, recomputed))
+
+        finally:
+            cur.close()
+
+        if mismatches:
+            logger.warning(
+                f"Group content integrity check: {len(mismatches)}/{total} mismatches detected."  # noqa: E501
+            )
+        else:
+            logger.info(f"Group content integrity check: all {total} rows verified.")
+
+        return mismatches
+
+    # ------------------------------------------------------------------------------------------------------------
+    def cleanup_duplicate_group_settings(self, dry_run: bool = False) -> dict[str, Any]:
+        """Detect and (optionally) remove legacy duplicate rows in group_settings.
+
+        Background: Prior to adding UNIQUE (group_identity_id, content_id) duplicates could appear
+        under concurrent saves. New schema prevents future duplicates, but old ones may remain.
+
+        Steps:
+          1. Identify duplicate sets (gid, content_id) with COUNT(*) > 1.
+          2. Choose the smallest id as canonical keep_id.
+          3. Repoint current_group_setting rows referencing any other duplicate id to keep_id.
+          4. Delete non-canonical duplicate rows (unless dry_run=True).
+
+        Args:
+            dry_run: If True, no modifications are committed; a report is returned only.
+
+        Returns a report dict containing counts and per-duplicate details.
+        """
+        report: dict[str, Any] = {
+            "duplicate_sets": 0,
+            "rows_deleted": 0,
+            "rows_kept": 0,
+            "details": []
+        }
+
+        cur = self.conn.cursor()
+        try:
+            cur.execute(
+                """
+                SELECT group_identity_id, content_id,
+                       COUNT(*) AS cnt,
+                       MIN(id) AS keep_id,
+                       GROUP_CONCAT(id ORDER BY id) AS all_ids
+                FROM group_settings
+                GROUP BY group_identity_id, content_id
+                HAVING cnt > 1
+                """
+            )
+            dup_rows = cur.fetchall()
+            if not dup_rows:
+                return report
+
+            report["duplicate_sets"] = len(dup_rows)
+
+            # Use a transaction so we can rollback completely on error
+            if not dry_run:
+                cur.execute("START TRANSACTION")
+
+            total_deleted = 0
+            total_kept = 0
+            details: list[dict[str, Any]] = []
+
+            for group_identity_id_raw, content_id_raw, cnt_raw, keep_id_raw, all_ids_raw in dup_rows:
+                try:
+                    group_identity_id = int(cast(Any, group_identity_id_raw))
+                    content_id = int(cast(Any, content_id_raw))
+                    keep_id = int(cast(Any, keep_id_raw))
+                except Exception:
+                    continue
+                all_ids = str(all_ids_raw)
+                try:
+                    id_list = [int(x) for x in all_ids.split(',') if x]
+                except Exception:
+                    id_list = []
+                if not id_list:
+                    continue
+                keep_id_int = keep_id
+                dup_ids = [i for i in id_list if i != keep_id]
+                total_kept += 1
+
+                # Repoint current_group_setting referencing duplicate ids
+                if dup_ids and not dry_run:
+                    placeholders = ','.join(['%s'] * len(dup_ids))
+                    params: list[Any] = [keep_id_int, group_identity_id, *dup_ids]
+                    cur.execute(
+                        f"""
+                        UPDATE current_group_setting
+                        SET setting_id=%s
+                        WHERE group_identity_id=%s AND setting_id IN ({placeholders})
+                        """,
+                        params
+                    )
+
+                # Delete duplicate rows
+                deleted_this = 0
+                if dup_ids and not dry_run:
+                    cur.execute(
+                        f"""
+                        DELETE FROM group_settings
+                        WHERE id IN ({','.join(['%s']*len(dup_ids))})
+                        """,
+                        tuple(dup_ids)
+                    )
+                    deleted_this = cur.rowcount
+                    total_deleted += deleted_this
+
+                details.append({
+                    "group_identity_id": group_identity_id,
+                    "content_id": content_id,
+                    "keep_id": keep_id_int,
+                    "duplicate_ids": dup_ids,
+                    "deleted": deleted_this if not dry_run else 0
+                })
+
+            if not dry_run:
+                try:
+                    self.conn.commit()
+                except Exception as ex:  # pragma: no cover - defensive
+                    try:
+                        self.conn.rollback()
+                    except Exception:
+                        pass
+                    logger.error(f"Duplicate cleanup failed; rolled back: {ex}")
+                    return report
+
+            report.update({
+                "rows_deleted": total_deleted,
+                "rows_kept": total_kept,
+                "details": details,
+                "dry_run": dry_run,
+            })
+
+            level = logger.info if total_deleted == 0 else logger.warning
+            level(
+                f"Duplicate cleanup report: sets={report['duplicate_sets']} kept={total_kept} "
+                f"deleted={total_deleted} dry_run={dry_run}"
+            )
+            return report
         finally:
             cur.close()
 
