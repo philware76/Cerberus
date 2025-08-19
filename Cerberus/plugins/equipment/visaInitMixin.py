@@ -1,10 +1,12 @@
-import logging
 from typing import Any, cast
 
 from Cerberus.exceptions import EquipmentError
+from Cerberus.logConfig import getLogger
 from Cerberus.plugins.equipment.baseEquipment import (BaseCommsEquipment,
                                                       Identity)
 from Cerberus.plugins.equipment.visaDevice import VISADevice
+
+logger = getLogger("VISA")
 
 
 class VisaInitMixin:
@@ -33,13 +35,13 @@ class VisaInitMixin:
 
         VISADevice.__init__(self, port=port, ipAddress=ip, timeout=timeout)  # type: ignore[misc]
         if VISADevice.open(self) is None:  # type: ignore[attr-defined]
-            logging.error(f"Failed to open VISA resource {ip}:{port}")
+            logger.error(f"Failed to open VISA resource {ip}:{port}")
             return False
 
         self._visa_opened = True
         idn = VISADevice.query(self, '*IDN?')  # type: ignore[attr-defined]
         if not idn:
-            logging.error("Did not receive *IDN? response; closing VISA resource")
+            logger.error("Did not receive *IDN? response; closing VISA resource")
             self._visa_close_and_reset()
             return False
 
@@ -47,9 +49,8 @@ class VisaInitMixin:
         self.identity = Identity(idn)
         if self.identity.model != self.name:
             self._visa_close_and_reset()
-            raise EquipmentError(
-                f"Device identity {self.identity.model} is not the same as the equipment plugin {self.name}"
-            )
+            logger.warning(f"Device identity {self.identity.model} is not the same as the equipment plugin {self.name}")
+            return False
 
         return True
 
@@ -67,6 +68,6 @@ class VisaInitMixin:
             try:
                 VISADevice.close(self)  # type: ignore[attr-defined]
             except Exception:
-                logging.debug("VISA close raised during cleanup", exc_info=True)
+                logger.debug("VISA close raised during cleanup", exc_info=True)
 
         self._visa_opened = False
