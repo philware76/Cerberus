@@ -93,7 +93,7 @@ class BaseTest(BasePlugin):
         instrument = self._equipment.get(equip_type)
         instrument = instrument if isinstance(instrument, equip_type) else None
         if instrument is None:
-            raise EquipmentError(f"Failed to find {T}")
+            raise EquipmentError(f"Failed to find {equip_type.__name__}")
 
         return instrument
 

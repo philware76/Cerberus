@@ -26,7 +26,6 @@ class BasePlugin(ABC):
     def __init__(self, name: str, description: Optional[str] = None):
         self.name = name
         self.description = description
-        self.configured = False
         self.finalised = False
 
         self._init: dict[str, Any] = {}
@@ -71,10 +70,6 @@ class BasePlugin(ABC):
     @abstractmethod
     def initialise(self, init: Any = None) -> bool:
         '''Initialises a plugin with some initialisation meta data'''
-
-    @abstractmethod
-    def configure(self, config: Any = None) -> bool:
-        '''Provides the configuration for the plugin'''
 
     @abstractmethod
     def finalise(self) -> bool:

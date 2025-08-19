@@ -35,16 +35,9 @@ class BaseEquipment(BasePlugin):
         logging.debug("Initialise")
         return True
 
-    def configure(self, config: Any | None = None) -> bool:
-        """Configures the equipment"""
-        logging.debug("Configure")
-        return True
-
     def finalise(self) -> bool:
         """Finalises [closes] the equipment"""
         logging.debug("Finalise")
-        self._initialised = False
-        self.configured = False
         self.finalised = True
         return True
 
