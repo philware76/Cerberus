@@ -41,6 +41,7 @@ Core architectural pillars:
 | Execution            | `Executor.runTest()`                            | Injects Product (optional), initialises required Equipment, runs & finalises Test, returns Result object. |
 | Networking discovery | `EthDiscovery.search()`                         | Broadcast discovery to find candidate Products (NESIE devices). |
 | Persistence          | `GenericDB` (MySQL) / File DB (tests)            | Automatic parameter versioning & retrieval per station / plugin / group. |
+| Persistence          | `GenericDB` (MySQL) / File DB (tests)            | Automatic parameter versioning & retrieval per station / plugin / group. ([GenericDB details](Cerberus/database/README_GenericDB.md)) |
 | State management     | `Manager`                                        | Coordinates load/save of all plugin parameters and lifecycle finalisation. |
 | Planning             | `plan`, `planService`                            | Test plan composition & serialisation. |
 
