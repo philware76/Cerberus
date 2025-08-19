@@ -37,4 +37,4 @@ class N1913A(BasePowerMeter, VISADevice, VisaInitMixin):
         return self.command(f"FREQ {freq}MHZ")
 
     def getPowerReading(self) -> float:
-        return float(self.query("FETC?"))
+        return float(self.query("FETCH?"))

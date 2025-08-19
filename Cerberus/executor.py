@@ -1,11 +1,12 @@
-import logging
-
 from Cerberus.exceptions import TestError
+from Cerberus.logConfig import getLogger
 from Cerberus.manager import PluginService
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment
 from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
+
+logger = getLogger("executor")
 
 
 class Executor:
@@ -45,7 +46,7 @@ class Executor:
     @staticmethod
     def _log_missing_requirements(test: BaseTest, missing: list[type[BaseEquipment]]) -> None:
         missing_names = [t.__name__ for t in missing]
-        logging.error(
+        logger.error(
             f"Missing required equipment for test: {test.name}. Missing: {missing_names}"  # noqa: E501
         )
 
@@ -56,28 +57,28 @@ class Executor:
         """
         for idx, candidate in enumerate(candidates, start=1):
             if candidate.initialise():
-                logging.debug(
+                logger.debug(
                     f"{candidate.name} (#{idx}/{len(candidates)}) initialised for requirement {req_type.__name__}"  # noqa: E501
                 )
                 return candidate
 
-            logging.warning(
+            logger.warning(
                 f"Candidate {candidate.name} (#{idx}/{len(candidates)}) failed to initialise for {req_type.__name__}"  # noqa: E501
             )
 
-        logging.error(
+        logger.error(
             f"All {len(candidates)} candidates failed for requirement {req_type.__name__} in test {test.name}"  # noqa: E501
         )
         return None
 
     def runTest(self, test: BaseTest, product: BaseProduct | None) -> bool:
         """Run a single test with an optional pre-configured product injected."""
-        logging.debug(f"Running test: {test.name}")
+        logger.debug(f"Running test: {test.name}")
 
         test.setProduct(product)
 
         if not test.initialise():
-            logging.error(f"Failed to initialize test: {test.name}")
+            logger.error(f"Failed to initialize test: {test.name}")
             return False
 
         if not self._prepare_equipment(test):
@@ -87,15 +88,15 @@ class Executor:
             test.run()
 
         except TestError as e:
-            logging.error(f"Failed to run {test.name} test with {e}")
+            logger.error(f"Failed to run {test.name} test with {e}")
 
         finally:
             test.finalise()
 
-        logging.info("{test.name} test has completed.")
+        logger.info("{test.name} test has completed.")
 
         if test.result is not None:
-            logging.info(f"{test.name} test result: {test.result.status}")
+            logger.info(f"{test.name} test result: {test.result.status}")
             if test.result.log is not None:
                 print(test.result.log)
 
