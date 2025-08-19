@@ -271,6 +271,46 @@ A `BaseTest` declares `requiredEquipment: List[Type[BaseEquipment]]` describing 
    - For each selected instance not yet initialised, open connections (e.g. VISA, sockets, serial), perform identification / health check to mark as ready.
 5. If any required type is missing (no candidates), preparation fails and the executor aborts the test gracefully.
 
+### 5.1 Parent Instrument Delegation (Facet Devices)
+Some physical instruments expose *logical* sub‑devices that do not own an independent transport (e.g. Rohde & Schwarz NRP power sensors when physically connected through an SMB100A signal generator). To model these cleanly while preserving a single physical VISA session, Cerberus now supports a lightweight parent/child (facet) pattern:
+
+Core concepts:
+1. Facet equipment classes (e.g. `NRP_Z22`, `NRP_Z24`) declare a `REQUIRED_PARENTS` class list containing the name(s) of parent instruments. Currently only the first entry is used (single parent support). Example: `REQUIRED_PARENTS = ["SMB100A"]` in `BaseNRPPowerMeter`.
+2. Facet devices do not inherit from `VISADevice` nor open sessions. Instead they delegate SCPI calls to the already‑initialised parent via a minimal structural protocol (write/query/command/operationComplete).
+3. Dependency preparation is performed centrally by the new `EquipmentDependencyResolver` (`Cerberus/equipmentDependencyResolver.py`) which is invoked from `RequiredEquipment` before calling `initialise()` on a candidate. It:
+   - Looks for `REQUIRED_PARENTS` on the candidate.
+   - Finds the parent instance via `PluginService`.
+   - Initialises the parent first (if not already initialised).
+   - Injects the parent into the child's `initialise` call as `initialise({'parent': parent})`.
+   - Emits a debug log: `Injected <ParentName> into <ChildName>` for traceability.
+4. The child’s `initialise` method validates that a parent was supplied and fails fast if not, ensuring ordering correctness without a hard‑coded numeric priority system.
+5. Tests remain unchanged – they still list only the abstract required types. The resolver implicitly ensures the parent appears and is ready before the child is selected.
+
+Why this approach over priorities:
+- Declarative: dependencies are part of the plugin’s self‑description (`REQUIRED_PARENTS`).
+- Deterministic initialisation ordering is derived naturally (parents first) without manual priority tuning.
+- Extensible: future multi‑parent support can evolve inside the resolver without changing plugin call sites.
+
+Fallback / Error Handling:
+- If the parent is missing, the child candidate is skipped; other candidates (if any) are tried.
+- If parent initialisation fails, the failure is logged and the child is not attempted.
+- If all candidates fail (including due to parent issues) the original failure path in `RequiredEquipment` is preserved.
+
+Debug tracing example (simplified):
+```
+DEBUG dependencyResolver: Injected SMB100A into NRP-Z22
+DEBUG requiredEquipment: NRP-Z22 (#1/1) initialised for requirement BasePowerMeter
+```
+
+Implementation Files:
+- `plugins/equipment/powerMeters/RohdeSchwarz/NRP/baseNPRPowerMeter.py` – refactored to facet model & declares `REQUIRED_PARENTS`.
+- `equipmentDependencyResolver.py` – new resolver component.
+- `requiredEquipment.py` – now delegates dependency work to the resolver instead of inline logic.
+
+Limitations (current scope):
+- Only a single parent is honoured (first element). Multi‑parent or dependency cycles are not yet supported (not needed for current hardware topology).
+- Parent discovery assumes the parent plugin instance name matches the declared string exactly.
+
 ### Multiple Equipment Instances
 You can provide multiple physical or virtual instruments implementing the same abstract capability; all are discovered. The *current selection policy* is deterministic but primitive: choose the first discovered candidate (folder traversal order). This keeps logic simple but does not evaluate "online" vs. "offline" dynamically inside `PluginService` itself—responsibility for verifying operational status (e.g. connectivity) belongs to the equipment plugin's own initialise routine or the `RequiredEquipment` layer. When a plugin fails to initialise, future enhancements could fall back to other candidates automatically (see below).
 
@@ -319,6 +359,11 @@ Potential improvements:
 - Real‑time status panel showing which devices are currently allocated and their usage counts.
 
 ### 7.9 Plugin Hot Reload
+### 7.10 Enhanced Dependency Graph (Future)
+Future enhancements could include:
+- Multi‑parent dependency support with a full DAG traversal & cycle detection.
+- Topological sorting of all required equipment in one batch for improved parallel initialisation opportunities.
+- Capability‑based dynamic parent selection (choose among multiple possible parents matching a functional capability descriptor rather than a fixed name).
 - Watch plugin directories for file changes; support safe in‑process reload (unregister & replace) for rapid development.
 
 ---
@@ -339,6 +384,8 @@ Potential improvements:
 - *Requirement*: An abstract equipment class listed by a test indicating a capability need.
 - *Candidate*: A discovered equipment plugin instance that `isinstance` satisfies a requirement type.
 - *Selection*: The chosen candidate used to fulfil a requirement during a test run.
+- *Parent Instrument*: A physical instrument that owns the transport/session and provides SCPI access for one or more facet devices.
+- *Facet Equipment (Child)*: A logical equipment plugin that delegates all I/O to a parent instrument instead of opening its own connection.
 
 ---
 ## 10. Summary

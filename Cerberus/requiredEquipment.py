@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional, Type
 
+from Cerberus.equipmentDependencyResolver import EquipmentDependencyResolver
 from Cerberus.logConfig import getLogger
 from Cerberus.manager import PluginService
 from Cerberus.plugins.equipment.baseEquipment import BaseEquipment, Identity
@@ -47,6 +48,7 @@ class RequiredEquipment:
     def __init__(self, pluginService: PluginService, cache: RequirementCache | None = None):
         self.pluginService = pluginService
         self.cache = cache or RequirementCache()
+        self._depResolver = EquipmentDependencyResolver(pluginService)
 
     # --- Public API -------------------------------------------------------------------------------------------
     def prepare(self, test: BaseTest, force_refresh: bool = False) -> bool:
@@ -117,8 +119,7 @@ class RequiredEquipment:
             f"Missing required equipment for test: {test.name}. Missing: {missing_names}"  # noqa: E501
         )
 
-    @staticmethod
-    def _initialise_first_online(req_type: type[BaseEquipment], candidates: list[BaseEquipment], test: BaseTest, *, skip_instance: BaseEquipment | None = None) -> BaseEquipment | None:
+    def _initialise_first_online(self, req_type: type[BaseEquipment], candidates: list[BaseEquipment], test: BaseTest, *, skip_instance: BaseEquipment | None = None) -> BaseEquipment | None:
         # Iterate candidates, returning on first successful initialise. Uses early-continue
         # style and ensures only a single warning is emitted per failed candidate.
         total = len(candidates)
@@ -126,7 +127,14 @@ class RequiredEquipment:
             if skip_instance is not None and equip is skip_instance:
                 continue  # explicit skip of previously invalidated cached instance
             try:
-                if equip.initialise():
+                # Resolve & inject dependencies
+                success, init_payload = self._depResolver.prepare_dependencies(equip)
+                if not success:
+                    logger.warning(
+                        f"Skipping candidate {equip.name} due to dependency failure for {req_type.__name__}"  # noqa: E501
+                    )
+                    continue
+                if equip.initialise(init_payload):
                     logger.debug(
                         f"{equip.name} (#{idx}/{total}) initialised for requirement {req_type.__name__}"  # noqa: E501
                     )
