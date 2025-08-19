@@ -3,7 +3,7 @@ from typing import cast
 
 from numpy.polynomial import Chebyshev
 
-from Cerberus.gui.helpers import openMatPlotUI
+from Cerberus.gui.helpers import getGlobalMatPlotUI
 from Cerberus.logConfig import getLogger
 from Cerberus.plugins.baseParameters import BaseParameters, NumericParameter
 from Cerberus.plugins.basePlugin import hookimpl, singleton
@@ -38,7 +38,7 @@ class CableCalTestParams(BaseParameters):
         self.addParameter(NumericParameter("Stop", 3500, units="MHz", minValue=100, maxValue=3500, description="Stop Frequency"))
         self.addParameter(NumericParameter("Step", 100, units="MHz", minValue=10, maxValue=500, description="Step Frequency"))
         self.addParameter(NumericParameter("Power", 0, units="dBm", minValue=-40, maxValue=20, description="Signal Generator Output Power"))
-        self.addParameter(NumericParameter("Atten", 40, units="dBm", minValue=-40, maxValue=20, description="Signal Generator Output Power"))
+        self.addParameter(NumericParameter("Atten", 40, units="dBm", minValue=00, maxValue=40, description="Attenuator(s) on the cable"))
 
         self.addParameter(NumericParameter("MinSamples", 10, minValue=5, maxValue=100, description="Minimum number of readings per measurement"))
         self.addParameter(NumericParameter("Chebyshev Degree", 8, minValue=5, maxValue=30, description="Chebyshev degree of coeffs"))
@@ -63,6 +63,8 @@ class CableCalTest(PowerMeasurementMixin, BaseTest):
         self.configEquipment()
 
         self.gp = self.getGroupParameters("Calibration")
+        logger.info(self.gp)
+
         start = int(self.gp["Start"])
         stop = int(self.gp["Stop"])
         step = int(self.gp["Step"])
@@ -74,39 +76,32 @@ class CableCalTest(PowerMeasurementMixin, BaseTest):
 
         freqRange = range(start, stop + step, step)
         xlim = (start - step, stop + step)
-        ylim = (1, -1)
+        ylim = (-5, 5)
 
-        app, window, matplot = openMatPlotUI(
-            "Cable Calibration",
-            "Frequency (MHz)",
-            "Offset (dB)",
+        # Obtain (or create) persistent global plot UI.
+        gpui = getGlobalMatPlotUI(
+            title="Cable Calibration",
+            xlabel="Frequency (MHz)",
+            ylabel="Offset (dB)",
             xlim=xlim,
             ylim=ylim,
-            series=["Cal"],
             window_title="Cable Calibration Live"
         )
+        series_name = gpui.new_series("CalRun")
 
         for freq in freqRange:
             self.sigGen.setFrequency(freq)
-            meas = self.takeMeasurement(freq) + atten
-            logger.debug(f"Set frequency: {freq}, Power: {meas} dBm")
+            meas = self.take_power_measurement(freq) + atten
+            logger.debug(f"Set frequency: {freq}, Power: {meas:.2f} dBm")
 
             calData[freq] = meas
-            matplot.append_point("Cal", freq, meas)
-            app.processEvents()
+            gpui.append_point(series_name, freq, meas)
 
         polyFit = self.calcCalCoeffs(calData)
         self.checkCalCoeffs(freqRange, calData, polyFit)
 
         self.result = CableCalTestResult(ResultStatus.PASSED)
         self.result.log = self.getLog()
-
-        try:
-            while window.isVisible():  # Keep UI responsive until closed
-                app.processEvents()
-                time.sleep(0.05)
-        except Exception:
-            pass
 
     def configEquipment(self):
         self.sigGen = self.configSigGen()
@@ -131,17 +126,8 @@ class CableCalTest(PowerMeasurementMixin, BaseTest):
 
         return cheb
 
-    def takeMeasurement(self, freq) -> float:
-        return self.take_power_measurement(freq)
-
-    # Legacy specific measurement helpers removed (now handled by mixin)
-
     def configSigGen(self) -> BaseSigGen:
         sigGen = self.getEquip(BaseSigGen)
         cast(VISADevice, sigGen).reset()
 
         return sigGen
-
-    # Equipment specific config now provided by mixin (see PowerMeasurementMixin)
-
-    # Equipment specific config now provided by mixin (see PowerMeasurementMixin)
