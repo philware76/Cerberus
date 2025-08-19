@@ -34,22 +34,23 @@ Below are Mermaid diagrams (GitHub and many Markdown renderers support these). P
 
 ### High-Level Component Interaction
 ```mermaid
+%% NOTE: Simplified to avoid GitHub mermaid parser issues (removed edge label & complex chars)
 flowchart LR
-   subgraph CLI[CLI / Shell]
+   subgraph CLI [CLI / Shell]
       MS[MainShell]
    end
    MS --> MGR[Manager]
    MGR --> PS[PluginService]
-   PS --> PD_E[PluginDiscovery: Equipment]
-   PS --> PD_P[PluginDiscovery: Products]
-   PS --> PD_T[PluginDiscovery: Tests]
+   PS --> PD_E[Discovery Equip]
+   PS --> PD_P[Discovery Products]
+   PS --> PD_T[Discovery Tests]
    MGR --> DB[(Database)]
    MS --> EXEC[Executor]
    EXEC --> RE[RequiredEquipment]
    RE --> PS
    EXEC --> TEST[Test]
-   TEST -->|declares| REQ[requiredEquipment (types)]
-   PS --> EQUIP[(Equipment Plugins)]
+   TEST --> REQ[Required Equip Types]
+   PS --> EQUIP[(Equip Plugins)]
    PS --> PROD[(Product Plugins)]
    PS --> TESTS[(Test Plugins)]
 ```
