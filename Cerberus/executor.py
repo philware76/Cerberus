@@ -38,9 +38,11 @@ class Executor:
         if not test.initialise():
             logger.error(f"Failed to initialize test: {test.name}")
             return False
+
         if flush_cache:
             logger.debug("Flush cache flag set; clearing equipment cache before preparation")
             self.required_equipment.flush_cache()
+
         if not self.required_equipment.prepare(test, force_refresh=False):
             return False
 

@@ -105,7 +105,7 @@ class PluginService:
         missing: List[Type[BaseEquipment]] = []
         selection: dict[Type[BaseEquipment], BaseEquipment] = {}
 
-        logging.warning(f"Checking requirements for test: {test.name}")
+        logging.debug(f"Checking requirements for test: {test.name}")
         equipmentRequirements: List[Type[BaseEquipment]] = test.requiredEquipment
         equipmentList = list(self.equipPlugins.values())
 
@@ -116,8 +116,9 @@ class PluginService:
                 candidates[equipType] = matches
                 for equip in matches:
                     logging.debug(f"   - Found: {equip.name}")
-                # Selection policy: first candidate
+
                 selection[equipType] = matches[0]
+
             else:
                 logging.debug(f"   - Missing: {equipType.__name__}")
                 missing.append(equipType)

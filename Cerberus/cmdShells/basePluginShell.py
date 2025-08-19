@@ -45,29 +45,44 @@ class BasePluginShell(BaseShell):
             setParams "{'GroupName':<groupName> }, {"Parameters":{"param1": {"name": ..., ...}}'
         """
         try:
-            # Parse the JSON string into a dictionary
-            jsonTxt = json.loads(line)
-            groupName = jsonTxt["groupName"]
-            params = jsonTxt["parameters"]
-            # Ensure that the group exists in the test parameters
-            if groupName in self.plugin._groupParams:
-                # Convert the dictionary into a BaseParameters (or subclass) object
-                params = BaseParameters.from_dict(groupName, params)
-                self.plugin._groupParams[groupName] = params
-                print(f"\nNew {groupName} parameters:")
-                for value in list(params.values()):
-                    print(" - " + str(value))
-
-                print()
-            else:
-                print(f"Error: Group '{groupName}' does not exist in test parameters.")
-
+            payload = json.loads(line)
         except json.JSONDecodeError as e:
             print("JSON decoding failed:", e)
+            return
+
+        try:
+            group_name = payload["groupName"]
+            raw_params = payload["parameters"]
         except KeyError as e:
-            print(f"Missing expected key in parameters: {e}")
-        except Exception as e:
-            print("Error setting parameters:", e)
+            print(f"Missing expected key: {e}. Expecting 'groupName' and 'parameters'.")
+            return
+
+        # Validate group existence
+        if group_name not in self.plugin._groupParams:
+            print(f"Error: Group '{group_name}' does not exist in test parameters.")
+            return
+
+        existing_group: BaseParameters = self.plugin._groupParams[group_name]
+
+        # Validate that all provided parameter names already exist (prevent silent drops / typos)
+        unknown = [p for p in raw_params.keys() if p not in existing_group]
+        if unknown:
+            print(f"Error: Unknown parameter name(s) for group '{group_name}': {unknown}")
+            return
+
+        try:
+            # Build a new parameter group instance (atomic replacement on success)
+            new_group = BaseParameters.from_dict(group_name, raw_params)
+        except Exception as e:  # Construction failed; leave old group intact
+            print("Failed to construct new parameter group:", e)
+            return
+
+        # All validation passed, commit replacement
+        self.plugin._groupParams[group_name] = new_group
+        print(f"\nUpdated {group_name} parameters:")
+        for value in list(new_group.values()):
+            print(" - " + str(value))
+        print()
 
     def do_uiParams(self, arg):
         """Show a GUI for the parameters to edit"""
@@ -85,8 +100,10 @@ class BasePluginShell(BaseShell):
 
     def do_finalise(self, arg):
         """Finalises and closes the equipment"""
-        if self.plugin._initialised:
-            self.plugin.finalise()
+        if self.plugin.finalise():
+            print("Finalised\n")
+        else:
+            print("Not finalises\n")
 
     def do_exit(self, arg) -> bool:
         """Finalise (close) and exit the equipment shell"""

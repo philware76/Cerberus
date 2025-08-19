@@ -119,28 +119,31 @@ class RequiredEquipment:
 
     @staticmethod
     def _initialise_first_online(req_type: type[BaseEquipment], candidates: list[BaseEquipment], test: BaseTest, *, skip_instance: BaseEquipment | None = None) -> BaseEquipment | None:
-        for idx, candidate in enumerate(candidates, start=1):
-            if skip_instance is not None and candidate is skip_instance:
-                continue  # Defensive (already filtered) but keep logic explicit
+        # Iterate candidates, returning on first successful initialise. Uses early-continue
+        # style and ensures only a single warning is emitted per failed candidate.
+        total = len(candidates)
+        for idx, equip in enumerate(candidates, start=1):
+            if skip_instance is not None and equip is skip_instance:
+                continue  # explicit skip of previously invalidated cached instance
             try:
-                if candidate.initialise():
+                if equip.initialise():
                     logger.debug(
-                        f"{candidate.name} (#{idx}/{len(candidates)}) initialised for requirement {req_type.__name__}"  # noqa: E501
+                        f"{equip.name} (#{idx}/{total}) initialised for requirement {req_type.__name__}"  # noqa: E501
                     )
-                    return candidate
-            except Exception:
+                    return equip
+                # Explicit failure (returned falsy)
                 logger.warning(
-                    f"Candidate {candidate.name} (#{idx}/{len(candidates)}) raised during initialise for {req_type.__name__}",
+                    f"Candidate {equip.name} (#{idx}/{total}) failed to initialise for {req_type.__name__}"  # noqa: E501
+                )
+            except Exception:
+                # Log the exception once; don't emit a second generic failure message.
+                logger.warning(
+                    f"Candidate {equip.name} (#{idx}/{total}) raised during initialise for {req_type.__name__}",
                     exc_info=True,
                 )
-                # Treat as failure; move to next candidate.
-
-            logger.warning(
-                f"Candidate {candidate.name} (#{idx}/{len(candidates)}) failed to initialise for {req_type.__name__}"  # noqa: E501
-            )
 
         logger.error(
-            f"All {len(candidates)} candidates failed for requirement {req_type.__name__} in test {test.name}"  # noqa: E501
+            f"All {total} candidates failed for requirement {req_type.__name__} in test {test.name}"  # noqa: E501
         )
         return None
 
