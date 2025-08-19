@@ -66,7 +66,7 @@ class PowerMeasurementMixin:
         else:
             meas = self._take_power_meter_reading(freq_mhz)
 
-        return round(meas, 2)
+        return meas
 
     # Internal helpers ----------------------------------------------------------------------------
     def _config_spec_analyser(self, sa: BaseSpecAnalyser) -> None:

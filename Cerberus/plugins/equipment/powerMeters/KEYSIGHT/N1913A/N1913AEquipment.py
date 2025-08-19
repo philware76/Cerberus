@@ -22,15 +22,10 @@ class N1913A(BasePowerMeter, VISADevice, VisaInitMixin):
         VisaInitMixin.__init__(self)
 
     def initialise(self, init: Any | None = None) -> bool:
-        if self._initialised:
-            logging.debug(f"{self.name} is already initialised.")
-            return True
-
         if not self._visa_initialise(init):
             return False
 
-        self._initialised = BaseCommsEquipment.initialise(self)
-        return self._initialised
+        return BaseCommsEquipment.initialise(self)
 
     def setFrequency(self, freq: float) -> bool:
         """Sets the frequency (MHz)"""
