@@ -343,4 +343,3 @@ Potential improvements:
 ## 10. Summary
 The Cerberus runtime cleanly divides responsibilities: discovery is explicit and deterministic, state persistence is centralised in the `Manager`, while per‑test orchestration and equipment selection are isolated in the `Executor` + requirement resolution helpers. This modularity enables incremental enhancement—particularly around smarter equipment selection and dynamic health awareness—without disrupting existing plugin contracts.
 
-Feel free to extend this document as additional lifecycle hooks or selection policies are introduced.
