@@ -62,8 +62,11 @@ class PowerMeasurementMixin:
         For a plain power meter we simply tune and read.
         """
         if isinstance(self.powerMeter, BaseSpecAnalyser):
-            return self._take_spec_marker_measurement(freq_mhz, min_samples=min_samples)
-        return self._take_power_meter_reading(freq_mhz)
+            meas = self._take_spec_marker_measurement(freq_mhz, min_samples=min_samples)
+        else:
+            meas = self._take_power_meter_reading(freq_mhz)
+
+        return round(meas, 2)
 
     # Internal helpers ----------------------------------------------------------------------------
     def _config_spec_analyser(self, sa: BaseSpecAnalyser) -> None:
@@ -88,9 +91,9 @@ class PowerMeasurementMixin:
     def _take_spec_marker_measurement(self, freq_mhz: float, *, min_samples: int | None = None) -> float:
         sa = cast(BaseSpecAnalyser, self.powerMeter)
         sa.setCentre(freq_mhz)
-        dwell(0.5)
+        dwell(0.1)
         sa.setMarkerPeak()
-        dwell(0.5)
+        dwell(0.1)
 
         if min_samples is None:
             # Attempt to get from parameters (silent if absent)
