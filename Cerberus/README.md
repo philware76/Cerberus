@@ -61,11 +61,11 @@ flowchart TD
    A[Start Category Discovery] --> B[Locate category folder]
    B --> C{Walk leaf folders}
    C -->|leaf| D[List *.py files]
-   D --> E{Ends with <Type>.py?}
+   D --> E{Ends with suffix?}
    E -->|No| D
    E -->|Yes| F[Derive module name]
-   F --> G[Dynamic import via importlib]
-   G --> H{Has create<Type>Plugin()?}
+   F --> G[Dynamic import]
+   G --> H{Factory function exists?}
    H -->|No| D
    H -->|Yes| I[Invoke factory → instance]
    I --> J[Register with Pluggy]
@@ -73,8 +73,8 @@ flowchart TD
    K --> D
    D --> L{More files?}
    L -->|Yes| D
-   L -->|No| M[Validate hook impl counts]
-   M --> N[Return dict of instances]
+   L -->|No| M[Validate hook counts]
+   M --> N[Return instances]
 ```
 
 ### Test Execution Sequence
