@@ -1,7 +1,7 @@
 from typing import cast  # added for identity check typing
 
+from Cerberus.cmdShells.baseCommsShell import BaseCommsShell
 from Cerberus.cmdShells.pluginsShell import PluginsShell
-from Cerberus.cmdShells.runCommandShell import RunCommandShell
 from Cerberus.manager import Manager
 from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.commsInterface import CommsInterface
@@ -16,7 +16,7 @@ class EquipShell(PluginsShell):
         super().__init__(manager, pluginService.equipPlugins, "Equipment")
 
 
-class EquipmentShell(RunCommandShell):
+class EquipmentShell(BaseCommsShell):
     def __init__(self, equip: BaseCommsEquipment, manager: Manager):
         EquipmentShell.intro = f"Welcome to Cerberus {equip.name} Equipment shell. Type help or ? to list commands.\n"
         EquipmentShell.prompt = f"{equip.name}> "
@@ -25,41 +25,7 @@ class EquipmentShell(RunCommandShell):
         self.equip: BaseCommsEquipment = equip
         self.config = {}
 
-    def do_identity(self, arg):
-        """Show the equipment identity (if initialised)"""
-        # Direct VISA device
-        if isinstance(self.equip, VISADevice):
-            try:
-                self.equip.getIdentity()
-                print(self.equip.identity)
-
-            except Exception as ex:
-                print(f"Failed to read identity: {ex}")
-
-            return False
-
-        # Delegated child: try parent if available
-        if isinstance(self.equip, SingleParentDelegationMixin) and self.equip.has_parent():
-            try:
-                parent = self.equip._p()  # type: ignore[attr-defined]
-                if isinstance(parent, VISADevice):
-                    try:
-                        parent.getIdentity()
-                    except Exception:
-                        pass
-
-                    print(f"(Delegated) Parent '{parent.name}' identity: {getattr(parent, 'identity', 'Unavailable')}")
-
-                else:
-                    print("Parent is not a VISA device; no standard identity available.")
-
-            except Exception as ex:
-                print(f"Unable to access parent identity: {ex}")
-
-            return False
-
-        print("Equipment is neither a VISADevice nor a delegated child with a VISA parent.")
-        return False
+    # do_identity inherited from BaseCommsShell
 
     def do_checkId(self, arg):
         """checkId : Compare initialised equipment identity with DB (lookup by model & station)."""
@@ -92,73 +58,9 @@ class EquipmentShell(RunCommandShell):
 
         return False
 
-    def do_write(self, command):
-        """Basic query command to device"""
-        if not command:
-            print("Usage: write <SCPI|command>")
-            return False
+    # do_write inherited from BaseCommsShell
 
-        # Direct communications interface
-        if isinstance(self.equip, CommsInterface):
-            comms = cast(CommsInterface, self.equip)
-            try:
-                comms.write(command)
-                print("Successful")
-            except Exception as ex:
-                print(f"Write failed: {ex}")
-            return False
-
-        # Delegated (single-parent) comms path
-        if isinstance(self.equip, SingleParentDelegationMixin) and self.equip.has_parent():
-            try:
-                self.equip.write(command)  # type: ignore[call-arg]
-                print("Successful (delegated)")
-            except Exception as ex:
-                print(f"Delegated write failed: {ex}")
-            return False
-
-        print("This equipment does not support write() (no comms interface / parent not attached).")
-        return False
-
-    def do_query(self, command):
-        """Basic query command to device"""
-        if not command:
-            print("Usage: query <SCPI|command>")
-            return False
-
-        # Direct communications interface
-        if isinstance(self.equip, CommsInterface):
-            comms = cast(CommsInterface, self.equip)
-            try:
-                resp = comms.query(command)
-                if resp is not None:
-                    print(resp)
-
-                else:
-                    print("Did not get a response")
-
-            except Exception as ex:
-                print(f"Query failed: {ex}")
-
-            return False
-
-        # Delegated (single-parent) comms path
-        if isinstance(self.equip, SingleParentDelegationMixin) and self.equip.has_parent():
-            try:
-                resp = self.equip.query(command)  # type: ignore[call-arg]
-                if resp is not None:
-                    print(resp)
-
-                else:
-                    print("Did not get a response (delegated)")
-
-            except Exception as ex:
-                print(f"Delegated query failed: {ex}")
-
-            return False
-
-        print("This equipment does not support query() (no comms interface / parent not attached).")
-        return False
+    # do_query inherited from BaseCommsShell
 
     def do_saveSettings(self, arg):
         """Save the settings to the database"""
@@ -214,6 +116,8 @@ class EquipmentShell(RunCommandShell):
         try:
             equip.attach_parent(parent)  # type: ignore[arg-type]
             print(f"Attached parent '{parent.name}'.")
+            # refresh comms adapter (child now has delegated path)
+            self._refresh_comms()
 
         except Exception as ex:
             print(f"Failed to attach parent: {ex}")
@@ -261,6 +165,8 @@ class EquipmentShell(RunCommandShell):
         try:
             child.attach_parent(self.equip)  # type: ignore[arg-type]
             print(f"Attached '{self.equip.name}' as parent of '{child.name}'.")
+            # If we attached ourselves as a parent, ensure our own comms (if child view) refreshed
+            self._refresh_comms()
 
         except Exception as ex:
             print(f"Failed to attach: {ex}")
@@ -281,6 +187,7 @@ class EquipmentShell(RunCommandShell):
         try:
             equip.detach_parent()
             print("Parent detached.")
+            self._refresh_comms()
 
         except Exception as ex:
             print(f"Failed to detach parent: {ex}")

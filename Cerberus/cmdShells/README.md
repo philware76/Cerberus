@@ -121,17 +121,20 @@ Below each section lists static (explicitly implemented) commands. Dynamic plugi
 (For ProductsShell, `load/open` are overridden by discovery workflow; see below.)
 
 ### EquipmentShell (`<EquipmentName>`)
-Static domain commands:
-- `identity` – query & print instrument identity (VISA devices)
-- `checkId` – compare live identity vs DB record for model/station
-- `write <cmd>` – raw write (if comms interface)
-- `query <cmd>` – raw query & print response
-- `saveSettings` – persist equipment settings via DB service
+Built on `BaseCommsShell` which centralises low‑level comms (`identity`, `write`, `query`) for both:
+- Direct devices implementing `CommsInterface` / `VISADevice`.
+- Delegated children (`SingleParentDelegationMixin`) that forward through an attached parent.
+
+Static domain commands layered on top:
+- `identity` – (from `BaseCommsShell`) shows direct or delegated parent identity.
+- `write <cmd>` / `query <cmd>` – (from `BaseCommsShell`) raw SCPI/command over direct or delegated link.
+- `checkId` – compare live identity vs DB record for model/station.
+- `saveSettings` – persist equipment settings via DB service.
 Parent delegation utilities (only for `SingleParentDelegationMixin` equip)  
 *(See detailed workflow & troubleshooting in the [In‑Depth Parent Delegation section](#in-depth-equipment-parent-delegation--getparent))*:
 - `getParent` – attach declared REQUIRED_PARENT automatically (or show existing)
 - `setParentEquip <childName>` – attach this equipment as parent of child
-- `detachParent` – detach current parent
+- `detachParent` – detach current parent (adapter auto‑refreshes)
 Plus dynamic plugin API commands (see `cmds`).
 
 ### ProductsShell (`Product>`)
