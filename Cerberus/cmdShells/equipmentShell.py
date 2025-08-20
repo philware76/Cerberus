@@ -113,9 +113,27 @@ class EquipmentShell(BaseCommsShell):
             print(f"Failed to initialise parent '{parent.name}': {ex}")
             return False
 
+        # After successful initialisation, attempt to read & display identity
+        ident_str = None
+        if isinstance(parent, VISADevice):
+            try:
+                parent.getIdentity()
+                ident_obj = getattr(parent, 'identity', None)
+                if ident_obj:
+                    ident_str = str(ident_obj)
+            except Exception as id_ex:  # identity retrieval shouldn't abort attach
+                ident_str = f"<identity read failed: {id_ex}>"
+
+        if ident_str:
+            print(f"Initialised parent '{parent.name}' identity: {ident_str}")
+        else:
+            print(f"Initialised parent '{parent.name}'.")
+
         try:
             equip.attach_parent(parent)  # type: ignore[arg-type]
-            print(f"Attached parent '{parent.name}'.")
+            # Update prompt to Parent/Child form
+            EquipmentShell.prompt = f"{parent.name}/{equip.name}> "
+            print(f"Attached parent '{parent.name}' (delegation enabled).")
             # refresh comms adapter (child now has delegated path)
             self._refresh_comms()
 
@@ -188,8 +206,19 @@ class EquipmentShell(BaseCommsShell):
             equip.detach_parent()
             print("Parent detached.")
             self._refresh_comms()
+            # Indicate parent currently absent
+            EquipmentShell.prompt = f"Parent?/{equip.name}> "
 
         except Exception as ex:
             print(f"Failed to detach parent: {ex}")
 
         return False
+
+    # Auto-attempt parent attachment when shell loop starts (only once per open)
+    def preloop(self):
+        super().preloop()
+        equip = self.equip
+        if isinstance(equip, SingleParentDelegationMixin):
+            if not equip.has_parent() and equip.parent_name_required():
+                # Run getParent logic (prints outcome). User can rerun manually if needed.
+                self.do_getParent("")
