@@ -303,131 +303,126 @@ ChildDevice> detachParent
 ---
 ## In‑Depth: Equipment Parent Delegation & `getParent`
 
-Some equipment plugins conceptually sit *behind* (or rely on) another plugin (controller, chassis, comms adapter). To simplify user workflow, the shell can auto‑attach the required parent via `getParent` when the child supports delegation.
+This section uses the real `SMB100A` (R&S signal generator) as the **parent** and the `NRP-Z24` power sensor (implemented as `NRP_Z24`) as the **child** to illustrate how parent delegation works.
 
-### When Delegation Is Available
-All of the following must be true for `getParent` to succeed:
-1. Child class mixes in `SingleParentDelegationMixin`.
-2. Child declares a required parent name (returned by `parent_name_required()` — typically from a `REQUIRED_PARENT` attribute).
-3. The parent equipment plugin was discovered (shows up in `equip list`).
-4. The parent can be successfully initialised (`initialise()` returns truthy / does not raise).
+### Why Delegation Here?
+Rohde & Schwarz NRP sensors communicate via an existing VISA session owned by the signal generator. Instead of every sensor opening its own physical VISA connection, the design:
+- Keeps a **single hardware session** in the parent (`SMB100A`, a `VISADevice`).
+- Exposes each sensor as a *distinct* plugin (so dependency selection & tests can refer to them individually).
+- Lets the sensor forward SCPI commands through the parent using a standardised interface supplied by the delegation mixin.
 
-### What `getParent` Does (Simplified Logic)
+### Child Declaration (`BaseNRPPowerMeter`)
 ```python
-if not isinstance(equip, SingleParentDelegationMixin):
-  print("This equipment does not support parent delegation.")
-elif equip.has_parent():
-  try:
-    print(f"Parent already attached: {equip._p().name}")
-  except Exception:
-    print("Parent attached but inaccessible (internal error).")
-else:
-  required = equip.parent_name_required()
-  if not required:
-    print("No REQUIRED_PARENT declared.")
-  else:
-    ps = PluginService.instance(); parent = ps.findEquipment(required)
-    if parent is None:
-      print(f"Required parent '{required}' not found among discovered equipment.")
-    else:
-      try:
-        parent.initialise()
-      except Exception as ex:
-        print(f"Failed to initialise parent '{parent.name}': {ex}")
-      else:
-        try:
-          equip.attach_parent(parent)
-          print(f"Attached parent '{parent.name}'.")
-        except Exception as ex:
-          print(f"Failed to attach parent: {ex}")
-```
-It always returns `False` (stay in shell) and never exits.
+class BaseNRPPowerMeter(SingleParentDelegationMixin, BasePowerMeter):
+  REQUIRED_PARENT: str | None = "SMB100A"  # Declarative dependency
 
-### Success Example
+  def initialise(self, init=None) -> bool:
+    if not self._ensure_parent(init):
+      return False  # Fails fast if parent not provided / cannot attach
+    return BasePowerMeter.initialise(self)
+```
+`REQUIRED_PARENT` advertises to both the shell and any dependency resolver what parent name must be attached. The mixin supplies `parent_name_required()`, `has_parent()`, `attach_parent()`, and `detach_parent()`.
+
+### Concrete Child (`NRP_Z24`)
+```python
+class NRP_Z24(BaseNRPPowerMeter):
+  def setFrequency(self, freq: float) -> bool:
+    return self.command(f"SENSe:FREQuency {freq}")
+
+  def getPowerReading(self) -> float:
+    resp = self.query("READ?")
+    ...
+```
+Because `setFrequency` & `getPowerReading` are defined on the child's **base** (`BasePowerMeter` / or its first base in MRO) or follow the naming rules, they become dynamic shell commands (`setFrequency`, `getPowerReading`).
+
+### Parent (`SMB100A`)
+Owns the VISA connection (via `VisaInitMixin` + `VISADevice`) and provides low-level SCPI helpers (`command`, `query`, etc.) that the child will reuse once attached.
+
+### Workflow in the Shell
+1. Discover plugins (manager startup does this automatically).
+2. Open Equipment shell.
+3. Load & open the **parent** (optional – `getParent` can initialise it if not already).
+4. Load & open the **child**.
+5. Run `getParent` inside the child shell to auto‑attach.
+
+Example session:
 ```
 Cerberus> equip
 Equipment> list
- #0: 'VisaController' [Equipment]
- #1: 'SigGenA' [Equipment]
+ #0: 'SMB100A' [SigGen]
+ #1: 'NRP-Z24' [NRPPowerMeter]
 
-Equipment> load SigGenA
+Equipment> load NRP-Z24
 Equipment> open
-SigGenA> getParent
-Attached parent 'VisaController'.
-SigGenA> getParent
-Parent already attached: VisaController
+NRP-Z24> getParent
+Attached parent 'SMB100A'.
+
+# Now dynamic commands from the *base* class + child are available
+NRP-Z24> setFrequency 1e9
+NRP-Z24> getPowerReading
+ -34.97
 ```
 
-### Missing Parent
+Re-running `getParent` after attachment:
 ```
-SigGenA> getParent
-Required parent 'VisaController' not found among discovered equipment.
+NRP-Z24> getParent
+Parent already attached: SMB100A
 ```
-Fix: ensure the parent plugin is discoverable (not disabled, driver present) then retry.
 
-### Not a Delegating Plugin
+### What `getParent` Does (Simplified for This Pair)
+```python
+if isinstance(child, SingleParentDelegationMixin):
+  if child.has_parent():
+    print(f"Parent already attached: {child._p().name}")
+  else:
+    required = child.parent_name_required()  # -> "SMB100A"
+    parent = PluginService.instance().findEquipment(required)
+    if parent:
+      parent.initialise()
+      child.attach_parent(parent)
+      print("Attached parent 'SMB100A'.")
+    else:
+      print("Required parent 'SMB100A' not found among discovered equipment.")
 ```
-OtherEquip> getParent
-This equipment does not support parent delegation.
-```
-Cause: no `SingleParentDelegationMixin`.
 
-### Required Parent Not Declared
-```
-ChildEquip> getParent
-No REQUIRED_PARENT declared.
-```
-Cause: `parent_name_required()` returned `None`; add the attribute to the plugin.
+### Failure Scenarios (Concrete)
+| Scenario | Example Output | Cause / Fix |
+|----------|----------------|-------------|
+| Parent not discovered | `Required parent 'SMB100A' not found among discovered equipment.` | Ensure SMB100A plugin is enabled & discovered; restart manager if necessary. |
+| Parent VISA init fails | `Failed to initialise parent 'SMB100A': <error>` | Check cabling, VISA resource string, permissions. Try `load SMB100A` + `open` + `init` manually. |
+| Child missing REQUIRED_PARENT | `No REQUIRED_PARENT declared.` | Add `REQUIRED_PARENT = "SMB100A"` to base or override `parent_name_required()`. |
+| Not delegating | `This equipment does not support parent delegation.` | Child class missing `SingleParentDelegationMixin` in MRO. |
+| Stale attachment | `Parent attached but inaccessible (internal error).` | Underlying parent object invalid; `detachParent` then `getParent`, or re‑`finalise` both. |
 
-### Parent Initialisation Failure
+### Detach & Re‑Attach
 ```
-ChildEquip> getParent
-Failed to initialise parent 'VisaController': Timeout opening resource
-```
-Resolve hardware / connection issues; re‑run after fixing.
-
-### Stale / Corrupted Attachment
-```
-ChildEquip> getParent
-Parent attached but inaccessible (internal error).
-```
-The child *thinks* it has a parent but internal state is invalid. Use `detachParent` then `getParent` again, or re‑`finalise` both plugins.
-
-### Manual Reverse Attachment
-If you are in the *parent* shell you can attach yourself to a child using:
-```
-ParentEquip> setParentEquip ChildEquip
-Attached 'ParentEquip' as parent of 'ChildEquip'.
-```
-This validates that the child's required parent matches the current parent name.
-
-### Detaching
-```
-ChildEquip> detachParent
+NRP-Z24> detachParent
 Parent detached.
+NRP-Z24> getParent
+Attached parent 'SMB100A'.
 ```
-You can then re‑run `getParent` to re‑attach (useful after parent reconfiguration / firmware reset).
+Useful after parent firmware reload or configuration change.
 
-### Designing a New Delegating Equipment Plugin
-- Inherit from base equipment + `SingleParentDelegationMixin`.
-- Declare `REQUIRED_PARENT = "SomeParentName"` (or equivalent the mixin reads).
-- Ensure `initialise()` is idempotent so repeated calls are safe.
-- Implement `finalise()` so detach/reattach cycles release resources cleanly.
-- Avoid heavy side‑effects in the child constructor; defer to `initialise()`.
+### Design Checklist for New Children Like `NRP-Z24`
+- [x] Inherit from `SingleParentDelegationMixin` before the functional base (so mixin hooks precedence if needed).
+- [x] Set `REQUIRED_PARENT` to the canonical parent plugin name.
+- [x] Keep `initialise()` lightweight; rely on parent for heavy I/O setup.
+- [x] Use parent provided `command/query` instead of opening new sessions.
+- [x] Ensure parent initialisation is idempotent (multiple calls safe).
 
-### When Not to Use Delegation
-- Relationship is optional (parent purely enhances functionality) — consider an explicit `setParent` method instead.
-- Multiple parents required (delegation mixin supports only a single parent).
-- Attachment order must be manually orchestrated due to calibration / configuration prerequisites.
+### When NOT to Use This Pattern
+- Child could optionally work stand‑alone (parent only augments features).
+- Many children need *different* context objects simultaneously (consider a pool / manager object instead).
+- Multiple parents are required (single parent mixin is insufficient; introduce a custom multi‑parent coordination layer).
 
 ### Quick Troubleshooting Table
 | Symptom | Cause | Action |
 |---------|-------|--------|
 | "This equipment does not support parent delegation." | Missing mixin | Add `SingleParentDelegationMixin` |
 | "No REQUIRED_PARENT declared." | Not set / returned `None` | Define `REQUIRED_PARENT` or override `parent_name_required()` |
-| Required parent not found | Parent plugin undiscovered | Check discovery logs / enable plugin |
-| Init failure | Hardware / driver / address issue | Fix underlying issue; try manual `init` on parent |
-| Inaccessible parent after attach | Internal plugin error / stale pointer | `detachParent` then `getParent`; possibly restart shells |
+| Required parent not found | Parent plugin undiscovered | Enable & discover `SMB100A` |
+| Init failure | Hardware / VISA resource issue | Verify VISA address; manually initialise parent |
+| Inaccessible parent after attach | Internal plugin error / stale pointer | `detachParent` then `getParent` |
 
 ---
 ## Error Handling & Edge Cases
