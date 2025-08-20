@@ -27,11 +27,39 @@ class EquipmentShell(RunCommandShell):
 
     def do_identity(self, arg):
         """Show the equipment identity (if initialised)"""
+        # Direct VISA device
         if isinstance(self.equip, VISADevice):
-            self.equip.getIdentity()
-            print(self.equip.identity)
-        else:
-            print("Equipment/Device is not a VISA device.")
+            try:
+                self.equip.getIdentity()
+                print(self.equip.identity)
+
+            except Exception as ex:
+                print(f"Failed to read identity: {ex}")
+
+            return False
+
+        # Delegated child: try parent if available
+        if isinstance(self.equip, SingleParentDelegationMixin) and self.equip.has_parent():
+            try:
+                parent = self.equip._p()  # type: ignore[attr-defined]
+                if isinstance(parent, VISADevice):
+                    try:
+                        parent.getIdentity()
+                    except Exception:
+                        pass
+
+                    print(f"(Delegated) Parent '{parent.name}' identity: {getattr(parent, 'identity', 'Unavailable')}")
+
+                else:
+                    print("Parent is not a VISA device; no standard identity available.")
+
+            except Exception as ex:
+                print(f"Unable to access parent identity: {ex}")
+
+            return False
+
+        print("Equipment is neither a VISADevice nor a delegated child with a VISA parent.")
+        return False
 
     def do_checkId(self, arg):
         """checkId : Compare initialised equipment identity with DB (lookup by model & station)."""
@@ -66,20 +94,71 @@ class EquipmentShell(RunCommandShell):
 
     def do_write(self, command):
         """Basic query command to device"""
+        if not command:
+            print("Usage: write <SCPI|command>")
+            return False
+
+        # Direct communications interface
         if isinstance(self.equip, CommsInterface):
             comms = cast(CommsInterface, self.equip)
-            comms.write(command)
-            print("Successful")
+            try:
+                comms.write(command)
+                print("Successful")
+            except Exception as ex:
+                print(f"Write failed: {ex}")
+            return False
+
+        # Delegated (single-parent) comms path
+        if isinstance(self.equip, SingleParentDelegationMixin) and self.equip.has_parent():
+            try:
+                self.equip.write(command)  # type: ignore[call-arg]
+                print("Successful (delegated)")
+            except Exception as ex:
+                print(f"Delegated write failed: {ex}")
+            return False
+
+        print("This equipment does not support write() (no comms interface / parent not attached).")
+        return False
 
     def do_query(self, command):
         """Basic query command to device"""
+        if not command:
+            print("Usage: query <SCPI|command>")
+            return False
+
+        # Direct communications interface
         if isinstance(self.equip, CommsInterface):
             comms = cast(CommsInterface, self.equip)
-            resp = comms.query(command)
-            if resp is not None:
-                print(resp)
-            else:
-                print("Did not get a response")
+            try:
+                resp = comms.query(command)
+                if resp is not None:
+                    print(resp)
+
+                else:
+                    print("Did not get a response")
+
+            except Exception as ex:
+                print(f"Query failed: {ex}")
+
+            return False
+
+        # Delegated (single-parent) comms path
+        if isinstance(self.equip, SingleParentDelegationMixin) and self.equip.has_parent():
+            try:
+                resp = self.equip.query(command)  # type: ignore[call-arg]
+                if resp is not None:
+                    print(resp)
+
+                else:
+                    print("Did not get a response (delegated)")
+
+            except Exception as ex:
+                print(f"Delegated query failed: {ex}")
+
+            return False
+
+        print("This equipment does not support query() (no comms interface / parent not attached).")
+        return False
 
     def do_saveSettings(self, arg):
         """Save the settings to the database"""
@@ -103,8 +182,10 @@ class EquipmentShell(RunCommandShell):
             try:
                 parent = equip._p()  # type: ignore[attr-defined]
                 print(f"Parent already attached: {parent.name}")
+
             except Exception:
                 print("Parent attached but inaccessible (internal error).")
+
             return False
 
         required = equip.parent_name_required()
@@ -122,6 +203,7 @@ class EquipmentShell(RunCommandShell):
         if parent is None:
             print(f"Required parent '{required}' not found among discovered equipment.")
             return False
+
         try:
             parent.initialise()
 
@@ -147,33 +229,42 @@ class EquipmentShell(RunCommandShell):
         if not childName:
             print("Usage: setParentEquip <childEquipmentName>")
             return False
+
         from Cerberus.pluginService import PluginService
         ps = PluginService.instance()
         if ps is None:
             print("PluginService instance not available.")
             return False
+
         child = ps.findEquipment(childName)
         if child is None:
             print(f"Child equipment '{childName}' not found.")
             return False
+
         if not isinstance(child, SingleParentDelegationMixin):
             print(f"Child '{childName}' does not support parent delegation.")
             return False
+
         required = child.parent_name_required()
         if required and required != self.equip.name:
             print(f"Child requires parent '{required}', not '{self.equip.name}'.")
             return False
+
         try:
             # Ensure this (parent) is initialised first
             self.equip.initialise()
+
         except Exception as ex:
             print(f"Failed to initialise parent '{self.equip.name}': {ex}")
             return False
+
         try:
             child.attach_parent(self.equip)  # type: ignore[arg-type]
             print(f"Attached '{self.equip.name}' as parent of '{child.name}'.")
+
         except Exception as ex:
             print(f"Failed to attach: {ex}")
+
         return False
 
     def do_detachParent(self, arg):
@@ -182,12 +273,16 @@ class EquipmentShell(RunCommandShell):
         if not isinstance(equip, SingleParentDelegationMixin):
             print("This equipment does not support parent delegation.")
             return False
+
         if not equip.has_parent():
             print("No parent attached.")
             return False
+
         try:
             equip.detach_parent()
             print("Parent detached.")
+
         except Exception as ex:
             print(f"Failed to detach parent: {ex}")
+
         return False
