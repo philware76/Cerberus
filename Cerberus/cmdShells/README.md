@@ -491,21 +491,4 @@ If a method needs richer argument semantics than `RunCommandShell` provides, imp
 ## Versioning
 This README documents the command interfaces present as of 2025‑08‑20. Future additions should append new commands and update architecture notes accordingly.
 
----
-## Quick Command Index
-(Abbreviated; see sections above for details.)
 
-Main: equip | products | tests | database | manager | plan | exit
-EquipmentShell: identity | checkId | write | query | saveSettings | getParent | setParentEquip | detachParent | cmds
-ProductsShell: discover | connect
-ProductShell: select | openPIC | openDA | stopNesie | killNesie | getBandsFitted | slotDetails | saveSettings | cmds
-TestsShell/TestShell: run | saveSettings | cmds
-ManagerShell: setChamber | getChamber | savePlan | setTestPlan | listPlans
-PlanShell: new | save | add | remove | show | listPlans
-DatabaseShell: wipeDB
-BasePluginShell: txtParams | listGroups | getGroupParams | setGroupParams | uiParams | init | finalise | exit
-RunCommandShell: cmds (and dynamic plugin API methods)
-PICShell: getStatus | getDA | powerOn | powerOff | exit
-
----
-Happy testing!
