@@ -35,6 +35,7 @@ class VISADevice(CommsInterface):
 
             logging.debug(self.instrument)
             self.instrument.timeout = self.timeout
+
             return self.instrument
 
         except (visa.errors.VisaIOError, Exception) as e:
@@ -108,11 +109,10 @@ class VISADevice(CommsInterface):
         self.write(command)
         return self.operationComplete()
 
-    def identity(self) -> Identity:
+    def getIdentity(self) -> Identity:
         cmd = "*IDN?"
         idResp = self.query(cmd)
         if idResp is None:
             raise EquipmentError("Failed to get *IDN? response!")
 
-        return Identity(idResp)
         return Identity(idResp)

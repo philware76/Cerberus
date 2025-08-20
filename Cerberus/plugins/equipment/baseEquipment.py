@@ -30,6 +30,13 @@ class BaseEquipment(BasePlugin):
     def __init__(self, name: str):
         super().__init__(name)
 
+        """
+        Exclude this equipement from any dependency selection.
+        Norminally this is set to False, but can be used to quickly 
+        exlcude equipment while developing the test system.
+        """
+        self.excluded = False
+
     def initialise(self, init: Any | None = None) -> bool:
         """Initialises the equipment"""
         logging.debug("Initialise")

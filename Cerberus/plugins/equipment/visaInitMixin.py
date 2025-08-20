@@ -39,14 +39,9 @@ class VisaInitMixin:
             return False
 
         self._visa_opened = True
-        idn = VISADevice.query(self, '*IDN?')  # type: ignore[attr-defined]
-        if not idn:
-            logger.error("Did not receive *IDN? response; closing VISA resource")
-            self._visa_close_and_reset()
-            return False
+        self.identity = VISADevice.getIdentity(self)      # type: ignore[attr-defined]
 
         # Parse identity and validate model matches plugin name
-        self.identity = Identity(idn)
         if self.identity.model != self.name:
             self._visa_close_and_reset()
             logger.warning(f"Device identity {self.identity.model} is not the same as the equipment plugin {self.name}")

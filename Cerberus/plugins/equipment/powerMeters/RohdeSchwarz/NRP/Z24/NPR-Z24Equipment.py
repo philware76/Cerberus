@@ -2,7 +2,7 @@
 import logging
 
 from Cerberus.plugins.basePlugin import hookimpl, singleton
-from Cerberus.plugins.equipment.powerMeters.RohdeSchwarz.NRP.baseNPRPowerMeter import \
+from Cerberus.plugins.equipment.powerMeters.RohdeSchwarz.NRP.baseNRPPowerMeter import \
     BaseNRPPowerMeter
 
 
@@ -15,6 +15,8 @@ def createEquipmentPlugin():
 class NRP_Z24(BaseNRPPowerMeter):
     def __init__(self):
         super().__init__("NRP-Z24")
+
+        self.excluded = False
 
     def setFrequency(self, freq: float) -> bool:
         logging.debug("%s setting frequency to %s", self.name, freq)

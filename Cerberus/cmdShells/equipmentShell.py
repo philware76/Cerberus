@@ -5,6 +5,9 @@ from Cerberus.cmdShells.runCommandShell import RunCommandShell
 from Cerberus.manager import Manager
 from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.commsInterface import CommsInterface
+from Cerberus.plugins.equipment.mixins.parentDelegation import \
+    SingleParentDelegationMixin
+from Cerberus.plugins.equipment.visaDevice import VISADevice
 
 
 class EquipShell(PluginsShell):
@@ -24,20 +27,17 @@ class EquipmentShell(RunCommandShell):
 
     def do_identity(self, arg):
         """Show the equipment identity (if initialised)"""
-        if self.equip.isInitialised():
+        if isinstance(self.equip, VISADevice):
+            self.equip.getIdentity()
             print(self.equip.identity)
         else:
-            print("Equipment/Device is not initialised.")
+            print("Equipment/Device is not a VISA device.")
 
     def do_checkId(self, arg):
         """checkId : Compare initialised equipment identity with DB (lookup by model & station)."""
-        if not self.equip.isInitialised():
-            print("Equipment is not initialised; run init first.")
-            return False
-
         ident = self.equip.identity
         if not ident or not ident.serial:
-            print("Equipment identity/serial unavailable.")
+            print("Equipment identity/serial unavailable. Is it a VISA device?")
             return False
 
         # Use the model from the identity (not the plugin name) for DB lookup
@@ -85,3 +85,109 @@ class EquipmentShell(RunCommandShell):
         """Save the settings to the database"""
         db = self.manager.db
         db.save_equipment([self.plugin])
+    # ---------------- Parent delegation utilities ---------------------------------
+
+    def do_getParent(self, arg):  # child perspective
+        """getParent : Attach the declared REQUIRED_PARENT automatically.
+
+        If a parent is already attached, shows its name. If the equipment
+        declares REQUIRED_PARENT and the parent exists (and is initialised /
+        can be initialised) it is attached. Otherwise an error is printed.
+        """
+        equip = self.equip
+        if not isinstance(equip, SingleParentDelegationMixin):
+            print("This equipment does not support parent delegation.")
+            return False
+
+        if equip.has_parent():
+            try:
+                parent = equip._p()  # type: ignore[attr-defined]
+                print(f"Parent already attached: {parent.name}")
+            except Exception:
+                print("Parent attached but inaccessible (internal error).")
+            return False
+
+        required = equip.parent_name_required()
+        if not required:
+            print("No REQUIRED_PARENT declared.")
+            return False
+
+        from Cerberus.pluginService import PluginService
+        ps = PluginService.instance()
+        if ps is None:
+            print("PluginService instance not available.")
+            return False
+
+        parent = ps.findEquipment(required)
+        if parent is None:
+            print(f"Required parent '{required}' not found among discovered equipment.")
+            return False
+        try:
+            parent.initialise()
+
+        except Exception as ex:
+            print(f"Failed to initialise parent '{parent.name}': {ex}")
+            return False
+
+        try:
+            equip.attach_parent(parent)  # type: ignore[arg-type]
+            print(f"Attached parent '{parent.name}'.")
+
+        except Exception as ex:
+            print(f"Failed to attach parent: {ex}")
+
+        return False
+
+    def do_setParentEquip(self, childName):  # parent perspective
+        """setParentEquip <childName> : Attach this equipment as parent of the named child.
+
+        Validates that the child declares this equipment in REQUIRED_PARENT
+        before attaching.
+        """
+        if not childName:
+            print("Usage: setParentEquip <childEquipmentName>")
+            return False
+        from Cerberus.pluginService import PluginService
+        ps = PluginService.instance()
+        if ps is None:
+            print("PluginService instance not available.")
+            return False
+        child = ps.findEquipment(childName)
+        if child is None:
+            print(f"Child equipment '{childName}' not found.")
+            return False
+        if not isinstance(child, SingleParentDelegationMixin):
+            print(f"Child '{childName}' does not support parent delegation.")
+            return False
+        required = child.parent_name_required()
+        if required and required != self.equip.name:
+            print(f"Child requires parent '{required}', not '{self.equip.name}'.")
+            return False
+        try:
+            # Ensure this (parent) is initialised first
+            self.equip.initialise()
+        except Exception as ex:
+            print(f"Failed to initialise parent '{self.equip.name}': {ex}")
+            return False
+        try:
+            child.attach_parent(self.equip)  # type: ignore[arg-type]
+            print(f"Attached '{self.equip.name}' as parent of '{child.name}'.")
+        except Exception as ex:
+            print(f"Failed to attach: {ex}")
+        return False
+
+    def do_detachParent(self, arg):
+        """detachParent : Detach currently attached parent (if any)."""
+        equip = self.equip
+        if not isinstance(equip, SingleParentDelegationMixin):
+            print("This equipment does not support parent delegation.")
+            return False
+        if not equip.has_parent():
+            print("No parent attached.")
+            return False
+        try:
+            equip.detach_parent()
+            print("Parent detached.")
+        except Exception as ex:
+            print(f"Failed to detach parent: {ex}")
+        return False
