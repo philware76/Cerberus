@@ -127,7 +127,8 @@ Static domain commands:
 - `write <cmd>` – raw write (if comms interface)
 - `query <cmd>` – raw query & print response
 - `saveSettings` – persist equipment settings via DB service
-Parent delegation utilities (only for `SingleParentDelegationMixin` equip):
+Parent delegation utilities (only for `SingleParentDelegationMixin` equip)  
+*(See detailed workflow & troubleshooting in the [In‑Depth Parent Delegation section](#in-depth-equipment-parent-delegation--getparent))*:
 - `getParent` – attach declared REQUIRED_PARENT automatically (or show existing)
 - `setParentEquip <childName>` – attach this equipment as parent of child
 - `detachParent` – detach current parent
