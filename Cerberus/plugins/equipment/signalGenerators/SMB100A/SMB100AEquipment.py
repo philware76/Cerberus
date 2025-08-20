@@ -1,5 +1,6 @@
-import logging
 from typing import Any
+
+from numpy.polynomial import Chebyshev
 
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
@@ -22,6 +23,11 @@ class SMB100A(BaseSigGen, VISADevice, VisaInitMixin):
         if not self._visa_initialise(init):
             return False
 
+        coeffs = {'coef': [-0.12844127405696937, -0.021183500845307433, -0.022500394654882364, -0.004774417605736688, 0.010878950047209814, -
+                  0.023782706673870325, 0.006319029334995595, -0.00111093457550916, -0.008435670031733537], 'domain': [100.0, 3500.0], 'window': [-1.0, 1.0]}
+
+        self.filter = Chebyshev(coeffs['coef'], domain=coeffs['domain'], window=coeffs['window'])
+
         return BaseSigGen.initialise(self)
 
     def finalise(self) -> bool:
@@ -31,10 +37,14 @@ class SMB100A(BaseSigGen, VISADevice, VisaInitMixin):
     # Abstract commands --------------------------------------------------------------------------------------------
     def setOutputPower(self, level_dBm) -> bool:
         """Sets the output power (dBm)"""
+        self.pwrLevel = level_dBm
         return self.set_power(level_dBm)
 
     def setFrequency(self, frequencyMHz: int) -> bool:
         """Sets the output frequency (MHz)"""
+        pwrOfset = self.filter(frequencyMHz)
+        self.set_power(self.pwrLevel - pwrOfset)
+
         return self.set_freq(frequencyMHz)
 
     def setPowerState(self, state: bool) -> bool:

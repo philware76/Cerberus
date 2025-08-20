@@ -44,15 +44,19 @@ class BaseCalCable(BaseEquipment):
     def loadChebyshev(self, data):
         coeffs: Sequence[float] = data["coeffs"]
         domain = tuple(data["domain"])
-        self._cheb = Chebyshev(coeffs, domain=domain)
+        window = data["window"]
+
+        self._cheb = Chebyshev(coeffs, domain=domain, window=window)
         self._cal_meta = data
+
         # Update parameter view if present
         try:
             self.updateParameters("Cable", {
                 "MinFreq": float(domain[0]),
                 "MaxFreq": float(domain[1]),
-                "Coeffs": json.dumps(coeffs)
+                "Coeffs": json.dumps(data)
             })
+
         except Exception:
             pass
 

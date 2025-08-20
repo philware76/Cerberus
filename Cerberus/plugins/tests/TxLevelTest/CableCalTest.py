@@ -115,14 +115,19 @@ class CableCalTest(PowerMeasurementMixin, BaseTest):
             print(f"{freq} MHz => Cal diff: {diff:+.3f} dB Meas: {calData[freq]:.3f} vs Fit: {offset:.3f}")
 
     def calcCalCoeffs(self, calData):
-        # Chebyshev fit (more numerically stable than plain polynomial)
+        # Chebyshev fit
         freqs = sorted(calData.keys())
         powers = [calData[f] for f in freqs]
         degree = int(self.gp["Chebyshev Degree"])
 
         cheb = Chebyshev.fit(freqs, powers, degree, domain=[min(freqs), max(freqs)])
-        print(f"Chebyshev degree {degree} coefficients (ascending order for T_n):")
-        print([float(c) for c in cheb.coef])
+        saved = {
+            "coef": cheb.coef.tolist(),
+            "domain": cheb.domain.tolist(),
+            "window": cheb.window.tolist(),
+        }
+        print("Chebyshev() filter:-")
+        print(saved)
 
         return cheb
 

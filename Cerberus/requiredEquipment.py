@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, cast
 
 from Cerberus.equipmentDependencyResolver import EquipmentDependencyResolver
+from Cerberus.exceptions import EquipmentError
 from Cerberus.logConfig import getLogger
 from Cerberus.manager import PluginService
-from Cerberus.plugins.equipment.baseEquipment import BaseEquipment, Identity
+from Cerberus.plugins.equipment.baseEquipment import (BaseCommsEquipment,
+                                                      BaseEquipment, Identity)
+from Cerberus.plugins.equipment.visaDevice import VISADevice
 from Cerberus.plugins.tests.baseTest import BaseTest
 
 logger = getLogger("requiredEquipment")
@@ -69,18 +72,39 @@ class RequiredEquipment:
             selected: BaseEquipment | None = None
             skip_instance: BaseEquipment | None = None
 
+            # Remove any candidates explicitly marked as excluded
+            orig_count = len(candidates)
+            candidates = [c for c in candidates if not c.excluded]
+            if len(candidates) == 0:
+                logger.error(
+                    f"All discovered candidates for requirement {req_type.__name__} are excluded (test: {test.name})"
+                )
+                return False
+
+            if len(candidates) != orig_count:
+                excluded = [c.name for c in reqs.candidates[req_type] if c.excluded]
+                logger.debug(
+                    f"Excluded candidates filtered for {req_type.__name__}: {excluded}"
+                )
+
             if not force_refresh:
                 cached = self.cache.get(req_type)
                 if cached is not None:
-                    if self._health_check(cached):
-                        logger.debug(f"Reusing cached equipment {cached.name} for {req_type.__name__}")
-                        selected = cached
-                    else:
-                        logger.warning(
-                            f"Cached equipment {cached.name} for {req_type.__name__} failed health check; invalidating and selecting alternative"
+                    if cached.excluded:
+                        logger.debug(
+                            f"Cached equipment {cached.name} for {req_type.__name__} is now marked excluded; invalidating cache entry"
                         )
                         self.cache.invalidate(req_type)
-                        skip_instance = cached  # Do not reconsider this instance in this selection cycle
+                    else:
+                        if self._VISAHealthCheck(cached):
+                            logger.debug(f"Reusing cached equipment {cached.name} for {req_type.__name__}")
+                            selected = cached
+                        else:
+                            logger.warning(
+                                f"Cached equipment {cached.name} for {req_type.__name__} failed health check; invalidating and selecting alternative"
+                            )
+                            self.cache.invalidate(req_type)
+                            skip_instance = cached  # Do not reconsider this instance in this selection cycle
 
             if selected is None:
                 # Filter out skip_instance for this attempt only
@@ -156,37 +180,15 @@ class RequiredEquipment:
         return None
 
     @staticmethod
-    def _health_check(equip: BaseEquipment) -> bool:
-        """Perform a lightweight health check on a cached equipment instance.
+    def _VISAHealthCheck(equip: BaseEquipment) -> bool:
+        """Health check only for communication equipment."""
+        if not isinstance(equip, VISADevice):
+            return True  # Non‑comms equipment skipped from health validation.
 
-        Strategy (best-effort):
-          1. If it has a callable ``identity`` attribute, call it and ensure we
-             get a plausible Identity object (model not 'Unknown'). This may
-             issue an *IDN? query for VISA-based instruments.
-          2. Else if it has an ``identity`` attribute (object), inspect for a
-             non-'Unknown' model.
-          3. Fallback: assume healthy (return True) – avoids false negatives
-             for equipment without identity support.
-        Any exception => unhealthy.
-        """
+        visaDevice = cast(VISADevice, equip)
         try:
-            ident_attr = getattr(equip, "identity", None)
-            if callable(ident_attr):  # Method style
-                ident = ident_attr()
-                if isinstance(ident, Identity):
-                    model = getattr(ident, "model", "")
-                    return bool(model and model != "Unknown")
-
-                return ident is not None
-
-            if ident_attr is not None:  # Attribute style
-                model = getattr(ident_attr, "model", None)
-                if model is not None:
-                    return model != "Unknown"
-
-            # No identity information – treat as healthy.
-            return True
-
-        except Exception:
-            logger.debug("Health check exception", exc_info=True)
+            visaDevice.getIdentity()
+        except EquipmentError:
             return False
+
+        return True

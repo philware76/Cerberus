@@ -275,10 +275,10 @@ A `BaseTest` declares `requiredEquipment: List[Type[BaseEquipment]]` describing 
 Some physical instruments expose *logical* sub‑devices that do not own an independent transport (e.g. Rohde & Schwarz NRP power sensors when physically connected through an SMB100A signal generator). To model these cleanly while preserving a single physical VISA session, Cerberus now supports a lightweight parent/child (facet) pattern:
 
 Core concepts:
-1. Facet equipment classes (e.g. `NRP_Z22`, `NRP_Z24`) declare a `REQUIRED_PARENTS` class list containing the name(s) of parent instruments. Currently only the first entry is used (single parent support). Example: `REQUIRED_PARENTS = ["SMB100A"]` in `BaseNRPPowerMeter`.
+1. Facet equipment classes (e.g. `NRP_Z22`, `NRP_Z24`) declare a `REQUIRED_PARENT` string naming the parent instrument. Example: `REQUIRED_PARENT = "SMB100A"` in `BaseNRPPowerMeter`.
 2. Facet devices do not inherit from `VISADevice` nor open sessions. Instead they delegate SCPI calls to the already‑initialised parent via a minimal structural protocol (write/query/command/operationComplete).
 3. Dependency preparation is performed centrally by the new `EquipmentDependencyResolver` (`Cerberus/equipmentDependencyResolver.py`) which is invoked from `RequiredEquipment` before calling `initialise()` on a candidate. It:
-   - Looks for `REQUIRED_PARENTS` on the candidate.
+   - Looks for `REQUIRED_PARENT` on the candidate.
    - Finds the parent instance via `PluginService`.
    - Initialises the parent first (if not already initialised).
    - Injects the parent into the child's `initialise` call as `initialise({'parent': parent})`.
@@ -287,7 +287,7 @@ Core concepts:
 5. Tests remain unchanged – they still list only the abstract required types. The resolver implicitly ensures the parent appears and is ready before the child is selected.
 
 Why this approach over priorities:
-- Declarative: dependencies are part of the plugin’s self‑description (`REQUIRED_PARENTS`).
+- Declarative: dependencies are part of the plugin’s self‑description (`REQUIRED_PARENT`).
 - Deterministic initialisation ordering is derived naturally (parents first) without manual priority tuning.
 - Extensible: future multi‑parent support can evolve inside the resolver without changing plugin call sites.
 
@@ -303,7 +303,7 @@ DEBUG requiredEquipment: NRP-Z22 (#1/1) initialised for requirement BasePowerMet
 ```
 
 Implementation Files:
-- `plugins/equipment/powerMeters/RohdeSchwarz/NRP/baseNPRPowerMeter.py` – refactored to facet model & declares `REQUIRED_PARENTS`.
+- `plugins/equipment/powerMeters/RohdeSchwarz/NRP/baseNPRPowerMeter.py` – refactored to facet model & declares `REQUIRED_PARENT`.
 - `equipmentDependencyResolver.py` – new resolver component.
 - `requiredEquipment.py` – now delegates dependency work to the resolver instead of inline logic.
 
