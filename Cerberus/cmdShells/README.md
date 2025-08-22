@@ -127,7 +127,10 @@ Built on `BaseCommsShell` which centralises low‑level comms (`identity`, `writ
 
 Static domain commands layered on top:
 - `identity` – (from `BaseCommsShell`) shows direct or delegated parent identity.
-- `write <cmd>` / `query <cmd>` – (from `BaseCommsShell`) raw SCPI/command over direct or delegated link.
+- `write <cmd>` – plain SCPI write (no `*OPC?` wait). Use for rapid config, mode toggles, continuous acquisition enable.
+- `cmd <cmd>` – SCPI command with completion wait (`*OPC?`) when the device implements `command()`. Use when you must block until the instrument finishes (reset, calibration, long config step). Falls back to plain write if unsupported.
+- `query <cmd>` – raw query over direct or delegated link.
+- `drain` – discard any pending unread VISA socket data (helps recover from desynchronised command/response sequences).
 - `checkId` – compare live identity vs DB record for model/station.
 - `saveSettings` – persist equipment settings via DB service.
 Parent delegation utilities (only for `SingleParentDelegationMixin` equip)  
@@ -136,6 +139,37 @@ Parent delegation utilities (only for `SingleParentDelegationMixin` equip)
 - `setParentEquip <childName>` – attach this equipment as parent of child
 - `detachParent` – detach current parent (adapter auto‑refreshes)
 Plus dynamic plugin API commands (see `cmds`).
+
+#### Power Sensor Measurement Helpers (NRP_Z24)
+The `NRP_Z24` power sensor plugin adds several dynamic helper methods which appear automatically as shell commands (they follow the `get*/set*` naming rules):
+
+- `setSingleMode` – Abort any acquisition and set single‑shot mode (`INIT:CONT OFF`). Use with `getMeasOne`.
+- `setContMode` – Abort and enable continuous mode (`INIT:CONT ON`). Use with `getMeasFetch` loop.
+- `getMeasOne` – Single measurement cycle: `INIT1; *OPC?; FETCh1?` → returns a float.
+- `getMeasFetch` – Fetch most recent result without triggering (`FETCh1?`) – ideal for continuous mode polling.
+
+Usage patterns:
+```
+# Single-shot stable loop
+NRP-Z24> setSingleMode
+NRP-Z24> getMeasOne
+NRP-Z24> getMeasOne
+
+# Continuous loop
+NRP-Z24> setContMode
+NRP-Z24> getMeasFetch
+NRP-Z24> getMeasFetch
+
+# If responses become misaligned (e.g., numeric value to wrong query):
+NRP-Z24> drain      # clear residual data
+NRP-Z24> write *CLS # clear status
+NRP-Z24> setSingleMode (or setContMode)
+```
+
+Guidelines:
+- Avoid mixing `READ?` / `READ1?` with continuous mode; prefer explicit INIT + FETCh or continuous + FETCh.
+- Use `write` for mode toggles and configuration; reserve `cmd` for operations requiring completion synchronisation.
+- If a timeout occurs, `drain` then re‑establish the desired mode.
 
 ### ProductsShell (`Product>`)
 Manages product plugins with a *discovery + connect* workflow (instead of manual `load`/`open`).

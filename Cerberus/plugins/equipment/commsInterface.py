@@ -18,5 +18,9 @@ class CommsInterface(ABC):
         """Write a command to the comms device"""
 
     @abstractmethod
+    def read(self, bytes: int) -> str | None:
+        """Read x number of bytes from the comms device"""
+
+    @abstractmethod
     def query(self, command: str) -> str | None:
         """Send a command and wait for a reply"""

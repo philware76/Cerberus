@@ -2,6 +2,7 @@ from typing import Any
 
 from numpy.polynomial import Chebyshev
 
+from Cerberus.common import dwell
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.visaDevice import VISADevice
@@ -19,14 +20,16 @@ class SMB100A(BaseSigGen, VISADevice, VisaInitMixin):
         BaseSigGen.__init__(self, "SMB100A")
         VisaInitMixin.__init__(self)
 
+        self.pwrLevel = 0
+
     def initialise(self, init: Any | None = None) -> bool:
         if not self._visa_initialise(init):
             return False
 
-        coeffs = {'coef': [-0.12844127405696937, -0.021183500845307433, -0.022500394654882364, -0.004774417605736688, 0.010878950047209814, -
-                  0.023782706673870325, 0.006319029334995595, -0.00111093457550916, -0.008435670031733537], 'domain': [100.0, 3500.0], 'window': [-1.0, 1.0]}
+        coeffs = {'coeffs': [-0.2507963333638481, -0.06964297336077044, -0.019439599548059367, -0.003609709892110792, -0.01340433126881617, -
+                             0.01698232865407864, 0.0064792860891761, -0.014997559295771864, 0.004114665375940766], 'domain': [600.0, 3500.0], 'window': [-1.0, 1.0]}
 
-        self.filter = Chebyshev(coeffs['coef'], domain=coeffs['domain'], window=coeffs['window'])
+        self.filter = Chebyshev(coeffs['coeffs'], domain=coeffs['domain'], window=coeffs['window'])
 
         return BaseSigGen.initialise(self)
 
@@ -38,10 +41,16 @@ class SMB100A(BaseSigGen, VISADevice, VisaInitMixin):
     def setOutputPower(self, level_dBm) -> bool:
         """Sets the output power (dBm)"""
         self.pwrLevel = level_dBm
-        return self.set_power(level_dBm)
+        if self.set_power(level_dBm):
+            dwell(0.25)
+            return True
+
+        return False
 
     def setFrequency(self, frequencyMHz: int) -> bool:
         """Sets the output frequency (MHz)"""
+
+        # This bit of code gets the power offset from the calibration data (filter)
         pwrOfset = self.filter(frequencyMHz)
         self.set_power(self.pwrLevel - pwrOfset)
 

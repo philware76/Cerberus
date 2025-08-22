@@ -12,7 +12,7 @@ from Cerberus.ethDiscovery import EthDiscovery
 from Cerberus.manager import Manager
 from Cerberus.plugins.common import PROD_ID_MAPPING
 from Cerberus.plugins.products.baseProduct import BaseProduct
-from Cerberus.plugins.products.bist import BaseBIST
+from Cerberus.plugins.products.bist import BaseBIST, BISTError
 from Cerberus.plugins.products.nesieSSH import NesieSSH
 from Cerberus.plugins.products.sshComms import SSHComms
 
@@ -179,13 +179,16 @@ class ProductShell(RunCommandShell):
 
     def do_openDA(self, arg):
         """Connect to a Nesie with the selected IP """
-        if self.product.isBISTOpen():
-            print("Closing previous BIST connection...")
-            self.product.closeBIST()
+        try:
+            if self.product.isBISTOpen():
+                print("Closing previous BIST connection...")
+                self.product.closeBIST()
 
-        host = self.product.openBIST()
+            host = self.product.openBIST()
 
-        ProductShell.prompt = f"{self.product.name} DA@{host}> "
+            ProductShell.prompt = f"{self.product.name} DA@{host}> "
+        except BISTError as e:
+            print(f"Failed to open BIST: {e}")
 
     def _resolve_key_path(self) -> Path:
         # From cmdShells/productShell.py -> up to Cerberus, down to plugins/products/Keys/id_rsa.zynq

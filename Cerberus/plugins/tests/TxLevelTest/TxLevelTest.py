@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from dataclasses import asdict
@@ -7,10 +8,13 @@ from numpy.polynomial import Chebyshev
 
 from Cerberus.common import dwell
 from Cerberus.exceptions import EquipmentError, TestError
-from Cerberus.plugins.baseParameters import BaseParameters, NumericParameter
+from Cerberus.plugins.baseParameters import (BaseParameters, NumericParameter,
+                                             OptionParameter, StringParameter)
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.equipment.cables.RXCalCableEquipment import RXCalCable
 from Cerberus.plugins.equipment.cables.TXCalCableEquipment import TXCalCable
+from Cerberus.plugins.equipment.powerMeters.basePowerMeters import \
+    BasePowerMeter
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
 from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
     BaseSpecAnalyser
@@ -39,7 +43,16 @@ class TxLevelTestParameters(BaseParameters):
         super().__init__("RF Parameters")
 
         self.addParameter(NumericParameter("Tx Attn", 25, units="dB", minValue=0, maxValue=50, description="The TX Attenuation setting of NESIE"))
-        self.addParameter(NumericParameter("Cable Cal", 40.0, units="dB", minValue=0, maxValue=50, description="The loss of the connecting SMA cable"))
+        self.addParameter(NumericParameter("Cable Attn", 10.0, units="dB", minValue=0, maxValue=50, description="The attenuator on the cable"))
+        self.addParameter(StringParameter(
+            "Coeffs",
+            value='{"coeffs": [-1.609141417150715, -0.6757908354285234, 0.058674614875468135, '
+            '-0.0031915753722614125, -0.021765415467106336, 0.016691035032112896, '
+            '-0.013077298931293337, 0.004910903969558918, -0.008379936478786022], '
+            '"domain": [600.0, 3500.0], "window": [-1.0, 1.0]}',
+            description="Chebyshev coefficents"))
+
+        self.addParameter(OptionParameter("Enable cable calibration", value=True, description="If cable calibration is enabled, Coeffs will be used"))
 
 
 class TxLevelTest(PowerMeasurementMixin, BaseTest):
@@ -63,13 +76,12 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
 
     def __init__(self) -> None:
         super().__init__("Tx Level")
-        self._addRequirements([BaseSpecAnalyser, BaseSigGen, TXCalCable, RXCalCable])
+        self._addRequirements([BasePowerMeter, TXCalCable, RXCalCable])
         self.addParameterGroup(TxLevelTestParameters())
 
         self.bist: TacticalBISTCmds | None = None
         self.freqOffset: int = TxLevelTest.AD9361_DC_NOTCH_FREQ_OFFSET
-        self.specAna: BaseSpecAnalyser | None = None
-        self.cheb: Chebyshev | None = None
+        self.pwrCalAdjust: Chebyshev
         self.filt = None  # set in configProductForFreq
 
     def run(self) -> None:
@@ -78,14 +90,25 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
             raise EquipmentError(f"{self.name} test requires a product type to be set before test")
 
         gp = self.getGroupParameters("RF Parameters")
-        self.TxAttn = float(gp["Tx Attn"])  # preserve naming convention
-        self.cableCal = float(gp["Cable Cal"])  # preserve naming convention
+        self.TxAttn = float(gp["Tx Attn"])
+        self.cableAttn = float(gp["Cable Attn"])
 
-        # Ensure we are using a spectrum analyser
-        self.setup_power_path()
-        self.specAna = cast(BaseSpecAnalyser, self.powerMeter)
+        self.usePwrcalAdjust = bool(gp["Enable cable calibration"])
+
+        if self.usePwrcalAdjust:
+            try:
+                coeffs_raw = str(gp["Coeffs"])
+                self.coeffs = json.loads(coeffs_raw)
+                self.pwrCalAdjust = Chebyshev(self.coeffs['coeffs'], domain=self.coeffs['domain'], window=self.coeffs['window'])
+            except json.JSONDecodeError:
+                raise ValueError("Failed to decode the Cable Cal Coeffs json string in the test parameters")
+
+        else:
+            # A null filter - will always return 0 as the calibration value
+            self.pwrCalAdjust = Chebyshev([0, 0], domain=[600, 3500], window=[-1.0, 1.0])
+
+        self.configurePowerMeter()
         self.initProduct()
-        self.cheb = self.getCheb()
 
         slotNum = 0
         for hwId, bandName in self.product.getBands():
@@ -94,6 +117,7 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
                 self.testBand(slotNum, hwId)
             else:
                 logging.debug(f"Skipping slot: {slotNum} - Empty")
+
             slotNum += 1
 
         self.result = TxLevelTestResult(ResultStatus.PASSED)
@@ -102,31 +126,30 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
         self.finaliseProduct()
         return super().finalise()
 
-    def getCheb(self) -> Chebyshev:
-        coeffs = [-41.050163553316416, -1.223352951884796, -0.046113614071520224, -0.04349724582375006, 0.1687123666141453, 0.05756109857165281, -0.026992299889912127, -0.05707854541034618, 0.0016636832612212716, -0.0032157438867030305,
-                  0.01920038523659272, 0.03717463796923275, 0.07374152755709508, 0.09264865048317557, 0.02034832268232638, -0.01478322226821526, -0.060596621395038915, -0.011138690543777637, 0.0077710190338166635, 0.023636552233819313, -0.011987505135510714]
-        return Chebyshev(coeffs, domain=[100, 3500])
-
     def testBand(self, slotNum: int, hwId: int) -> None:
-        assert self.specAna is not None and self.bist is not None and self.cheb is not None
-        freqMHz = self.configProductForFreq(slotNum, hwId)
-        self.specAna.setCentre(freqMHz + self.freqOffset)
-        self.bist.set_attn(25)
+        assert self.powerMeter is not None and self.bist is not None
+
+        freqMHz, path = self.configProductForFreq(slotNum, hwId)
+        self.powerMeter.setFrequency(freqMHz + self.freqOffset)
+        self.bist.set_attn(self.TxAttn)
         time.sleep(0.5)
-        calOffset = self.cheb(freqMHz + self.freqOffset)
+
+        pwrCalAdjustment = float(self.pwrCalAdjust(freqMHz + self.freqOffset))
         rawPwr = self.take_power_measurement(freqMHz + self.freqOffset)
-        measuredPwr = rawPwr - calOffset
+
+        measuredPwr = round(rawPwr - pwrCalAdjustment + self.cableAttn, 2)
         detectedPwr = self.bist.get_pa_power(freqMHz)
         diff = detectedPwr - measuredPwr
         band_name = getattr(getattr(self.filt, 'band', None), 'name', 'Unknown')
-        print(
-            f"Slot: {slotNum}, Band: {band_name}, Freq: {freqMHz} MHz, "
-            f"Measured: {measuredPwr} (cal: {calOffset}), detected: {detectedPwr}, diff: {diff}"
-        )
-        time.sleep(1)
-        self.bist.set_attn(BaseTactical.MAX_ATTENUATION)
 
-    def configProductForFreq(self, slotNum: int, hwId: int) -> int:
+        print(
+            f"Slot: {slotNum}, Band: {band_name}, Path: {path}, Freq: {freqMHz} MHz, "
+            f"Measured: {round(measuredPwr, 2)} (cal: {round(pwrCalAdjustment, 2)}), detected: {round(detectedPwr, 2)}, diff: {round(diff, 2)}"
+        )
+
+        time.sleep(1)
+
+    def configProductForFreq(self, slotNum: int, hwId: int) -> tuple[int, str]:
         assert self.bist is not None
         self.filt = nesie_rx_filter_bands.RX_FILTER_BANDS_BY_ID[hwId]
         filt_dict = asdict(self.filt)
@@ -137,22 +160,26 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
         setForwardReverse = self.filt.extra_data & nesie_rx_filter_bands.EXTRA_DATA_SWAP_FOR_AND_REV_MASK == nesie_rx_filter_bands.EXTRA_DATA_SWAP_FOR_AND_REV_MASK
         if self.filt.direction_mask == nesie_rx_filter_bands.BOTH_DIR_MASK:
             freq = int(self.filt.downlink.low_mhz + (self.filt.downlink.high_mhz - self.filt.downlink.low_mhz) / 2.0)
+
         elif self.filt.direction_mask == nesie_rx_filter_bands.UPLINK_DIR_MASK:
             freq = int(self.filt.uplink.low_mhz + (self.filt.uplink.high_mhz - self.filt.uplink.low_mhz) / 2.0)
             setForwardReverse = True
+
         else:
             raise TestError("Invalid filter band direction setting")
 
         self.bist.set_tx_fwd_rev("SET" if setForwardReverse else "CLEAR")
-        self.bist.set_duplexer(slotNum, "TX")
+        path = self.bist.set_duplexer(slotNum, "TX")
         self.bist.set_tx_freq(freq)
         self.bist.set_pa_on(freq)
-        return freq
+
+        return freq, path
 
     def initProduct(self) -> None:
         self.product = self.getProduct()
         self.product.readFittedBands()
         self.product.openBIST()
+
         self.bist = cast(TacticalBISTCmds, self.product)
         if self.bist is None:
             raise EquipmentError("BIST not available")
@@ -167,11 +194,7 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
     def finaliseProduct(self) -> None:
         if self.bist is None:
             return
+
         self.bist.set_attn(BaseTactical.MAX_ATTENUATION)
         self.bist.set_pa_off()
         self.bist.set_tx_disable()
-
-    def setup_power_path(self) -> None:  # type: ignore[override]
-        # Force spectrum analyser usage (test relies on marker measurements)
-        self.powerMeter = self.getEquip(BaseSpecAnalyser)  # type: ignore[attr-defined]
-        self._config_spec_analyser(cast(BaseSpecAnalyser, self.powerMeter))

@@ -68,8 +68,8 @@ class PICShell(BaseShell):
         if arg is not None:
 
             def _timeoutFunc(timeTaken: int):
-                print(".", end="")
-                return timeTaken < 90
+                print(".", end="", flush=True)
+                return timeTaken < 120
 
             if self.pic.waitForPowerOn(_timeoutFunc):
                 print("\nPowered On")

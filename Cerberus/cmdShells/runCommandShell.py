@@ -9,15 +9,40 @@ from Cerberus.manager import Manager
 from Cerberus.plugins.basePlugin import BasePlugin
 
 
+def _is_dynamic_name(name: str) -> bool:
+    return (
+        not name.startswith('_') and (
+            name.startswith("set") or name.startswith("get") or name.startswith("cmd") or name == "reset"
+        )
+    )
+
+
 def get_base_methods(base_cls):
+    """Return dynamic-method candidates from the given base class only.
+
+    (Retained for backward compatibility; used by higher-level helper.)
+    """
     return {
         name: method
         for name, method in inspect.getmembers(base_cls, predicate=inspect.isfunction)
-        if not name.startswith('_') and (name.startswith("set") or
-                                         name.startswith("get") or
-                                         name.startswith("cmd") or
-                                         name == "reset")
+        if _is_dynamic_name(name)
     }
+
+
+def get_plugin_dynamic_methods(plugin: BasePlugin):
+    """Collect dynamic methods from the plugin's first base class PLUS subclass additions.
+
+    Order of precedence:
+      1. Start with first direct base class methods (historical behavior).
+      2. Overlay concrete plugin class methods that satisfy naming rule, allowing additions/overrides.
+    """
+    base_cls = plugin.__class__.__bases__[0]
+    methods = get_base_methods(base_cls)
+    # Add / override with subclass-level functions
+    for name, func in inspect.getmembers(plugin.__class__, predicate=inspect.isfunction):
+        if _is_dynamic_name(name):
+            methods[name] = func
+    return methods
 
 
 class SilentArgParser(argparse.ArgumentParser):
@@ -32,9 +57,9 @@ class SilentArgParser(argparse.ArgumentParser):
 class RunCommandShell(BasePluginShell):
     def __init__(self, plugin: BasePlugin, manager: Manager):
         super().__init__(plugin, manager)
-
+        # Dynamic method discovery (base + subclass overrides/additions)
         self.base_cls = plugin.__class__.__bases__[0]
-        self.allowed_methods = get_base_methods(self.base_cls)
+        self.allowed_methods = get_plugin_dynamic_methods(plugin)
         self.parsers = self._buildParsers()
 
     # Include dynamic plugin method names in tab completion of the first word

@@ -1,8 +1,9 @@
-import logging
 from typing import Protocol, runtime_checkable
 
-from Cerberus.plugins.products.bandNames import BandNames
+from Cerberus.logConfig import getLogger
 from Cerberus.telnetClient import TelnetClient, TelnetError
+
+logger = getLogger("BIST")
 
 
 @runtime_checkable
@@ -52,12 +53,12 @@ class BaseBIST(_BISTIO):
             raise BISTNotInitializedError("initComms must be called before openBIST().")
 
         if self.isBISTOpen():
-            logging.debug("BIST was already open, closing previous connection...")
+            logger.debug("BIST was already open, closing previous connection...")
             self.closeBIST()
 
         try:
             self._client.open()
-            logging.debug("Waiting for OK back after opening telnet connection...")
+            logger.debug("Waiting for OK back after opening telnet connection...")
             self._query("TX:ENAB?")
             return self.bistHost
 
@@ -67,6 +68,7 @@ class BaseBIST(_BISTIO):
     def closeBIST(self):
         if self._client:
             self._client.close()
+            logger.debug("BIST is closed")
 
     def isBISTOpen(self):
         return bool(self._client is not None and self._client.is_open())
@@ -76,6 +78,7 @@ class BaseBIST(_BISTIO):
             raise BISTNotInitializedError("Telnet to BIST has not been opened yet.")
 
         try:
+            logger.debug(f" -  Send: {cmd}")
             if not self._client.send(cmd):
                 raise BISTCommandError("Failed to get OK back from BIST")
 
@@ -87,7 +90,10 @@ class BaseBIST(_BISTIO):
             raise BISTNotInitializedError("Telnet to BIST has not been opened yet.")
 
         try:
-            return self._client.query(cmd).strip()
+            logger.debug(f" - Query: {cmd}")
+            resp = self._client.query(cmd).strip()
+            logger.debug(f" - Respn: {resp}")
+            return resp
 
         except TelnetError as e:
             raise BISTConnectionError(f"Query failed: {cmd}: {e}") from e
@@ -173,13 +179,12 @@ class BandwidthMixin:
 class DuplexerMixin:
     def get_duplexer(self: _BISTIO,  side: str): return self._query(f"{side}:DUP?")
 
-    def set_duplexer(self: _BISTIO, slotNum: int, TXorRX: str):
+    def set_duplexer(self: _BISTIO, slotNum: int, TXorRX: str) -> str:
         """Set duplexer path by band and side using Band enum.
         TXorRX must be 'TX' or 'RX'.
         """
         if TXorRX not in ('TX', 'RX'):
-            logging.debug('Select Transmit or Receive Path (TX/RX) ONLY')
-            return
+            raise BISTCommandError(f"TXorRX parameter is not correct: '{TXorRX}', must be TX or RX only.")
 
         # names = ['LTE_7', 'LTE_20', 'GSM850', 'EGSM900', 'DCS1800', 'PCS1900', 'UMTS_1', 'SPARE1', 'SPARE2', 'SPARE3', 'SPARE4', 'SPARE5']
         # try:
@@ -195,6 +200,8 @@ class DuplexerMixin:
         selected_path = f"{kinds[slotNum]}{hundreds}{suffixes[slotNum]}"
 
         self._send(f'{TXorRX}:DUP {selected_path}')
+
+        return selected_path
 
 
 class TempsMixin:

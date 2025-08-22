@@ -10,8 +10,8 @@ class BasePowerMeter(BaseCommsEquipment, ABC):
     """
 
     @abstractmethod
-    def setFrequency(self, freq: float) -> bool:
-        """Sets the frequency for the measurement"""
+    def setFrequency(self, frequencyMHz: float) -> bool:
+        """Sets the frequency (MHz) for the measurement"""
 
     @abstractmethod
     def getPowerReading(self) -> float:

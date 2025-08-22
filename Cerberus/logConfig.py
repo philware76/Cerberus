@@ -23,12 +23,25 @@ def setupLogging(level=logging.INFO, silence_external: bool = True) -> logging.L
         }
         RESET = "\033[0m"
 
+        def formatTime(self, record, datefmt=None):
+            from datetime import datetime
+            ct = datetime.fromtimestamp(record.created)
+            if datefmt:
+                s = ct.strftime(datefmt)
+                # If %f is in datefmt, trim to milliseconds
+                if "%f" in datefmt:
+                    ms = ct.strftime("%f")[:3]
+                    s = s.replace(ct.strftime("%f"), ms)
+                return s
+            else:
+                return ct.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
         def format(self, record):
             color = self.COLORS.get(record.levelno, self.RESET)
             message = super().format(record)
             return f"{color}{message}{self.RESET}"
 
-    formatter = ColorFormatter("[%(levelname)s] [%(name)s:%(lineno)d] %(message)s")
+    formatter = ColorFormatter("[%(asctime)s] [%(levelname)s] [%(name)s:%(lineno)d] %(message)s", datefmt="%Y-%m-%d %H:%M:%S.%f")
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
 

@@ -71,22 +71,20 @@ class TelnetClient:
             tn.write(data)
 
         except OSError as e:
-            logging.error(f"Telnet Write Error: {e}")
-            return False
+            raise TelnetError(f"Telnet Write Error: {e}")
 
         return True
 
     def send(self, line: str) -> bool:
         """Send a command and wait for the "\n" OK back"""
         if self._write(line):
-            resp = self.read_line()
-            return resp == ""
+            resp = self.read_line(strip=False)
+            return resp.startswith("\n")
         else:
             return False
 
     def query(self, line: str, *, timeout: Optional[float] = None, strip: bool = True) -> str:
         """Send a line and read a single response line.
-
         timeout: overrides default timeout for this read only.
         strip: if True, rstrip CR/LF.
         """
@@ -102,11 +100,13 @@ class TelnetClient:
 
         text = raw.decode(errors="replace")
         if strip:
-            text = text.rstrip("\r\n")
+            text = text.rstrip()
 
-        logging.debug("<- %s", text)
         if text.startswith("ERR:"):
             raise TelnetProtocolError(text)
+
+        if text != "":
+            logging.debug("<- '%s'", text)
 
         return text
 
