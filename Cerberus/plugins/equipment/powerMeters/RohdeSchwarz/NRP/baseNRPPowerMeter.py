@@ -44,6 +44,7 @@ class BaseNRPPowerMeter(SingleParentDelegationMixin, BasePowerMeter):
         if not self._ensure_parent(init):
             logging.error("%s: initialisation failed - required parent instrument not provided", self.name)
             return False
+        
         # BaseCommsEquipment initialisation (via MRO chain: BasePowerMeter->BaseCommsEquipment)
         return BasePowerMeter.initialise(self)  # type: ignore[misc]
 

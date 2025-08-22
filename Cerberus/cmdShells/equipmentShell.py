@@ -113,16 +113,12 @@ class EquipmentShell(BaseCommsShell):
             print(f"Failed to initialise parent '{parent.name}': {ex}")
             return False
 
-        # After successful initialisation, attempt to read & display identity
+        # After successful initialisation, show already-fetched identity (do not re-query)
         ident_str = None
         if isinstance(parent, VISADevice):
-            try:
-                parent.getIdentity()
-                ident_obj = getattr(parent, 'identity', None)
-                if ident_obj:
-                    ident_str = str(ident_obj)
-            except Exception as id_ex:  # identity retrieval shouldn't abort attach
-                ident_str = f"<identity read failed: {id_ex}>"
+            ident_obj = getattr(parent, 'identity', None)
+            if ident_obj:
+                ident_str = str(ident_obj)
 
         if ident_str:
             print(f"Initialised parent '{parent.name}' identity: {ident_str}")

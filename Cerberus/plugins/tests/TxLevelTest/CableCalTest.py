@@ -3,6 +3,7 @@ from typing import cast
 
 from numpy.polynomial import Chebyshev
 
+from Cerberus.common import dwell
 from Cerberus.gui.helpers import getGlobalMatPlotUI
 from Cerberus.logConfig import getLogger
 from Cerberus.plugins.baseParameters import BaseParameters, NumericParameter
@@ -71,9 +72,6 @@ class CableCalTest(PowerMeasurementMixin, BaseTest):
         pwr = int(self.gp["Power"])
         atten = int(self.gp["Atten"])
 
-        self.sigGen.setOutputPower(pwr)
-        self.sigGen.setPowerState(True)
-
         freqRange = range(start, stop + step, step)
         xlim = (start - step, stop + step)
         ylim = (-5, 5)
@@ -89,6 +87,8 @@ class CableCalTest(PowerMeasurementMixin, BaseTest):
         )
         series_name = gpui.new_series("CalRun")
 
+        self._waitForSettledFirstReading(start, pwr)
+
         for freq in freqRange:
             self.sigGen.setFrequency(freq)
             meas = self.take_power_measurement(freq) + atten
@@ -103,10 +103,23 @@ class CableCalTest(PowerMeasurementMixin, BaseTest):
         self.result = CableCalTestResult(ResultStatus.PASSED)
         self.result.log = self.getLog()
 
+    def _waitForSettledFirstReading(self, freq, pwr):
+        self.sigGen.setOutputPower(pwr)
+        self.sigGen.setFrequency(freq)
+        self.sigGen.setPowerState(True)
+
+        diff = 10
+        meas = self.take_power_measurement(freq)
+        while diff > 0.02:
+            dwell(0.25)
+            prev = meas
+            meas = self.take_power_measurement(freq)
+            diff = abs(prev - meas)
+            print(f"Waiting for settled measurement: {diff} < 0.02")
+
     def configEquipment(self):
         self.sigGen = self.configSigGen()
-        # Unified setup via mixin
-        self.setup_power_path()
+        self.configurePowerMeter()
 
     def checkCalCoeffs(self, freqRange, calData, cheb):
         for freq in freqRange:

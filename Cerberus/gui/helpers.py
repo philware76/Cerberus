@@ -19,9 +19,11 @@ def _ensure_qapp() -> QApplication:
     inst = QApplication.instance()
     if inst is None:
         inst = QApplication([])
+
     qapp = cast(QApplication, inst)
     if hasattr(qapp, "setQuitOnLastWindowClosed"):
         qapp.setQuitOnLastWindowClosed(False)
+
     return qapp
 
 

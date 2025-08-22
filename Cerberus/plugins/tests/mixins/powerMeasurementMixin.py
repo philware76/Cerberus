@@ -42,7 +42,7 @@ class PowerMeasurementMixin:
     powerMeter: BasePowerMeter
 
     # Public API ---------------------------------------------------------------------------------
-    def setup_power_path(self) -> None:
+    def configurePowerMeter(self) -> None:
         """Discover and configure the power measuring path.
 
         If the discovered equipment is a spectrum analyser additional
@@ -54,7 +54,7 @@ class PowerMeasurementMixin:
         else:
             self._config_power_meter(self.powerMeter)
 
-    def take_power_measurement(self, freq_mhz: float, *, min_samples: int | None = None) -> float:
+    def take_power_measurement(self, freq_mhz: float, *, min_samples: int = 10) -> float:
         """Acquire a power measurement at ``freq_mhz``.
 
         For a spectrum analyser we centre the span on the frequency, peak
@@ -85,7 +85,7 @@ class PowerMeasurementMixin:
 
     def _take_power_meter_reading(self, freq_mhz: float) -> float:
         self.powerMeter.setFrequency(freq_mhz)
-        dwell(0.5)
+        dwell(0.25)
         return self.powerMeter.getPowerReading()
 
     def _take_spec_marker_measurement(self, freq_mhz: float, *, min_samples: int | None = None) -> float:
@@ -100,11 +100,11 @@ class PowerMeasurementMixin:
             try:
                 gp = self.getGroupParameters("Calibration")  # type: ignore[attr-defined]
                 min_samples = int(gp.get("MinSamples", 5))
+
             except Exception:
                 min_samples = 5
+
         min_samples = max(1, int(min_samples))
 
-        marker_pwr = getSettledReading(sa.getMarkerPower, min_samples)
-        return round(marker_pwr, 2)
         marker_pwr = getSettledReading(sa.getMarkerPower, min_samples)
         return round(marker_pwr, 2)

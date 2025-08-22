@@ -29,6 +29,7 @@ from typing import Any, Optional, Protocol, runtime_checkable
 class _SCPIParent(Protocol):  # Minimal structural surface expected from parent
     def write(self, command: str) -> None: ...  # noqa: D401,E701
     def query(self, command: str) -> str: ...
+    def read(self, bytes: int) -> str: ...
     def command(self, command: str) -> bool: ...
     def operationComplete(self) -> bool: ...
 
@@ -59,6 +60,7 @@ class SingleParentDelegationMixin:
     def detach_parent(self) -> None:
         if self._parent is not None:
             logging.debug("%s detached from parent %s", getattr(self, 'name', '<unnamed>'), self._parent.name)
+            
         self._parent = None
 
     def has_parent(self) -> bool:
@@ -85,6 +87,7 @@ class SingleParentDelegationMixin:
             try:
                 self.attach_parent(init['parent'])  # type: ignore[arg-type]
                 return True
+            
             except Exception:
                 logging.exception("Failed to attach provided parent")
                 return False
@@ -95,22 +98,28 @@ class SingleParentDelegationMixin:
                 from Cerberus.pluginService import \
                     PluginService  # local import to avoid cycles
                 ps = PluginService.instance()
+
                 if ps is None:
                     logging.error("PluginService instance unavailable for parent resolution")
                     return False
+
                 parent = ps.findEquipment(self.REQUIRED_PARENT)
                 if parent is None:
                     logging.error("%s: required parent '%s' not found", getattr(self, 'name', '<unnamed>'), self.REQUIRED_PARENT)
                     return False
+
                 # Ensure parent initialised before delegation
                 try:
                     if hasattr(parent, 'initialise'):
                         parent.initialise()
+
                 except Exception:
                     logging.exception("%s: exception initialising parent %s", getattr(self, 'name', '<unnamed>'), parent.name)
                     return False
+
                 self.attach_parent(parent)  # type: ignore[arg-type]
                 return True
+
             except Exception:
                 logging.exception("Unexpected error resolving parent")
                 return False
@@ -122,11 +131,15 @@ class SingleParentDelegationMixin:
     def _p(self) -> _SCPIParent:
         if self._parent is None:
             raise RuntimeError("SCPI parent not attached")
+        
         return self._parent
 
     # Delegated helpers (expected by rest of system if present) -----------------------
     def write(self, command: str) -> None:  # type: ignore[override]
         self._p().write(command)
+
+    def read(self, bytes: int) -> str:  # type: ignore[override]
+        self._p().read(bytes)
 
     def query(self, command: str) -> str:  # type: ignore[override]
         return self._p().query(command)
