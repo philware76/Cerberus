@@ -2,19 +2,20 @@ import json
 import logging
 from typing import Any, cast
 
-import mysql.connector
-from mysql.connector import errorcode
+import psycopg
+from psycopg import sql
+from psycopg.rows import dict_row
 
 from Cerberus.common import DBInfo
 from Cerberus.database.cerberusDB import CerberusDB
 from Cerberus.logConfig import getLogger
 
-logger = getLogger("MySqlDB")
+logger = getLogger("Database")
 logger.setLevel(logging.INFO)
 
 
-class MySqlDB(CerberusDB):
-    """MySQL persistence for plugin parameter settings.
+class PostgreSqlDB(CerberusDB):
+    """PostgreSQL persistence for plugin parameter settings.
     """
 
     def __init__(self, station_id: str, dbInfo: DBInfo):
@@ -25,7 +26,7 @@ class MySqlDB(CerberusDB):
             self.connectToDatabase(dbInfo)
             logger.info("Database connection established successfully")
 
-        except mysql.connector.Error as err:
+        except psycopg.Error as err:
             error_msg = self.handleDBErrors(err)
             raise ConnectionError(error_msg) from err
 
@@ -39,13 +40,13 @@ class MySqlDB(CerberusDB):
             self._ensure_tables()
             logger.info("Database tables verified/created successfully")
 
-        except mysql.connector.Error as table_err:
+        except psycopg.Error as table_err:
             logger.error(f"Failed to create/verify database tables: {table_err}")
             self.conn.close()
 
             raise ConnectionError(f"Database table setup failed: {table_err}") from table_err
 
-        invalidContent = self.checkGroupContentIntegrity()
+        invalidContent = self.check_group_content_integrity()
         if len(invalidContent) > 0:
             logger.error("Database integrity: Broken!")
             logger.error("Group Content is invalid on these entries:")
@@ -56,39 +57,30 @@ class MySqlDB(CerberusDB):
             logger.info("Database integrity: OK")
 
     def handleDBErrors(self, err) -> str:
-        error_msg = f"Failed to connect to MySQL database: {err}"
+        error_msg = f"Failed to connect to PostgreSQL database: {err}"
         logger.error(error_msg)
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            logger.error("Check your username and password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            logger.error("Database does not exist")
-        elif err.errno == 2003:  # CR_CONN_HOST_ERROR
-            logger.error("Could not connect to MySQL server - check host and port")
-        elif err.errno == 2013:  # CR_SERVER_LOST
-            logger.error("Lost connection to MySQL server during query")
-        elif err.errno in (2002, 2006):  # CR_CONNECTION_ERROR, CR_SERVER_GONE_ERROR
-            logger.error("Connection error - check network connectivity")
+
+        # PostgreSQL error handling
+        if hasattr(err, 'sqlstate'):
+            if err.sqlstate == '28000':  # Invalid authorization specification
+                logger.error("Check your username and password")
+            elif err.sqlstate == '3D000':  # Invalid catalog name
+                logger.error("Database does not exist")
+            elif err.sqlstate == '08006':  # Connection failure
+                logger.error("Could not connect to PostgreSQL server - check host and port")
+            elif err.sqlstate in ('08000', '08003', '08S01'):  # Connection exceptions
+                logger.error("Connection error - check network connectivity")
 
         return error_msg
 
     def connectToDatabase(self, dbInfo):
-        logger.info(f"Connecting to MySQL database at {dbInfo.host}:{dbInfo.port}")
-        self.conn = mysql.connector.connect(
-            host=dbInfo.host,
-            port=dbInfo.port,
-            user=dbInfo.username,
-            password=dbInfo.password,
-            database=dbInfo.database,
-            connection_timeout=10,  # 10 seconds for initial connection
+        logger.info(f"Connecting to PostgreSQL database at {dbInfo.host}:{dbInfo.port}")
+        connection_string = f"host={dbInfo.host} port={dbInfo.port} dbname={dbInfo.database} user={dbInfo.username} password={dbInfo.password}"
+        self.conn = psycopg.connect(
+            connection_string,
             autocommit=False,
-            raise_on_warnings=True,
-            charset='utf8mb4',
-            collation='utf8mb4_unicode_ci',
-            use_unicode=True,
-            sql_mode='STRICT_TRANS_TABLES',
-            connect_timeout=10,  # Alternative parameter name for some versions
-            read_timeout=30,  # Timeout for reading from the connection
-            write_timeout=30  # Timeout for writing to the connection
+            connect_timeout=10,
+            options="-c client_encoding=UTF8"
         )
 
     def _close_impl(self):
@@ -97,16 +89,18 @@ class MySqlDB(CerberusDB):
         except Exception:
             pass
 
-    def _execute_catch_table_already_exists(self, cur, sql: str):
+    def _execute_catch_table_already_exists(self, cur, sql_query: str):
         try:
-            cur.execute(sql)
-        except mysql.connector.errors.DatabaseError as w:
-            if w.errno == 1050:
-                pass  # Table already exists
+            cur.execute(sql_query)
+        except psycopg.errors.DuplicateTable:
+            pass  # Table already exists
+        except psycopg.Error as e:
+            # Check if it's a "relation already exists" error
+            if "already exists" in str(e):
+                pass
             else:
-                raise  # Re-raise other warnings
+                raise
 
-    # ------------------------------------------------------------------------------------------------------------
     def _ensure_tables(self):
         """Ensure normalized tables exist (fresh schema, no migration needed).
 
@@ -122,12 +116,12 @@ class MySqlDB(CerberusDB):
             self._execute_catch_table_already_exists(cur,
                                                      """
                 CREATE TABLE IF NOT EXISTS group_identity (
-                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    id BIGSERIAL PRIMARY KEY,
                     station_id VARCHAR(100) NOT NULL,
                     plugin_type VARCHAR(32) NOT NULL,
                     plugin_name VARCHAR(128) NOT NULL,
                     group_name VARCHAR(128) NOT NULL,
-                    UNIQUE KEY uq_group_identity (station_id, plugin_type, plugin_name, group_name)
+                    UNIQUE (station_id, plugin_type, plugin_name, group_name)
                 )
                 """
                                                      )
@@ -136,9 +130,9 @@ class MySqlDB(CerberusDB):
             self._execute_catch_table_already_exists(cur,
                                                      """
                 CREATE TABLE IF NOT EXISTS group_content (
-                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    id BIGSERIAL PRIMARY KEY,
                     group_hash CHAR(64) NOT NULL UNIQUE,
-                    group_json JSON NOT NULL,
+                    group_json JSONB NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 """
@@ -148,13 +142,11 @@ class MySqlDB(CerberusDB):
             self._execute_catch_table_already_exists(cur,
                                                      """
                 CREATE TABLE IF NOT EXISTS group_settings (
-                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    id BIGSERIAL PRIMARY KEY,
                     group_identity_id BIGINT NOT NULL,
                     content_id BIGINT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE KEY uq_gid_content (group_identity_id, content_id),
-                    KEY idx_gid_created (group_identity_id, id),
-                    KEY idx_gid_content (group_identity_id, content_id),
+                    UNIQUE (group_identity_id, content_id),
                     CONSTRAINT fk_gs_identity FOREIGN KEY (group_identity_id)
                         REFERENCES group_identity(id) ON DELETE CASCADE,
                     CONSTRAINT fk_gs_content FOREIGN KEY (content_id)
@@ -163,11 +155,12 @@ class MySqlDB(CerberusDB):
                 """
                                                      )
 
-            # In case table pre-existed without the UNIQUE key, attempt to add it (ignore if already there)
-            try:  # pragma: no cover - migration path
-                cur.execute("ALTER TABLE group_settings ADD UNIQUE KEY uq_gid_content (group_identity_id, content_id)")
-            except Exception:
-                pass
+            # Create indexes
+            try:
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_gid_created ON group_settings(group_identity_id, id)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_gid_content ON group_settings(group_identity_id, content_id)")
+            except psycopg.Error:
+                pass  # Index might already exist
 
             # Pointer to current version
             self._execute_catch_table_already_exists(cur,
@@ -175,8 +168,7 @@ class MySqlDB(CerberusDB):
                 CREATE TABLE IF NOT EXISTS current_group_setting (
                     group_identity_id BIGINT PRIMARY KEY,
                     setting_id BIGINT NOT NULL,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    KEY idx_setting_id (setting_id),
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     CONSTRAINT fk_cgs_identity FOREIGN KEY (group_identity_id)
                         REFERENCES group_identity(id) ON DELETE CASCADE,
                     CONSTRAINT fk_cgs_setting FOREIGN KEY (setting_id)
@@ -185,11 +177,16 @@ class MySqlDB(CerberusDB):
                 """
                                                      )
 
+            # Create index for setting_id
+            try:
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_setting_id ON current_group_setting(setting_id)")
+            except psycopg.Error:
+                pass  # Index might already exist
+
             self.conn.commit()
         finally:
             cur.close()
 
-    # ------------------------------------------------------------------------------------------------------------
     def _save_group_imp(self, plugin_type: str, plugin_name: str, group_name: str, values_map: dict) -> None:
         """
         Save an entire parameter group as a JSON mapping parameter_name->value.
@@ -228,22 +225,24 @@ class MySqlDB(CerberusDB):
 
         cur = self.conn.cursor()
         try:
-            # Resolve / create identity (LAST_INSERT_ID trick returns existing id on duplicate)
+            # Resolve / create identity (PostgreSQL equivalent of MySQL's ON DUPLICATE KEY UPDATE)
             cur.execute(
                 """
                 INSERT INTO group_identity (station_id, plugin_type, plugin_name, group_name)
                 VALUES (%s,%s,%s,%s)
-                ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)
+                ON CONFLICT (station_id, plugin_type, plugin_name, group_name) 
+                DO UPDATE SET id = group_identity.id
+                RETURNING id
                 """,
                 (self.station_id, plugin_type, plugin_name, group_name)
             )
-            gid = cur.lastrowid
+            result = cur.fetchone()
+            gid = result[0] if result else None
 
             # Locate or insert global content row WITHOUT burning an AUTO_INCREMENT value when
-            # the hash already exists. The prior ON DUPLICATE KEY pattern allocates and discards
-            # ids on duplicates, creating large gaps. This SELECT -> INSERT approach reduces (but
+            # the hash already exists. This SELECT -> INSERT approach reduces (but
             # cannot eliminate) gaps. A race where another session inserts the same hash between
-            # our SELECT and INSERT is handled by catching ER_DUP_ENTRY and re-selecting.
+            # our SELECT and INSERT is handled by catching unique constraint violation and re-selecting.
             cur.execute("SELECT id FROM group_content WHERE group_hash=%s", (group_hash,))
             row = cur.fetchone()
             if row:
@@ -251,17 +250,15 @@ class MySqlDB(CerberusDB):
             else:
                 try:
                     cur.execute(
-                        "INSERT INTO group_content (group_hash, group_json) VALUES (%s,%s)",
+                        "INSERT INTO group_content (group_hash, group_json) VALUES (%s,%s) RETURNING id",
                         (group_hash, canonical_json)
                     )
-                    content_id = cur.lastrowid
-                except mysql.connector.Error as e:  # pragma: no cover - race condition path
-                    if getattr(e, "errno", None) == errorcode.ER_DUP_ENTRY:
-                        # Another connection inserted concurrently; fetch the id now present.
-                        cur.execute("SELECT id FROM group_content WHERE group_hash=%s", (group_hash,))
-                        content_id = int(cur.fetchone()[0])  # type: ignore[index]
-                    else:
-                        raise
+                    result = cur.fetchone()
+                    content_id = result[0] if result else None
+                except psycopg.errors.UniqueViolation:  # pragma: no cover - race condition path
+                    # Another connection inserted concurrently; fetch the id now present.
+                    cur.execute("SELECT id FROM group_content WHERE group_hash=%s", (group_hash,))
+                    content_id = int(cur.fetchone()[0])  # type: ignore[index]
 
             # Does this identity already have a historical setting pointing to this content?
             cur.execute(
@@ -277,18 +274,19 @@ class MySqlDB(CerberusDB):
                 cur.execute(
                     """
                     UPDATE current_group_setting
-                    SET setting_id=%s
+                    SET setting_id=%s, updated_at=CURRENT_TIMESTAMP
                     WHERE group_identity_id=%s AND setting_id<>%s
                     """,
                     (setting_id, gid, setting_id)
                 )
                 if cur.rowcount == 0:
                     # Either the pointer already matches (no action needed) OR the row is absent.
-                    # 2. Insert it if absent (IGNORE avoids error if it actually existed and matched).
+                    # 2. Insert it if absent (ON CONFLICT DO NOTHING avoids error if it actually existed and matched).
                     cur.execute(
                         """
-                        INSERT IGNORE INTO current_group_setting (group_identity_id, setting_id)
+                        INSERT INTO current_group_setting (group_identity_id, setting_id)
                         VALUES (%s,%s)
+                        ON CONFLICT (group_identity_id) DO NOTHING
                         """,
                         (gid, setting_id)
                     )
@@ -299,22 +297,23 @@ class MySqlDB(CerberusDB):
                 return
 
             # Insert (or reuse existing) historical version referencing shared content.
-            # UNIQUE (group_identity_id, content_id) ensures only one row per pair; the ON DUPLICATE clause
-            # fetches existing id without creating a duplicate row.
+            # PostgreSQL equivalent with ON CONFLICT
             cur.execute(
                 """
                 INSERT INTO group_settings (group_identity_id, content_id) VALUES (%s,%s)
-                ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)
+                ON CONFLICT (group_identity_id, content_id) DO UPDATE SET id = group_settings.id
+                RETURNING id
                 """,
                 (gid, content_id)
             )
-            new_setting_id = cur.lastrowid
+            result = cur.fetchone()
+            new_setting_id = result[0] if result else None
 
             # Point current_group_setting at the new/reused setting only if different or missing.
             cur.execute(
                 """
                 UPDATE current_group_setting
-                SET setting_id=%s
+                SET setting_id=%s, updated_at=CURRENT_TIMESTAMP
                 WHERE group_identity_id=%s AND setting_id<>%s
                 """,
                 (new_setting_id, gid, new_setting_id)
@@ -322,8 +321,9 @@ class MySqlDB(CerberusDB):
             if cur.rowcount == 0:
                 cur.execute(
                     """
-                    INSERT IGNORE INTO current_group_setting (group_identity_id, setting_id)
+                    INSERT INTO current_group_setting (group_identity_id, setting_id)
                     VALUES (%s,%s)
+                    ON CONFLICT (group_identity_id) DO NOTHING
                     """,
                     (gid, new_setting_id)
                 )
@@ -333,7 +333,7 @@ class MySqlDB(CerberusDB):
                 f"Group: '{group_name}' for plugin '{plugin_name}' changed; created new setting_id={new_setting_id} (gid={gid}) hash={group_hash}."
             )
 
-        except mysql.connector.Error as err:  # pragma: no cover - operational
+        except psycopg.Error as err:  # pragma: no cover - operational
             try:
                 self.conn.rollback()
             except Exception:
@@ -343,10 +343,9 @@ class MySqlDB(CerberusDB):
         finally:
             cur.close()
 
-    # ------------------------------------------------------------------------------------------------------------
     def _load_group_json(self, plugin_type: str, plugin_name: str, group_name: str) -> dict:
         """Load group JSON data for a specific plugin group."""
-        cur = self.conn.cursor(dictionary=True)
+        cur = self.conn.cursor(row_factory=dict_row)
         try:
             cur.execute(
                 """
@@ -369,13 +368,15 @@ class MySqlDB(CerberusDB):
             if isinstance(pdata, (bytes, bytearray)):
                 pdata = pdata.decode('utf-8')
             try:
+                if isinstance(pdata, dict):
+                    return pdata  # PostgreSQL JSONB returns dict directly
                 return json.loads(cast(str, pdata))
             except Exception:
                 logger.error("Failed to parse group JSON for %s.%s.%s", plugin_type, plugin_name, group_name)
         return {}
 
     def _get_cerberus_tables(self) -> list[str]:
-        """Return list of Cerberus table names for MySQL."""
+        """Return list of Cerberus table names for PostgreSQL."""
         return [
             'current_group_setting',
             'group_settings',
@@ -388,7 +389,7 @@ class MySqlDB(CerberusDB):
         ]
 
     def _delete_plugin_impl(self, plugin_type: str, plugin_name: str):
-        """MySQL-specific implementation for deleting a plugin."""
+        """PostgreSQL-specific implementation for deleting a plugin."""
         cur = self.conn.cursor()
         try:
             cur.execute(
@@ -400,7 +401,7 @@ class MySqlDB(CerberusDB):
             cur.close()
 
     def _delete_group_impl(self, plugin_type: str, plugin_name: str, group_name: str):
-        """MySQL-specific implementation for deleting a group."""
+        """PostgreSQL-specific implementation for deleting a group."""
         cur = self.conn.cursor()
         try:
             cur.execute(
@@ -412,12 +413,14 @@ class MySqlDB(CerberusDB):
             cur.close()
 
     def _drop_tables_safely(self, tables: list[str]) -> None:
-        """MySQL-specific implementation for dropping multiple tables safely."""
+        """PostgreSQL-specific implementation for dropping multiple tables safely."""
         cur = self.conn.cursor()
         try:
             for table_name in tables:
                 try:
-                    cur.execute(f"DROP TABLE IF EXISTS {table_name}")
+                    # Use sql.SQL for safe table name construction
+                    query = sql.SQL("DROP TABLE IF EXISTS {}").format(sql.Identifier(table_name))
+                    cur.execute(query)
                     logger.warning(f"Dropped table if existed: {table_name}")
                 except Exception as ex:  # pragma: no cover - defensive
                     logger.error(f"Failed to drop table {table_name}: {ex}")
@@ -426,7 +429,7 @@ class MySqlDB(CerberusDB):
             cur.close()
 
     def _get_group_content_rows(self) -> list[tuple[Any, Any, Any]]:
-        """MySQL-specific implementation to get all group_content rows."""
+        """PostgreSQL-specific implementation to get all group_content rows."""
         cur = self.conn.cursor()
         try:
             cur.execute("SELECT id, group_hash, group_json FROM group_content")
@@ -434,23 +437,9 @@ class MySqlDB(CerberusDB):
         finally:
             cur.close()
 
-    # MySQL-specific methods that contain MySQL-specific logic ------------------------
-    def checkGroupContentIntegrity(self) -> list[tuple[int, str, str]]:
-        """Verify each row in group_content matches its stored SHA256 hash.
-
-        Delegates to base class implementation.
-        """
-        return self.check_group_content_integrity()
-
-    def cleanup_duplicate_group_settings(self, dry_run: bool = False) -> dict[str, Any]:
-        """Detect and (optionally) remove legacy duplicate rows in group_settings.
-
-        Delegates to base class implementation.
-        """
-        return super().cleanup_duplicate_group_settings(dry_run)
-
+    # PostgreSQL-specific database implementation methods ------------------------
     def _find_duplicate_group_settings_impl(self) -> list[Any]:
-        """MySQL-specific implementation to find duplicate group settings."""
+        """PostgreSQL-specific implementation to find duplicate group settings."""
         cur = self.conn.cursor()
         try:
             cur.execute(
@@ -458,10 +447,10 @@ class MySqlDB(CerberusDB):
                 SELECT group_identity_id, content_id,
                        COUNT(*) AS cnt,
                        MIN(id) AS keep_id,
-                       GROUP_CONCAT(id ORDER BY id) AS all_ids
+                       STRING_AGG(id::text, ',' ORDER BY id) AS all_ids
                 FROM group_settings
                 GROUP BY group_identity_id, content_id
-                HAVING cnt > 1
+                HAVING COUNT(*) > 1
                 """
             )
             return cur.fetchall()
@@ -470,14 +459,14 @@ class MySqlDB(CerberusDB):
 
     def _cleanup_single_duplicate_set_impl(self, group_identity_id: int, keep_id_int: int,
                                            dup_ids: list[int], dry_run: bool) -> int:
-        """MySQL-specific implementation to cleanup a single duplicate set."""
+        """PostgreSQL-specific implementation to cleanup a single duplicate set."""
         if not dup_ids or dry_run:
             return 0
 
         cur = self.conn.cursor()
         try:
             # Start transaction
-            cur.execute("START TRANSACTION")
+            cur.execute("BEGIN")
 
             # Repoint current_group_setting referencing duplicate ids
             self._update_setting_references(group_identity_id, keep_id_int, dup_ids, cur)
@@ -506,7 +495,7 @@ class MySqlDB(CerberusDB):
         cur.execute(
             f"""
             UPDATE current_group_setting
-            SET setting_id=%s
+            SET setting_id=%s, updated_at=CURRENT_TIMESTAMP
             WHERE group_identity_id=%s AND setting_id IN ({placeholders})
             """,
             params
