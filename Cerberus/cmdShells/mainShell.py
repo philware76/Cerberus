@@ -16,6 +16,7 @@ from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo, dwell
 from Cerberus.database.fileDatabase import FileDatabase
 from Cerberus.database.mySqlDB import MySqlDB
+from Cerberus.database.postgreSqlDB import PostgreSqlDB
 from Cerberus.logConfig import setupLogging
 from Cerberus.manager import Manager
 
@@ -84,29 +85,37 @@ def runShell(argv):
     stationId, dbInfo = loadIni(args.inifile)
     logging.info(f"Cerberus:{stationId}")
 
-    if args.filedb:
-        db = FileDatabase(args.filedb)
-        logging.info(f"Using FileDatabase: {args.filedb}")
-    else:
-        # db = Database(stationId, dbInfo)
-        db = MySqlDB(stationId, dbInfo)
-        logging.info(f"Using MySQL: {dbInfo.host}:{dbInfo.port}")
-
-    # Provide status callback if splash exists
-    def _status(msg: str):
+    def splashUpdate(msg: str):
         if splash:
             splash.update_status(msg)
             dwell(SPLASH_DELAY)
 
-        # Instantiate manager (plugin discovery runs in constructor)
-    manager = Manager(stationId, db, status_callback=_status)
+    splashUpdate("Opening database...")
+
+    try:
+        if args.filedb:
+            db = FileDatabase(args.filedb)
+            logging.info(f"Using FileDatabase: {args.filedb}")
+        else:
+            # db = MySqlDB(stationId, dbInfo)
+            db = PostgreSqlDB(stationId, dbInfo)
+            logging.info(f"Using MySQL: {dbInfo.host}:{dbInfo.port}")
+
+    except Exception as e:
+        logging.error(f"Failed to connect to database: {dbInfo}")
+        exit(1)
+
+    try:
+        manager = Manager(stationId, db, status_callback=splashUpdate)
+    except Exception as e:
+        logging.error(f"Failed to correctly load the plugins: {e}")
+        exit(1)
 
     # Auto-hide splash after discovery completes
     if splash:
         QTimer.singleShot(1500, splash.close)
 
     with manager:
-
         try:
             MainShell(manager).cmdloop()
 
@@ -114,7 +123,7 @@ def runShell(argv):
             pass
 
         except Exception as e:
-            logging.exception("Unhandled exception in shell")
+            logging.exception(f"Unhandled exception in shell: {e}")
 
         finally:
             print("\nGoodbye")

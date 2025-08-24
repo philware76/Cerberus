@@ -1,12 +1,17 @@
 import hashlib
 import json
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Iterable, cast
 
 from Cerberus.database.baseDB import BaseDB
+from Cerberus.logConfig import getLogger
 from Cerberus.plugins.baseParameters import BaseParameter
 from Cerberus.plugins.basePlugin import BasePlugin
+
+logger = getLogger("CerberusDB")
+logger.setLevel(logging.INFO)
 
 
 @dataclass
