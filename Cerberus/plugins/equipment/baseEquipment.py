@@ -6,7 +6,10 @@ from Cerberus.plugins.commsParams import CommsParams
 
 
 class Identity():
-    def __init__(self, idString: str):
+    def __init__(self, idString: str | None = None):
+        if idString is None:
+            return
+
         parts = idString.split(",")
         if len(parts) == 4:
             self.manufacturer = parts[0].strip()
