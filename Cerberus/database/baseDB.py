@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Optional
+from typing import Iterable
 
-from Cerberus.plugins.baseParameters import BaseParameter
 from Cerberus.plugins.basePlugin import BasePlugin
 
 

@@ -60,7 +60,7 @@ class SingleParentDelegationMixin:
     def detach_parent(self) -> None:
         if self._parent is not None:
             logging.debug("%s detached from parent %s", getattr(self, 'name', '<unnamed>'), self._parent.name)
-            
+
         self._parent = None
 
     def has_parent(self) -> bool:
@@ -87,7 +87,7 @@ class SingleParentDelegationMixin:
             try:
                 self.attach_parent(init['parent'])  # type: ignore[arg-type]
                 return True
-            
+
             except Exception:
                 logging.exception("Failed to attach provided parent")
                 return False
@@ -131,7 +131,7 @@ class SingleParentDelegationMixin:
     def _p(self) -> _SCPIParent:
         if self._parent is None:
             raise RuntimeError("SCPI parent not attached")
-        
+
         return self._parent
 
     # Delegated helpers (expected by rest of system if present) -----------------------
@@ -139,7 +139,7 @@ class SingleParentDelegationMixin:
         self._p().write(command)
 
     def read(self, bytes: int) -> str:  # type: ignore[override]
-        self._p().read(bytes)
+        return self._p().read(bytes)
 
     def query(self, command: str) -> str:  # type: ignore[override]
         return self._p().query(command)

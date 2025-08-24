@@ -1,11 +1,9 @@
-import json
 import os
 
 import pytest
 
 from Cerberus.common import DBInfo
-from Cerberus.database.genericDB import GenericDB
-from Cerberus.plugins.commsParams import CommsParams
+from Cerberus.database.mySqlDB import MySqlDB
 from Cerberus.plugins.equipment.signalGenerators.VSG60C.vsg60CEquipment import \
     VSG60C
 from Cerberus.plugins.equipment.spectrumAnalysers.BB60C.bb60CEquipment import \
@@ -28,7 +26,7 @@ def _dbinfo_from_env():
 def generic_db():
     dbi = _dbinfo_from_env()
     try:
-        gdb = GenericDB('TEST_STATION_GENERIC', dbi)
+        gdb = MySqlDB('TEST_STATION_GENERIC', dbi)
     except Exception as exc:  # e.g. connection error
         pytest.skip(f"MySQL not available for GenericDB tests: {exc}")
     yield gdb

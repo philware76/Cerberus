@@ -1,7 +1,7 @@
-# GenericDB Parameter Persistence
+# MySqlDB Parameter Persistence
 
 ## 1. Overview
-GenericDB provides a **normalized, content‑addressed persistence layer** for plugin parameter groups used by Cerberus equipment, product, and test plugins. Its design goals:
+MySqlDB provides a **normalized, content‑addressed persistence layer** for plugin parameter groups used by Cerberus equipment, product, and test plugins. Its design goals:
 
 - Avoid redundant storage of identical parameter group JSON blobs (global dedup by hash)
 - Maintain a **version history** per (station, plugin_type, plugin_name, group_name) identity
@@ -111,12 +111,12 @@ If upgrading from older schema:
 
 ## 9. Example Usage
 ```python
-from Cerberus.database.genericDB import GenericDB
+from Cerberus.database.MySqlDB import MySqlDB
 from Cerberus.common import DBInfo
 
 # Connect
 info = DBInfo(host='localhost', port=3306, username='user', password='pw', database='cerberus')
-db = GenericDB('STATION_A', info)
+db = MySqlDB('STATION_A', info)
 
 # Save a plugin's groups
 for plugin in equipment_plugins:
@@ -185,4 +185,4 @@ ORDER BY gs.id;
 | Pointer | Current version reference for an identity (current_group_setting) |
 
 ---
-Maintained by GenericDB. For questions or extension proposals, update this document alongside code changes to keep architecture knowledge synchronized.
+Maintained by MySqlDB. For questions or extension proposals, update this document alongside code changes to keep architecture knowledge synchronized.
