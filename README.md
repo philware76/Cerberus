@@ -38,7 +38,7 @@ Core architectural pillars:
 | Plugin discovery     | `PluginDiscovery`, `pluggy`                      | Dynamically imports & registers Equipment / Product / Test factories. |
 | Plugin lifecycle     | `BasePlugin` (+ specialisations)                 | Initialise → Configure → (Run / Use) → Finalise. |
 | Requirements resolve | `PluginService.getRequirements()`               | Determines & selects suitable Equipment for a Test. |
-| Execution            | `Executor.runTest()`                            | Injects Product (optional), initialises required Equipment, runs & finalises Test, returns Result object. |
+| Execution            | `Executor.runTest()`                            | Injects Product (optional), prepares required Equipment via `RequiredEquipment`, runs & finalises Test, returns Result object. |
 | Networking discovery | `EthDiscovery.search()`                         | Broadcast discovery to find candidate Products (NESIE devices). |
 | Persistence          | `GenericDB` (MySQL) / File DB (tests)            | Automatic parameter versioning & retrieval per station / plugin / group. |
 | Persistence          | `GenericDB` (MySQL) / File DB (tests)            | Automatic parameter versioning & retrieval per station / plugin / group. ([GenericDB details](Cerberus/database/README_GenericDB.md)) |
@@ -103,7 +103,10 @@ When you trigger a Test (via CLI command, plan execution, or programmatically):
 	 * Builds a candidate list for each type
 	 * Marks missing types (fast fail)
 	 * Selects one instance (policy: first match) per type
-4. Each selected Equipment is initialised if not already online.
+4. Each selected Equipment is initialised if not already online. `RequiredEquipment` handles:
+	- Cached reuse with a VISA health check (`_VISAHealthCheck`)
+	- Excluded candidate filtering
+	- Parent injection if a candidate declares `REQUIRED_PARENT` (`_prepare_dependencies`)
 5. Equipment instances injected into the Test (`test.provideEquip`).
 6. `test.run()` executes; any `TestError` is caught & logged.
 7. `test.finalise()` always called.
@@ -115,6 +118,19 @@ This yields a clear contract:
 * A test may produce PASS, FAIL, or SKIPPED (others extendable via `ResultStatus`).
 
 ---
+
+### 3.1 RequiredEquipment helper methods (overview)
+`Cerberus/requiredEquipment.py` now organises the selection/initialisation flow into small helpers:
+
+- `prepare(test, force_refresh=False)` – top‑level entry; iterates required types and assembles the map to inject via `test.provideEquip(...)`.
+- `_select_equipment_for_requirement(req_type, candidates, test, force_refresh)` – per‑type selection combining cache reuse and fresh initialisation.
+- `_filter_excluded_candidates(req_type, candidates)` – removes `excluded` instances and returns both pruned list and excluded names for logging.
+- `_reuse_cached_if_healthy(req_type)` – returns a cached instance to reuse (if healthy) and a `skip_instance` if the cached one failed the health check.
+- `_initialise_first_online(req_type, candidates, test, *, skip_instance=None)` – iterates candidates, prepares dependencies, calls `initialise(...)`, and returns the first success.
+- `_prepare_dependencies(equip)` – resolves the optional `REQUIRED_PARENT` relationship and injects the parent into the child's `initialise` payload.
+- `_VISAHealthCheck(equip)` – performs a light identity query for `VISADevice` subclasses; non‑VISA devices always pass.
+
+
 
 ## 4. Product Discovery (Ethernet)
 

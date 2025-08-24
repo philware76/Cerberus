@@ -15,13 +15,15 @@ def createEquipmentPlugin():
 class NRP_Z22(BaseNRPPowerMeter):
     def __init__(self):
         super().__init__("NRP-Z22")
+        self.ACCEPTED_MODELS = ["NRP-Z22", "Z22", "NRPZ22"]
+        self.excluded = False
 
-    def setFrequency(self, freq: float) -> bool:
-        logging.debug("%s setting frequency to %s", self.name, freq)
-        return self.command(f"SENSe:FREQuency {freq}")
+    def setFrequency(self, frequencyMHz: float) -> bool:
+        logging.debug("%s setting frequency to %s MHz", self.name, frequencyMHz)
+        return self._p().command(f"SENSe:FREQuency {frequencyMHz * 1e6}")
 
     def getPowerReading(self) -> float:
-        resp = self.query("READ?")
+        resp = self._p().query("READ?")
         try:
             return float(resp.strip())
         except ValueError:

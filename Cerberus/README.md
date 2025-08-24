@@ -277,7 +277,7 @@ Some physical instruments expose *logical* sub‑devices that do not own an inde
 Core concepts:
 1. Facet equipment classes (e.g. `NRP_Z22`, `NRP_Z24`) declare a `REQUIRED_PARENT` string naming the parent instrument. Example: `REQUIRED_PARENT = "SMB100A"` in `BaseNRPPowerMeter`.
 2. Facet devices do not inherit from `VISADevice` nor open sessions. Instead they delegate SCPI calls to the already‑initialised parent via a minimal structural protocol (write/query/command/operationComplete).
-3. Dependency preparation is performed centrally by the new `EquipmentDependencyResolver` (`Cerberus/equipmentDependencyResolver.py`) which is invoked from `RequiredEquipment` before calling `initialise()` on a candidate. It:
+3. Dependency preparation is performed inline by `RequiredEquipment` (method `_prepare_dependencies`) before calling `initialise()` on a candidate. It:
    - Looks for `REQUIRED_PARENT` on the candidate.
    - Finds the parent instance via `PluginService`.
    - Initialises the parent first (if not already initialised).
@@ -298,14 +298,13 @@ Fallback / Error Handling:
 
 Debug tracing example (simplified):
 ```
-DEBUG dependencyResolver: Injected SMB100A into NRP-Z22
+DEBUG requiredEquipment: Injected SMB100A into NRP-Z22
 DEBUG requiredEquipment: NRP-Z22 (#1/1) initialised for requirement BasePowerMeter
 ```
 
 Implementation Files:
-- `plugins/equipment/powerMeters/RohdeSchwarz/NRP/baseNPRPowerMeter.py` – refactored to facet model & declares `REQUIRED_PARENT`.
-- `equipmentDependencyResolver.py` – new resolver component.
-- `requiredEquipment.py` – now delegates dependency work to the resolver instead of inline logic.
+- `plugins/equipment/powerMeters/RohdeSchwarz/NRP/baseNPRPowerMeter.py` – facet model & declares `REQUIRED_PARENT`.
+- `requiredEquipment.py` – contains the dependency preparation logic (`_prepare_dependencies`).
 
 Limitations (current scope):
 - Only a single parent is honoured (first element). Multi‑parent or dependency cycles are not yet supported (not needed for current hardware topology).

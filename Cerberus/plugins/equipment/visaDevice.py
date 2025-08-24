@@ -33,7 +33,7 @@ class VISADevice(CommsInterface):
 
     def open(self) -> TCPIPInstrument | None:
         try:
-            logger.debug(f"Opening VISA resource: {self.resource}")
+            logger.debug("Opening VISA resource: %s", self.resource)
             resource = self.rm.open_resource(self.resource, read_termination='\n', write_termination='\n')
             self.instrument = cast(TCPIPInstrument, resource)
 
@@ -43,7 +43,7 @@ class VISADevice(CommsInterface):
             return self.instrument
 
         except (visa.errors.VisaIOError, Exception) as e:
-            logger.error(f"Failed to open resource: {self.resource} - {e}")
+            logger.error("Failed to open resource: %s - %s", self.resource, e)
             return None
 
     def close(self) -> bool:
@@ -51,19 +51,19 @@ class VISADevice(CommsInterface):
             return True
 
         try:
-            logger.debug(f"Closing VISA resource: {self.resource}")
+            logger.debug("Closing VISA resource: %s", self.resource)
             self.instrument.close()
             return True
 
         except (visa.errors.VisaIOError, Exception) as e:
-            logger.error(f"Failed to close resource: {self.resource} - {e}")
+            logger.error("Failed to close resource: %s - %s", self.resource, e)
             return False
 
     def write(self, command: str):
         if self.instrument is None:
             raise EquipmentError("Instrument is not instantiated.")
 
-        logger.debug(f"{self.resource} - Write {command}")
+        logger.debug("%s - Write %s", self.resource, command)
         try:
             if self.instrument.write(command) == 0:
                 raise EquipmentError(f"Failed to send '{command}'")
@@ -75,28 +75,28 @@ class VISADevice(CommsInterface):
         if self.instrument is None:
             raise EquipmentError("Instrument is not instantiated.")
 
-        logger.debug(f"{self.resource} - Read...")
+        logger.debug("%s - Read...", self.resource)
         try:
             resp = repr(self.instrument.read_bytes(bytes))
 
         except visa.errors.VisaIOError as e:
             raise EquipmentError(f"Failed to read from device'") from e
 
-        logger.debug(f"{self.resource} - Response: {resp}")
+        logger.debug("%s - Response: %s", self.resource, resp)
         return resp
 
     def query(self, command: str) -> str:
         if self.instrument is None:
             raise EquipmentError("Instrument is not instantiated.")
 
-        logger.debug(f"{self.resource} - Query: {command}")
+        logger.debug("%s - Query: %s", self.resource, command)
         try:
             resp = self.instrument.query(command)
 
         except visa.errors.VisaIOError as e:
             raise EquipmentError(f"Failed to query '{command}'") from e
 
-        logger.debug(f"{self.resource} - Response: {resp}")
+        logger.debug("%s - Response: %s", self.resource, resp)
         return resp
 
     def operationComplete(self) -> bool:
@@ -109,12 +109,12 @@ class VISADevice(CommsInterface):
 
         try:
             complete = int(resp)
-            logger.debug(f"{self.resource} - *OPC? => {complete}")
+            logger.debug("%s - *OPC? => %s", self.resource, complete)
             if complete == 1:
                 return True
 
         except ValueError:
-            logger.error(f"{self.resource} Invalid response from *OPC? [{resp}]")
+            logger.error("%s Invalid response from *OPC? [%s]", self.resource, resp)
             return False
 
         raise EquipmentError("Failed to get operation complete")
@@ -170,5 +170,6 @@ class VISADevice(CommsInterface):
                         break
         finally:
             inst.timeout = original
-        logger.debug(f"{self.resource} - Drained {discarded} bytes from buffer")
+
+        logger.debug("%s - Drained %s bytes from buffer", self.resource, discarded)
         return discarded

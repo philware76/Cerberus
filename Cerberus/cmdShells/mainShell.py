@@ -15,7 +15,7 @@ from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo, dwell
 from Cerberus.database.fileDatabase import FileDatabase
-from Cerberus.database.genericDB import GenericDB
+from Cerberus.database.mySqlDB import MySqlDB
 from Cerberus.logConfig import setupLogging
 from Cerberus.manager import Manager
 
@@ -89,7 +89,7 @@ def runShell(argv):
         logging.info(f"Using FileDatabase: {args.filedb}")
     else:
         # db = Database(stationId, dbInfo)
-        db = GenericDB(stationId, dbInfo)
+        db = MySqlDB(stationId, dbInfo)
         logging.info(f"Using MySQL: {dbInfo.host}:{dbInfo.port}")
 
     # Provide status callback if splash exists
