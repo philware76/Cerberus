@@ -70,20 +70,20 @@ class FileDB(CerberusDB):
         """Save a group's parameter values."""
         with self._lock:
             data = self._load_data()
-            
+
             # Compute hash and canonical JSON
             hash_hex, canonical_json = self.compute_group_hash(values_map)
-            
+
             # Get or create group identity
             identity_key = self._get_group_identity_key(plugin_type, plugin_name, group_name)
-            
+
             # Check if content with this hash already exists
             content_id = None
             for cid, content in data["group_content"].items():
                 if content["group_hash"] == hash_hex:
                     content_id = int(cid)
                     break
-            
+
             # Create new content if not found
             if content_id is None:
                 content_id = self._get_next_id(data)
@@ -91,60 +91,60 @@ class FileDB(CerberusDB):
                     "group_hash": hash_hex,
                     "group_json": canonical_json
                 }
-            
+
             # Get or create group identity ID
             if identity_key in data["group_identities"]:
                 identity_id = data["group_identities"][identity_key]
             else:
                 identity_id = self._get_next_id(data)
                 data["group_identities"][identity_key] = identity_id
-            
+
             # Update or create group settings
             settings_id = self._get_next_id(data)
             data["group_settings"][str(settings_id)] = {
                 "group_identity_id": identity_id,
                 "content_id": content_id
             }
-            
+
             # Clean up old settings for this identity
             to_remove = []
             for sid, settings in data["group_settings"].items():
                 if settings["group_identity_id"] == identity_id and int(sid) != settings_id:
                     to_remove.append(sid)
-            
+
             for sid in to_remove:
                 del data["group_settings"][sid]
-            
+
             self._save_data(data)
 
     def _load_group_json(self, plugin_type: str, plugin_name: str, group_name: str) -> dict:
         """Load a group's parameter values."""
         with self._lock:
             data = self._load_data()
-            
+
             identity_key = self._get_group_identity_key(plugin_type, plugin_name, group_name)
-            
+
             # Find the group identity
             if identity_key not in data["group_identities"]:
                 return {}
-            
+
             identity_id = data["group_identities"][identity_key]
-            
+
             # Find the current settings for this identity
             content_id = None
             for settings in data["group_settings"].values():
                 if settings["group_identity_id"] == identity_id:
                     content_id = settings["content_id"]
                     break
-            
+
             if content_id is None:
                 return {}
-            
+
             # Get the content
             content = data["group_content"].get(str(content_id))
             if not content:
                 return {}
-            
+
             try:
                 return json.loads(content["group_json"])
             except json.JSONDecodeError:
@@ -163,77 +163,77 @@ class FileDB(CerberusDB):
         """Delete all data for a specific plugin."""
         with self._lock:
             data = self._load_data()
-            
+
             # Find all identity keys for this plugin
             prefix = f"{self.station_id}:{plugin_type}:{plugin_name}:"
-            identity_keys_to_remove = [key for key in data["group_identities"].keys() 
-                                     if key.startswith(prefix)]
-            
+            identity_keys_to_remove = [key for key in data["group_identities"].keys()
+                                       if key.startswith(prefix)]
+
             # Get identity IDs to remove
             identity_ids_to_remove = [data["group_identities"][key] for key in identity_keys_to_remove]
-            
+
             # Remove group identities
             for key in identity_keys_to_remove:
                 del data["group_identities"][key]
-            
+
             # Remove group settings for these identities
             settings_to_remove = []
             for sid, settings in data["group_settings"].items():
                 if settings["group_identity_id"] in identity_ids_to_remove:
                     settings_to_remove.append(sid)
-            
+
             for sid in settings_to_remove:
                 del data["group_settings"][sid]
-            
+
             # Note: We don't remove group_content as it might be referenced by other identities
-            
+
             self._save_data(data)
 
     def _delete_group_impl(self, plugin_type: str, plugin_name: str, group_name: str):
         """Delete data for a specific plugin group."""
         with self._lock:
             data = self._load_data()
-            
+
             identity_key = self._get_group_identity_key(plugin_type, plugin_name, group_name)
-            
+
             if identity_key not in data["group_identities"]:
                 return
-            
+
             identity_id = data["group_identities"][identity_key]
-            
+
             # Remove group identity
             del data["group_identities"][identity_key]
-            
+
             # Remove group settings for this identity
             settings_to_remove = []
             for sid, settings in data["group_settings"].items():
                 if settings["group_identity_id"] == identity_id:
                     settings_to_remove.append(sid)
-            
+
             for sid in settings_to_remove:
                 del data["group_settings"][sid]
-            
+
             self._save_data(data)
 
     def _drop_tables_safely(self, tables: list[str]) -> None:
         """Drop 'tables' (clear sections) in the file database."""
         with self._lock:
             data = self._load_data()
-            
+
             for table in tables:
                 if table in data:
                     if table == "next_id":
                         data[table] = 1
                     else:
                         data[table] = {}
-            
+
             self._save_data(data)
 
     def _find_duplicate_group_settings_impl(self) -> list[Any]:
         """Find duplicate group settings (file-based implementation)."""
         with self._lock:
             data = self._load_data()
-            
+
             # Group settings by identity_id
             identity_groups = {}
             for sid, settings in data["group_settings"].items():
@@ -241,7 +241,7 @@ class FileDB(CerberusDB):
                 if identity_id not in identity_groups:
                     identity_groups[identity_id] = []
                 identity_groups[identity_id].append((int(sid), settings))
-            
+
             # Find duplicates (more than one setting per identity)
             duplicates = []
             for identity_id, settings_list in identity_groups.items():
@@ -251,39 +251,39 @@ class FileDB(CerberusDB):
                     keep_id = settings_list[0][0]
                     content_id = settings_list[0][1]["content_id"]
                     all_ids = [str(sid) for sid, _ in settings_list]
-                    
+
                     # Format: (group_identity_id, content_id, count, keep_id, all_ids_csv)
                     duplicates.append((identity_id, content_id, len(settings_list), keep_id, ",".join(all_ids)))
-            
+
             return duplicates
 
     def _cleanup_single_duplicate_set_impl(self, group_identity_id: int, keep_id_int: int,
-                                         dup_ids: list[int], dry_run: bool) -> int:
+                                           dup_ids: list[int], dry_run: bool) -> int:
         """Clean up a single duplicate set."""
         if dry_run:
             return len(dup_ids)
-        
+
         with self._lock:
             data = self._load_data()
-            
+
             deleted_count = 0
             for dup_id in dup_ids:
                 if str(dup_id) in data["group_settings"]:
                     del data["group_settings"][str(dup_id)]
                     deleted_count += 1
-            
+
             if deleted_count > 0:
                 self._save_data(data)
-            
+
             return deleted_count
 
     def _get_group_content_rows(self) -> list[tuple[Any, Any, Any]]:
         """Get all rows from group_content 'table'."""
         with self._lock:
             data = self._load_data()
-            
+
             rows = []
             for cid, content in data["group_content"].items():
                 rows.append((int(cid), content["group_hash"], content["group_json"]))
-            
+
             return rows
