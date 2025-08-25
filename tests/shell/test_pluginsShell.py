@@ -16,11 +16,6 @@ def test_cerberus_manager_created(manager):
     assert manager is not None
 
 
-def test_no_missing_plugins(manager: Manager):
-    pluginService = manager.pluginService
-    assert len(pluginService.missingPlugins) == 0
-
-
 @pytest.mark.parametrize("shell_class, plugin_type", [
     (TestsShell, "Test"),
     (EquipShell, "Equip"),

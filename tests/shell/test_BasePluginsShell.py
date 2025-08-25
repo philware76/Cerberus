@@ -82,7 +82,7 @@ def test_BasePluginShell():
     with StringIO() as buf, redirect_stdout(buf):
         shell.do_setGroupParams(line)
         output = buf.getvalue()
-    assert "New RF Params parameters" in output
+    assert "Updated RF Params parameters" in output
     assert str(g2Param1.value) in output
 
     # Confirm plugin parameter actually updated
