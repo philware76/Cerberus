@@ -74,7 +74,7 @@ class PostgreSqlDB(CerberusDB):
         return error_msg
 
     def connectToDatabase(self, dbInfo):
-        logger.info(f"Connecting to PostgreSQL database at {dbInfo.host}:{dbInfo.port}")
+        logger.info(f"Connecting to PostgreSQL database at {dbInfo.host}:{dbInfo.port}...")
         connection_string = f"host={dbInfo.host} port={dbInfo.port} dbname={dbInfo.database} user={dbInfo.username} password={dbInfo.password}"
         self.conn = psycopg.connect(
             connection_string,
