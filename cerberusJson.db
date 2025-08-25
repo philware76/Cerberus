@@ -1,0 +1,121 @@
+{
+  "group_identities": {
+    "CERB_STATION_001:equipment:RX Cal Cable:Cal Cable": 2,
+    "CERB_STATION_001:equipment:TX Cal Cable:Cal Cable": 5,
+    "CERB_STATION_001:equipment:CT200:Communication": 8,
+    "CERB_STATION_001:equipment:NanoDAC:Communication": 10,
+    "CERB_STATION_001:equipment:NanoDAC:Modbus": 13,
+    "CERB_STATION_001:equipment:N1913A:Communication": 15,
+    "CERB_STATION_001:equipment:NRP-Z22:Communication": 17,
+    "CERB_STATION_001:equipment:NRP-Z24:Communication": 19,
+    "CERB_STATION_001:equipment:RF Switch:Communication": 22,
+    "CERB_STATION_001:equipment:SMB100A:Communication": 24,
+    "CERB_STATION_001:equipment:VSG60:Communication": 26,
+    "CERB_STATION_001:equipment:Simple Equipment #1:Communication": 28,
+    "CERB_STATION_001:equipment:BB60C:Communication": 30,
+    "CERB_STATION_001:test:Simple Test #1:RF Parameters": 33,
+    "CERB_STATION_001:test:Cable Calibration:Calibration": 36,
+    "CERB_STATION_001:test:Tx Level:RF Parameters": 39
+  },
+  "group_content": {
+    "1": {
+      "group_hash": "0cb738f3cf70cba73cdf4b72c6e5242da097b19887f4baf157c7b00ec477ac47",
+      "group_json": "{\"Coeffs\":\"{[]}\",\"Role\":\"RX\",\"Serial\":\"\",\"Start\":100,\"Stop\":3500}"
+    },
+    "4": {
+      "group_hash": "974c295b9b3ad519973440a55cc205368fe26d5e575064fff06ddbc57e990ed4",
+      "group_json": "{\"Coeffs\":\"{[]}\",\"Role\":\"TX\",\"Serial\":\"\",\"Start\":100,\"Stop\":3500}"
+    },
+    "7": {
+      "group_hash": "8340e9a52a5799eb76994795a5c48487e717026b1bd3e41360cddf7fc2ee59fb",
+      "group_json": "{\"IP Address\":\"127.0.0.1\",\"Port\":5025,\"Timeout\":1000}"
+    },
+    "12": {
+      "group_hash": "d14fa822f1729238cd43ff8bfe6fabcac5ef6aa801908bc5c7559c570140c7bc",
+      "group_json": "{\"Retries\":2,\"Unit ID\":1}"
+    },
+    "21": {
+      "group_hash": "9e37ec7ec294f626405bddbe6f25babf2cafdab99ad952ff3246250182eef880",
+      "group_json": "{\"IP Address\":\"127.0.0.1\",\"Port\":80,\"Timeout\":1000}"
+    },
+    "32": {
+      "group_hash": "def8d4b53dee21edb07485f75f49ddb96ff3dd3df8a53f48f95b1d750115b2cd",
+      "group_json": "{\"Number\":0.0,\"Option\":true,\"Select\":\"SimpleEnum.One\",\"Text\":\"This is text\"}"
+    },
+    "35": {
+      "group_hash": "240c4dc096a989aae3c7b477dfe59506c158abe9767a7a7f3203df2ed0706f5e",
+      "group_json": "{\"Atten\":40,\"Chebyshev Degree\":8,\"MinSamples\":10,\"Power\":0,\"Start\":100,\"Step\":100,\"Stop\":3500}"
+    },
+    "38": {
+      "group_hash": "4e0e0d26bc23a370c9366b6a989dd42dc13f3cfa651b8267fededadd57eeede0",
+      "group_json": "{\"Cable Attn\":10.0,\"Coeffs\":\"{\\\"coeffs\\\": [-1.609141417150715, -0.6757908354285234, 0.058674614875468135, -0.0031915753722614125, -0.021765415467106336, 0.016691035032112896, -0.013077298931293337, 0.004910903969558918, -0.008379936478786022], \\\"domain\\\": [600.0, 3500.0], \\\"window\\\": [-1.0, 1.0]}\",\"Enable cable calibration\":true,\"Tx Attn\":25}"
+    }
+  },
+  "group_settings": {
+    "3": {
+      "group_identity_id": 2,
+      "content_id": 1
+    },
+    "6": {
+      "group_identity_id": 5,
+      "content_id": 4
+    },
+    "9": {
+      "group_identity_id": 8,
+      "content_id": 7
+    },
+    "11": {
+      "group_identity_id": 10,
+      "content_id": 7
+    },
+    "14": {
+      "group_identity_id": 13,
+      "content_id": 12
+    },
+    "16": {
+      "group_identity_id": 15,
+      "content_id": 7
+    },
+    "18": {
+      "group_identity_id": 17,
+      "content_id": 7
+    },
+    "20": {
+      "group_identity_id": 19,
+      "content_id": 7
+    },
+    "23": {
+      "group_identity_id": 22,
+      "content_id": 21
+    },
+    "25": {
+      "group_identity_id": 24,
+      "content_id": 7
+    },
+    "27": {
+      "group_identity_id": 26,
+      "content_id": 7
+    },
+    "29": {
+      "group_identity_id": 28,
+      "content_id": 7
+    },
+    "31": {
+      "group_identity_id": 30,
+      "content_id": 7
+    },
+    "34": {
+      "group_identity_id": 33,
+      "content_id": 32
+    },
+    "37": {
+      "group_identity_id": 36,
+      "content_id": 35
+    },
+    "40": {
+      "group_identity_id": 39,
+      "content_id": 38
+    }
+  },
+  "next_id": 41
+}
