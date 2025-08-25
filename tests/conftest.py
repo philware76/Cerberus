@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from iniconfig import IniConfig
 
-from Cerberus.database.fileDatabase import FileDatabase
+from Cerberus.database.fileDB import FileDB
 from Cerberus.manager import Manager
 
 
@@ -47,5 +47,5 @@ def manager():
         except Exception:  # Broad: missing section/key or parse issue
             pass
 
-    fileDB = FileDatabase("test.db", station_identity=station_id)
+    fileDB = FileDB(station_id, "testDatabase.json")
     return Manager(station_id, fileDB)
