@@ -19,6 +19,7 @@ The FileDB implementation stores data in a JSON file with the following structur
 - group_identities: Maps (station_id, plugin_type, plugin_name, group_name) to IDs
 - group_content: Stores parameter content with SHA256 hashes for integrity
 - group_settings: Links identities to content, allowing for deduplication
+- test_results: Stores test execution results organized by test name
 - next_id: Counter for generating unique IDs
 """
 
@@ -145,7 +146,7 @@ class TestFileDBBasics:
         # Check that the file has the correct structure
         with open(temp_db_file, 'r') as f:
             data = json.load(f)
-            expected_keys = {"group_identities", "group_content", "group_settings", "next_id"}
+            expected_keys = {"group_identities", "group_content", "group_settings", "test_results", "next_id"}
             assert set(data.keys()) == expected_keys
             assert data["next_id"] == 1
 

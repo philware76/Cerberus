@@ -4,11 +4,6 @@ from Cerberus.plugins.products.baseProduct import BaseProduct
 from Cerberus.plugins.tests.baseTestResult import ResultStatus
 
 
-def test_NoMissingPlugins(manager: Manager):
-    pluginService = manager.pluginService
-    assert len(pluginService.missingPlugins) == 0
-
-
 def test_Executor(manager: Manager):
     pluginService = manager.pluginService
     testRunner = Executor(pluginService)

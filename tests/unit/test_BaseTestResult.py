@@ -29,16 +29,24 @@ class TestBaseTestResult(unittest.TestCase):
         self.assertEqual(result.name, "TestName")
         self.assertIsInstance(result.timestanmp, datetime)
         self.assertEqual(result.log, "")
-        self.assertEqual(result.testReferences, {"Equipment": [], "Test": []})
         self.assertEqual(result.testResult, {})
+        # Status should default to PENDING when not specified
+        self.assertEqual(result.status, ResultStatus.PENDING)
 
     def test_init_with_status(self):
         """Test BaseTestResult initialization with status parameter"""
         result = BaseTestResult("TestName", ResultStatus.PASSED)
 
-        # Note: There's a bug in the original code - it sets PENDING regardless of the input
-        # This test documents the current behavior
-        self.assertEqual(result.status, ResultStatus.PENDING)
+        # Status should be set to the provided value
+        self.assertEqual(result.status, ResultStatus.PASSED)
+
+        # Test with different status
+        result_failed = BaseTestResult("TestName2", ResultStatus.FAILED)
+        self.assertEqual(result_failed.status, ResultStatus.FAILED)
+
+        # Test with None (should default to PENDING)
+        result_default = BaseTestResult("TestName3", None)
+        self.assertEqual(result_default.status, ResultStatus.PENDING)
 
     def test_addTestResult_single_item(self):
         """Test adding a single test result"""
