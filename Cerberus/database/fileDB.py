@@ -34,6 +34,7 @@ class FileDB(CerberusDB):
             "group_identities": {},  # key: (station_id, plugin_type, plugin_name, group_name) -> id
             "group_content": {},     # key: id -> {"group_hash": str, "group_json": str}
             "group_settings": {},    # key: id -> {"group_identity_id": int, "content_id": int}
+            "test_results": {},      # key: test_name -> list of test results
             "next_id": 1
         }
 
@@ -287,3 +288,168 @@ class FileDB(CerberusDB):
                 rows.append((int(cid), content["group_hash"], content["group_json"]))
 
             return rows
+
+    # ===== TEST RESULTS IMPLEMENTATION =====
+
+    def _save_test_result_impl(self, test_name: str, status: str, timestamp,
+                               log_text: str | None, compressed_log: bytes | None,
+                               test_result_json: str) -> int:
+        """Save a test result to the file database."""
+        import base64
+
+        with self._lock:
+            data = self._load_data()
+
+            # Ensure test_results structure exists
+            if "test_results" not in data:
+                data["test_results"] = {}
+
+            if test_name not in data["test_results"]:
+                data["test_results"][test_name] = []
+
+            # Get next ID
+            result_id = self._get_next_id(data)
+
+            # Prepare the test result record
+            result_record = {
+                "id": result_id,
+                "station_id": self.station_id,
+                "status": status,
+                "timestamp": timestamp.isoformat() if timestamp else None,
+                "log_text": log_text,
+                # Encode compressed bytes as base64 string for JSON storage
+                "compressed_log": base64.b64encode(compressed_log).decode('ascii') if compressed_log else None,
+                "test_result_json": test_result_json
+            }
+
+            # Add to the test results
+            data["test_results"][test_name].append(result_record)
+
+            # Sort by timestamp (newest first) and limit to reasonable size
+            data["test_results"][test_name].sort(key=lambda x: x["timestamp"] or "", reverse=True)
+            if len(data["test_results"][test_name]) > 10000:  # Keep max 10k results
+                data["test_results"][test_name] = data["test_results"][test_name][:10000]
+
+            self._save_data(data)
+            return result_id
+
+    def _load_test_results_impl(self, test_name: str, limit: int, offset: int) -> list[dict]:
+        """Load test results from the file database."""
+        import base64
+        from datetime import datetime
+
+        with self._lock:
+            data = self._load_data()
+
+            if "test_results" not in data or test_name not in data["test_results"]:
+                return []
+
+            results = data["test_results"][test_name]
+
+            # Apply offset and limit
+            sliced_results = results[offset:offset + limit]
+
+            # Process results for return
+            processed_results = []
+            for result in sliced_results:
+                processed = dict(result)
+
+                # Decompress log if needed
+                if processed.get("compressed_log") and not processed.get("log_text"):
+                    try:
+                        compressed_data = base64.b64decode(processed["compressed_log"])
+                        processed["log_text"] = self._decompress_log(compressed_data)
+                    except Exception as e:
+                        logger.warning(f"Failed to decompress log for result {processed.get('id')}: {e}")
+
+                # Remove compressed_log from response to save space
+                processed.pop("compressed_log", None)
+
+                # Parse timestamp
+                if processed.get("timestamp"):
+                    try:
+                        processed["timestamp"] = datetime.fromisoformat(processed["timestamp"])
+                    except Exception:
+                        pass  # Keep as string if parsing fails
+
+                processed_results.append(processed)
+
+            return processed_results
+
+    def _get_test_result_by_id_impl(self, test_name: str, result_id: int) -> dict | None:
+        """Get a specific test result by ID."""
+        with self._lock:
+            data = self._load_data()
+
+            if "test_results" not in data or test_name not in data["test_results"]:
+                return None
+
+            # Find the result with matching ID
+            for result in data["test_results"][test_name]:
+                if result.get("id") == result_id:
+                    # Process the result similar to _load_test_results_impl
+                    processed = dict(result)
+
+                    # Decompress log if needed
+                    if processed.get("compressed_log") and not processed.get("log_text"):
+                        try:
+                            import base64
+                            compressed_data = base64.b64decode(processed["compressed_log"])
+                            processed["log_text"] = self._decompress_log(compressed_data)
+                        except Exception as e:
+                            logger.warning(f"Failed to decompress log for result {result_id}: {e}")
+
+                    processed.pop("compressed_log", None)
+
+                    # Parse timestamp
+                    if processed.get("timestamp"):
+                        try:
+                            from datetime import datetime
+                            processed["timestamp"] = datetime.fromisoformat(processed["timestamp"])
+                        except Exception:
+                            pass
+
+                    return processed
+
+            return None
+
+    def _delete_test_result_impl(self, test_name: str, result_id: int) -> bool:
+        """Delete a specific test result."""
+        with self._lock:
+            data = self._load_data()
+
+            if "test_results" not in data or test_name not in data["test_results"]:
+                return False
+
+            # Find and remove the result
+            results = data["test_results"][test_name]
+            for i, result in enumerate(results):
+                if result.get("id") == result_id:
+                    del results[i]
+                    self._save_data(data)
+                    return True
+
+            return False
+
+    def _cleanup_old_test_results_impl(self, test_name: str, keep_count: int) -> int:
+        """Clean up old test results, keeping only the most recent ones."""
+        with self._lock:
+            data = self._load_data()
+
+            if "test_results" not in data or test_name not in data["test_results"]:
+                return 0
+
+            results = data["test_results"][test_name]
+
+            if len(results) <= keep_count:
+                return 0
+
+            # Sort by timestamp (newest first)
+            results.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+
+            # Keep only the most recent
+            deleted_count = len(results) - keep_count
+            data["test_results"][test_name] = results[:keep_count]
+
+            self._save_data(data)
+            return deleted_count
