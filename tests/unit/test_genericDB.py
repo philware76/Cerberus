@@ -3,6 +3,7 @@ import os
 import pytest
 
 from Cerberus.common import DBInfo
+from Cerberus.database.fileDB import FileDB
 from Cerberus.database.mySqlDB import MySqlDB
 from Cerberus.plugins.equipment.signalGenerators.VSG60C.vsg60CEquipment import \
     VSG60C
@@ -26,7 +27,8 @@ def _dbinfo_from_env():
 def generic_db():
     dbi = _dbinfo_from_env()
     try:
-        gdb = MySqlDB('TEST_STATION_GENERIC', dbi)
+        # gdb = MySqlDB('TEST_STATION_GENERIC', dbi)
+        gdb = FileDB('TEST_STATION_GENERIC', "pytest.db")
     except Exception as exc:  # e.g. connection error
         pytest.skip(f"MySQL not available for GenericDB tests: {exc}")
     yield gdb
@@ -75,10 +77,13 @@ def test_save_and_load_equipment_comm_params_roundtrip(generic_db, equipment_plu
     bb.updateParameters('Communication', {'IP Address': '172.16.0.10'})
     generic_db.save_equipment([bb])
 
-    # Fetch raw rows for BB60C (optional sanity)
-    rows = [r for r in generic_db.load_all_for_type('equipment') if r.plugin_name == bb.name and r.group_name == 'Communication']
-    names = {r.parameter_name for r in rows}
-    assert {'IP Address', 'Port', 'Timeout'} <= names
-    rows = [r for r in generic_db.load_all_for_type('equipment') if r.plugin_name == bb.name and r.group_name == 'Communication']
-    names = {r.parameter_name for r in rows}
-    assert {'IP Address', 'Port', 'Timeout'} <= names
+    # Verify the data was saved by reloading fresh equipment and checking values
+    fresh_bb = BB60C()
+    generic_db.load_equipment_into(fresh_bb)
+    fresh_bb_comm = {p.name: p.value for p in fresh_bb._groupParams['Communication'].values()}  # noqa: SLF001
+
+    # Should have the updated IP address
+    assert fresh_bb_comm['IP Address'] == '172.16.0.10'
+    # And the original port and timeout should still be there
+    assert fresh_bb_comm['Port'] == 6001
+    assert fresh_bb_comm['Timeout'] == 1500

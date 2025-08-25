@@ -183,6 +183,31 @@ class PostgreSqlDB(CerberusDB):
             except psycopg.Error:
                 pass  # Index might already exist
 
+            # Test results table for storing test execution results
+            self._execute_catch_table_already_exists(cur,
+                                                     """
+                CREATE TABLE IF NOT EXISTS test_results (
+                    id BIGSERIAL PRIMARY KEY,
+                    station_id VARCHAR(100) NOT NULL,
+                    test_name VARCHAR(255) NOT NULL,
+                    status VARCHAR(50) NOT NULL,
+                    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    log_text TEXT NULL,
+                    compressed_log BYTEA NULL,
+                    test_result_json JSONB NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+                                                     )
+
+            # Create indexes for test_results
+            try:
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_test_name_timestamp ON test_results(test_name, timestamp DESC)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_station_test ON test_results(station_id, test_name)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON test_results(timestamp DESC)")
+            except psycopg.Error:
+                pass  # Index might already exist
+
             self.conn.commit()
         finally:
             cur.close()
@@ -382,6 +407,7 @@ class PostgreSqlDB(CerberusDB):
             'group_settings',
             'group_content',
             'group_identity',
+            'test_results',
             'equipment',
             'station',
             'testplans',
@@ -434,6 +460,180 @@ class PostgreSqlDB(CerberusDB):
         try:
             cur.execute("SELECT id, group_hash, group_json FROM group_content")
             return cur.fetchall()  # type: ignore[return-value]
+        finally:
+            cur.close()
+
+    # ===== TEST RESULTS IMPLEMENTATION =====
+
+    def _save_test_result_impl(self, test_name: str, status: str, timestamp,
+                               log_text: str | None, compressed_log: bytes | None,
+                               test_result_json: str) -> int:
+        """PostgreSQL-specific implementation for saving test results."""
+        cur = self.conn.cursor()
+        try:
+            cur.execute(
+                """
+                INSERT INTO test_results (station_id, test_name, status, timestamp, log_text, compressed_log, test_result_json)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (self.station_id, test_name, status, timestamp, log_text, compressed_log, test_result_json)
+            )
+            result = cur.fetchone()
+            result_id = result[0] if result else None
+            self.conn.commit()
+            return cast(int, result_id)
+        except psycopg.Error as err:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            logger.error(f"Failed to save test result for {test_name}: {err}")
+            raise
+        finally:
+            cur.close()
+
+    def _load_test_results_impl(self, test_name: str, limit: int, offset: int) -> list[dict]:
+        """PostgreSQL-specific implementation for loading test results."""
+        cur = self.conn.cursor(row_factory=dict_row)
+        try:
+            cur.execute(
+                """
+                SELECT id, station_id, test_name, status, timestamp, log_text, compressed_log, test_result_json, created_at
+                FROM test_results
+                WHERE station_id = %s AND test_name = %s
+                ORDER BY timestamp DESC, id DESC
+                LIMIT %s OFFSET %s
+                """,
+                (self.station_id, test_name, limit, offset)
+            )
+            results = cur.fetchall()
+
+            # Process results to handle compressed logs
+            processed_results = []
+            for result in results:
+                processed = cast(dict[str, Any], result)
+
+                # Decompress log if needed
+                if processed.get("compressed_log") and not processed.get("log_text"):
+                    try:
+                        compressed_data = cast(bytes, processed["compressed_log"])
+                        processed["log_text"] = self._decompress_log(compressed_data)
+                    except Exception as e:
+                        logger.warning(f"Failed to decompress log for result {processed.get('id')}: {e}")
+                        processed["log_text"] = "[Log decompression failed]"
+
+                # Remove compressed_log from response to save space
+                processed.pop("compressed_log", None)
+
+                processed_results.append(processed)
+
+            return processed_results
+        finally:
+            cur.close()
+
+    def _get_test_result_by_id_impl(self, test_name: str, result_id: int) -> dict | None:
+        """PostgreSQL-specific implementation for getting test result by ID."""
+        cur = self.conn.cursor(row_factory=dict_row)
+        try:
+            cur.execute(
+                """
+                SELECT id, station_id, test_name, status, timestamp, log_text, compressed_log, test_result_json, created_at
+                FROM test_results
+                WHERE station_id = %s AND test_name = %s AND id = %s
+                """,
+                (self.station_id, test_name, result_id)
+            )
+            result = cur.fetchone()
+
+            if not result:
+                return None
+
+            processed = cast(dict[str, Any], result)
+
+            # Decompress log if needed
+            if processed.get("compressed_log") and not processed.get("log_text"):
+                try:
+                    compressed_data = cast(bytes, processed["compressed_log"])
+                    processed["log_text"] = self._decompress_log(compressed_data)
+                except Exception as e:
+                    logger.warning(f"Failed to decompress log for result {result_id}: {e}")
+                    processed["log_text"] = "[Log decompression failed]"
+
+            # Remove compressed_log from response to save space
+            processed.pop("compressed_log", None)
+
+            return processed
+        finally:
+            cur.close()
+
+    def _delete_test_result_impl(self, test_name: str, result_id: int) -> bool:
+        """PostgreSQL-specific implementation for deleting a test result."""
+        cur = self.conn.cursor()
+        try:
+            cur.execute(
+                """
+                DELETE FROM test_results
+                WHERE station_id = %s AND test_name = %s AND id = %s
+                """,
+                (self.station_id, test_name, result_id)
+            )
+            deleted = cur.rowcount > 0
+            self.conn.commit()
+            return deleted
+        except psycopg.Error as err:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            logger.error(f"Failed to delete test result {result_id} for {test_name}: {err}")
+            raise
+        finally:
+            cur.close()
+
+    def _cleanup_old_test_results_impl(self, test_name: str, keep_count: int) -> int:
+        """PostgreSQL-specific implementation for cleaning up old test results."""
+        # Use regular cursor for simple ID selection
+        cur = self.conn.cursor()
+        try:
+            # First, get the IDs to delete (all except the most recent keep_count)
+            cur.execute(
+                """
+                SELECT id FROM test_results
+                WHERE station_id = %s AND test_name = %s
+                ORDER BY timestamp DESC, id DESC
+                OFFSET %s
+                """,
+                (self.station_id, test_name, keep_count)
+            )
+            rows = cur.fetchall()
+            # Extract IDs from tuples
+            ids_to_delete: list[int] = []
+            for row in rows:
+                id_value = row[0]  # type: ignore[misc]
+                ids_to_delete.append(cast(int, id_value))
+
+            if not ids_to_delete:
+                return 0
+
+            # Delete the old results using PostgreSQL's ANY operator
+            cur.execute(
+                """
+                DELETE FROM test_results
+                WHERE id = ANY(%s)
+                """,
+                (ids_to_delete,)
+            )
+            deleted_count = cur.rowcount
+            self.conn.commit()
+            return deleted_count
+        except psycopg.Error as err:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            logger.error(f"Failed to cleanup old test results for {test_name}: {err}")
+            raise
         finally:
             cur.close()
 
@@ -490,25 +690,23 @@ class PostgreSqlDB(CerberusDB):
     def _update_setting_references(self, group_identity_id: int, new_setting_id: int,
                                    old_setting_ids: list[int], cur) -> None:
         """Update current_group_setting to point to a new setting ID."""
-        placeholders = ','.join(['%s'] * len(old_setting_ids))
-        params: list[Any] = [new_setting_id, group_identity_id, *old_setting_ids]
         cur.execute(
-            f"""
+            """
             UPDATE current_group_setting
             SET setting_id=%s, updated_at=CURRENT_TIMESTAMP
-            WHERE group_identity_id=%s AND setting_id IN ({placeholders})
+            WHERE group_identity_id=%s AND setting_id = ANY(%s)
             """,
-            params
+            (new_setting_id, group_identity_id, old_setting_ids)
         )
 
     def _delete_rows_by_ids(self, table_ids: list[int], cur) -> int:
         """Delete rows from group_settings table by IDs and return count of deleted rows."""
         cur.execute(
-            f"""
+            """
             DELETE FROM group_settings
-            WHERE id IN ({','.join(['%s']*len(table_ids))})
+            WHERE id = ANY(%s)
             """,
-            tuple(table_ids)
+            (table_ids,)
         )
         return cur.rowcount
 
