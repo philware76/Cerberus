@@ -52,70 +52,70 @@
     }
   },
   "group_settings": {
-    "3": {
+    "41": {
       "group_identity_id": 2,
       "content_id": 1
     },
-    "6": {
+    "42": {
       "group_identity_id": 5,
       "content_id": 4
     },
-    "9": {
+    "43": {
       "group_identity_id": 8,
       "content_id": 7
     },
-    "11": {
+    "44": {
       "group_identity_id": 10,
       "content_id": 7
     },
-    "14": {
+    "45": {
       "group_identity_id": 13,
       "content_id": 12
     },
-    "16": {
+    "46": {
       "group_identity_id": 15,
       "content_id": 7
     },
-    "18": {
+    "47": {
       "group_identity_id": 17,
       "content_id": 7
     },
-    "20": {
+    "48": {
       "group_identity_id": 19,
       "content_id": 7
     },
-    "23": {
+    "49": {
       "group_identity_id": 22,
       "content_id": 21
     },
-    "25": {
+    "50": {
       "group_identity_id": 24,
       "content_id": 7
     },
-    "27": {
+    "51": {
       "group_identity_id": 26,
       "content_id": 7
     },
-    "29": {
+    "52": {
       "group_identity_id": 28,
       "content_id": 7
     },
-    "31": {
+    "53": {
       "group_identity_id": 30,
       "content_id": 7
     },
-    "34": {
+    "54": {
       "group_identity_id": 33,
       "content_id": 32
     },
-    "37": {
+    "55": {
       "group_identity_id": 36,
       "content_id": 35
     },
-    "40": {
+    "56": {
       "group_identity_id": 39,
       "content_id": 38
     }
   },
-  "next_id": 41
+  "next_id": 57
 }

@@ -55,14 +55,26 @@ class MainShell(BaseShell):
         PlanShell(self.manager).cmdloop()
 
 
-def loadIni(inifile: str = "cerberus.ini") -> Tuple[str, str, DBInfo]:
+def loadIni(inifile: str = "cerberus.ini", db_override: str | None = None) -> Tuple[str, str, DBInfo]:
     ini = iniconfig.IniConfig(inifile)
     if ini is None:
         logger.error(f"Failed to load {inifile} file!")
         exit(1)
 
     stationId = ini["Cerberus"]["identity"]
-    dbName = ini["Cerberus"]["database"]
+
+    # Use database override if provided, otherwise use the one from ini file
+    if db_override:
+        dbName = db_override
+        logger.info(f"Using database override: {dbName}")
+    else:
+        dbName = ini["Cerberus"]["database"]
+
+    # Validate that the database section exists in the ini file
+    if dbName not in ini:
+        logger.error(f"Database configuration '{dbName}' not found in {inifile}")
+        exit(1)
+
     dbInfo = DBInfo(
         host=ini[dbName]["host"],
         port=int(ini[dbName]["port"]),
@@ -80,12 +92,13 @@ SPLASH_DELAY = 0.05
 def runShell(argv):
     parser = argparse.ArgumentParser(description="Cerberus Shell")
     parser.add_argument('-i', '--inifile', type=str, default='cerberus.ini', help='configuration filename (default: cerberus.ini)')
+    parser.add_argument('--db', type=str, help='override database name from ini file (e.g., FileDatabase, MySqlDatabase, PostgreSqlDatabase)')
     args, unknown = parser.parse_known_args(argv)
     splash = show_image_splash(argv)
 
     try:
         setupLogging(logging.DEBUG)
-        stationId, dbName, dbInfo = loadIni(args.inifile)
+        stationId, dbName, dbInfo = loadIni(args.inifile, args.db)
         logger.info(f"Cerberus:{stationId}")
     except Exception as e:
         logger.error(f"Failed to read Ini file: {e}")

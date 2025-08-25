@@ -84,37 +84,76 @@ class RequiredEquipment:
         logger.error(f"Missing required equipment for test: {test.name}. Missing: {missing_names}")  # noqa: E501
 
     def _select_equipment_for_requirement(self, req_type: type[BaseEquipment], candidates: list[BaseEquipment], test: BaseTest, force_refresh: bool) -> BaseEquipment | None:
-        # Filter out excluded candidates with a single debug of who was skipped.
-        pruned, excluded_names = self._filter_excluded_candidates(req_type, candidates)
-        if not pruned:
+        """Select and initialize equipment for a requirement, with clear step-by-step flow."""
+
+        # Step 1: Filter excluded candidates
+        viable_candidates, excluded_names = self._filter_excluded_candidates(req_type, candidates)
+        if not viable_candidates:
             logger.error(f"All discovered candidates for requirement {req_type.__name__} are excluded (test: {test.name})")
             return None
 
         if excluded_names:
             logger.debug(f"Excluded candidates filtered for {req_type.__name__}: {excluded_names}")
 
-        # Try cached reuse unless caller asked to refresh.
+        # Step 2: Try cache reuse (unless force refresh requested)
         if not force_refresh:
-            reuse, skip_instance = self._reuse_cached_if_healthy(req_type)
-        else:
-            reuse, skip_instance = None, None
+            cached_result = self._try_cache_reuse(req_type, viable_candidates)
+            if cached_result is not None:
+                return cached_result
 
-        if reuse is not None:
-            return reuse
-
-        # Fall back to first successfully initialised candidate (skipping a bad cached one if needed).
-        filtered = [c for c in pruned if c is not skip_instance] if skip_instance is not None else pruned
-        if skip_instance is not None and not filtered:
-            logger.error(f"Only cached candidate for {req_type.__name__} failed health check and no alternative candidates are available")
-            return None
-
-        selected = self._initialise_first_online(req_type, filtered, test, skip_instance=skip_instance)
-        if selected is None:
-            return None
-
-        self.cache.set(req_type, selected)
+        # Step 3: Initialize first working candidate
+        selected = self._initialize_first_working_candidate(req_type, viable_candidates, test)
+        if selected is not None:
+            self.cache.set(req_type, selected)
 
         return selected
+
+    def _try_cache_reuse(self, req_type: type[BaseEquipment], viable_candidates: list[BaseEquipment]) -> BaseEquipment | None:
+        """Try to reuse cached equipment if it's still healthy and not excluded."""
+        cached = self.cache.get(req_type)
+        if cached is None:
+            return None
+
+        # Check if cached equipment is now excluded
+        if getattr(cached, "excluded", False):
+            logger.debug(f"Cached equipment {cached.name} for {req_type.__name__} is now marked excluded; invalidating cache entry")
+            self.cache.invalidate(req_type)
+            return None
+
+        # Health check cached equipment
+        if self._VISAHealthCheck(cached):
+            logger.debug(f"Reusing cached equipment {cached.name} for {req_type.__name__}")
+            return cached
+
+        # Cache failed health check - invalidate and continue with fresh search
+        logger.warning(f"Cached equipment {cached.name} for {req_type.__name__} failed health check; invalidating and selecting alternative")
+        self.cache.invalidate(req_type)
+        return None
+
+    def _initialize_first_working_candidate(self, req_type: type[BaseEquipment], candidates: list[BaseEquipment], test: BaseTest) -> BaseEquipment | None:
+        """Try to initialize candidates until one works, returning the first successful one."""
+        total = len(candidates)
+        for idx, equip in enumerate(candidates, start=1):
+            try:
+                # Resolve & inject dependencies
+                success, init_payload = self._prepare_dependencies(equip)
+                if not success:
+                    logger.warning(f"Skipping candidate {equip.name} due to dependency failure for {req_type.__name__}")
+                    continue
+
+                if equip.initialise(init_payload):
+                    logger.debug(f"{equip.name} (#{idx}/{total}) initialised for requirement {req_type.__name__}")
+                    return equip
+
+                # Explicit failure (returned falsy)
+                logger.warning(f"Candidate {equip.name} (#{idx}/{total}) failed to initialise for {req_type.__name__}")
+
+            except Exception:
+                # Log the exception once; don't emit a second generic failure message.
+                logger.warning(f"Candidate {equip.name} (#{idx}/{total}) raised during initialise for {req_type.__name__}", exc_info=True)
+
+        logger.error(f"All {total} candidates failed for requirement {req_type.__name__} in test {test.name}")
+        return None
 
     def _filter_excluded_candidates(self, req_type: type[BaseEquipment], candidates: list[BaseEquipment]) -> tuple[list[BaseEquipment], list[str]]:
         pruned = [c for c in candidates if not getattr(c, "excluded", False)]
@@ -122,86 +161,25 @@ class RequiredEquipment:
 
         return pruned, excluded_names
 
-    def _reuse_cached_if_healthy(self, req_type: type[BaseEquipment]) -> tuple[BaseEquipment | None, BaseEquipment | None]:
-        """Return a cached instance to reuse (if healthy) and/or one to skip.
-
-        Parameters:
-                req_type: The abstract equipment type being resolved.
-
-        Returns:
-                A tuple (reuse, skip_instance):
-                    - reuse: The cached equipment instance to use immediately if it is
-                        not excluded and passes the health check; otherwise None.
-                    - skip_instance: If a cached instance exists but fails the health
-                        check, this is that same instance so the caller can exclude it
-                        from the current candidate iteration; otherwise None.
-
-        Behaviour summary:
-                - No cached entry → (None, None).
-                - Cached is marked excluded → invalidate cache, return (None, None).
-                - Cached passes _VISAHealthCheck → (cached, None).
-                - Cached fails health check → invalidate cache, return (None, cached).
-        """
-        cached = self.cache.get(req_type)
-        if cached is None:
-            return None, None
-
-        if getattr(cached, "excluded", False):
-            logger.debug(f"Cached equipment {cached.name} for {req_type.__name__} is now marked excluded; invalidating cache entry")
-            self.cache.invalidate(req_type)
-            return None, None
-
-        if self._VISAHealthCheck(cached):
-            logger.debug(f"Reusing cached equipment {cached.name} for {req_type.__name__}")
-            return cached, None
-
-        logger.warning(f"Cached equipment {cached.name} for {req_type.__name__} failed health check; invalidating and selecting alternative")
-        self.cache.invalidate(req_type)
-        return None, cached
-
-    def _initialise_first_online(self, req_type: type[BaseEquipment], candidates: list[BaseEquipment], test: BaseTest, *, skip_instance: BaseEquipment | None = None) -> BaseEquipment | None:
-        # Iterate candidates, returning on first successful initialise. Uses early-continue
-        # style and ensures only a single warning is emitted per failed candidate.
-        total = len(candidates)
-        for idx, equip in enumerate(candidates, start=1):
-            if skip_instance is not None and equip is skip_instance:
-                continue  # explicit skip of previously invalidated cached instance
-            try:
-                # Resolve & inject dependencies
-                success, init_payload = self._prepare_dependencies(equip)
-                if not success:
-                    logger.warning(f"Skipping candidate {equip.name} due to dependency failure for {req_type.__name__}")  # noqa: E501
-                    continue
-
-                if equip.initialise(init_payload):
-                    logger.debug(f"{equip.name} (#{idx}/{total}) initialised for requirement {req_type.__name__}")  # noqa: E501
-                    return equip
-
-                # Explicit failure (returned falsy)
-                logger.warning(f"Candidate {equip.name} (#{idx}/{total}) failed to initialise for {req_type.__name__}")  # noqa: E501
-
-            except Exception:
-                # Log the exception once; don't emit a second generic failure message.
-                logger.warning(f"Candidate {equip.name} (#{idx}/{total}) raised during initialise for {req_type.__name__}", exc_info=True)
-
-        logger.error(
-            f"All {total} candidates failed for requirement {req_type.__name__} in test {test.name}"  # noqa: E501
-        )
-        return None
-
     @staticmethod
     def _VISAHealthCheck(equip: BaseEquipment) -> bool:
-        """Health check only for VISA Devices. Here we check if *IDN? still works"""
+        """Simple health check for VISA Devices using *IDN? query.
+
+        Returns True for non-VISA equipment (no check needed).
+        Returns True if VISA device responds to getIdentity().
+        Returns False if VISA device fails to respond.
+        """
         if not isinstance(equip, VISADevice):
-            return True  # Non‑comms equipment skipped from health validation.
+            return True  # Non-VISA equipment always considered healthy
 
         visaDevice = cast(VISADevice, equip)
         try:
-            visaDevice.getIdentity()
-        except EquipmentError:
+            identity = visaDevice.getIdentity()
+            # Consider device healthy if we get any identity response
+            return identity is not None
+        except (EquipmentError, Exception) as e:
+            logger.debug(f"VISA health check failed for {equip.name}: {e}")
             return False
-
-        return True
 
     def _prepare_dependencies(self, equip: BaseEquipment) -> tuple[bool, dict[str, Any] | None]:
         parent_name = getattr(equip, "REQUIRED_PARENT", None)
