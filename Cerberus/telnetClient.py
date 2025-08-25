@@ -1,5 +1,6 @@
 import logging
-import telnetlib
+import socket
+import time
 from typing import Optional, Self
 
 
@@ -32,23 +33,34 @@ class TelnetClient:
         self._host = host
         self._port = port
         self._timeout = timeout
-        self._tn: telnetlib.Telnet | None = None
+        self._sock: socket.socket | None = None
+        self._buffer = b""
 
     # ----------------------------------------------------------------------------------
     # Lifecycle
     # ----------------------------------------------------------------------------------
     def open(self) -> None:
-        if self._tn is not None:
+        if self._sock is not None:
             return
         logging.debug("TelnetClient: opening %s:%s (timeout=%s)", self._host, self._port, self._timeout)
-        self._tn = telnetlib.Telnet(self._host, self._port, self._timeout)
+        try:
+            self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._sock.settimeout(self._timeout)
+            self._sock.connect((self._host, self._port))
+            self._buffer = b""
+        except (socket.error, OSError) as e:
+            if self._sock:
+                self._sock.close()
+                self._sock = None
+            raise TelnetError(f"Failed to connect to {self._host}:{self._port}: {e}")
 
     def close(self) -> None:
-        if self._tn is not None:
+        if self._sock is not None:
             try:
-                self._tn.close()
+                self._sock.close()
             finally:
-                self._tn = None
+                self._sock = None
+                self._buffer = b""
                 logging.debug("TelnetClient: closed %s:%s", self._host, self._port)
 
     # Context manager support ----------------------------------------------------------
@@ -64,15 +76,13 @@ class TelnetClient:
     # ----------------------------------------------------------------------------------
     def _write(self, line: str) -> bool:
         """Send a line (appends newline)."""
-        tn = self._require_open()
+        sock = self._require_open()
         data = (line + "\n").encode()
         logging.debug("-> %s", line)
         try:
-            tn.write(data)
-
-        except OSError as e:
+            sock.sendall(data)
+        except (socket.error, OSError) as e:
             raise TelnetError(f"Telnet Write Error: {e}")
-
         return True
 
     def send(self, line: str) -> bool:
@@ -92,32 +102,54 @@ class TelnetClient:
         return self.read_line(timeout=timeout, strip=strip)
 
     def read_line(self, *, timeout: Optional[float] = None, strip: bool = True) -> str:
-        tn = self._require_open()
+        sock = self._require_open()
         eff_timeout = timeout if timeout is not None else self._timeout
-        raw = tn.read_until(b"\n", eff_timeout)
-        if raw == b"":
-            raise TelnetTimeout(f"Timeout reading line (>{eff_timeout}s)")
 
-        text = raw.decode(errors="replace")
-        if strip:
-            text = text.rstrip()
+        # Set timeout for this operation
+        original_timeout = sock.gettimeout()
+        sock.settimeout(eff_timeout)
 
-        if text.startswith("ERR:"):
-            raise TelnetProtocolError(text)
+        try:
+            # Look for existing newline in buffer
+            while b"\n" not in self._buffer:
+                try:
+                    data = sock.recv(1024)
+                    if not data:
+                        raise TelnetTimeout(f"Connection closed while reading line")
+                    self._buffer += data
+                except socket.timeout:
+                    raise TelnetTimeout(f"Timeout reading line (>{eff_timeout}s)")
+                except (socket.error, OSError) as e:
+                    raise TelnetError(f"Socket error while reading: {e}")
 
-        if text != "":
-            logging.debug("<- '%s'", text)
+            # Extract line from buffer
+            newline_pos = self._buffer.find(b"\n")
+            line_data = self._buffer[:newline_pos + 1]
+            self._buffer = self._buffer[newline_pos + 1:]
 
-        return text
+            text = line_data.decode(errors="replace")
+            if strip:
+                text = text.rstrip()
+
+            if text.startswith("ERR:"):
+                raise TelnetProtocolError(text)
+
+            if text != "":
+                logging.debug("<- '%s'", text)
+
+            return text
+
+        finally:
+            # Restore original timeout
+            sock.settimeout(original_timeout)
 
     # ----------------------------------------------------------------------------------
     # Helpers
     # ----------------------------------------------------------------------------------
     def is_open(self) -> bool:
-        return self._tn is not None
+        return self._sock is not None
 
-    def _require_open(self) -> telnetlib.Telnet:
-        if self._tn is None:
+    def _require_open(self) -> socket.socket:
+        if self._sock is None:
             raise TelnetError("Connection not open")
-
-        return self._tn
+        return self._sock
