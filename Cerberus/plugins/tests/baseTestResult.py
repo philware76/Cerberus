@@ -41,7 +41,7 @@ class BaseTestResult:
         # so that we know how the test was run. This is so we can go back and check/verify
         # the test results. Here we simply list the equipment used and the settings of that equipment
         # as well as the test settings.
-        # self.testReferences = {"Equipment": [], "Test": []}
+        self.testReferences = {"Equipment": [], "Test": []}
 
         # This contains all the results from the test runs.
         # This could be one long list of a value, or a complex dictionary of lists of various objects
