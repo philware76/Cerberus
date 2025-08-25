@@ -14,7 +14,7 @@ from Cerberus.cmdShells.planShell import PlanShell
 from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo, dwell
-from Cerberus.database.fileDatabase import FileDatabase
+from Cerberus.database.fileDB import FileDB
 from Cerberus.database.mySqlDB import MySqlDB
 from Cerberus.database.postgreSqlDB import PostgreSqlDB
 from Cerberus.logConfig import getLogger, setupLogging
@@ -83,9 +83,13 @@ def runShell(argv):
     args, unknown = parser.parse_known_args(argv)
     splash = show_image_splash(argv)
 
-    setupLogging(logging.DEBUG)
-    stationId, dbName, dbInfo = loadIni(args.inifile)
-    logger.info(f"Cerberus:{stationId}")
+    try:
+        setupLogging(logging.DEBUG)
+        stationId, dbName, dbInfo = loadIni(args.inifile)
+        logger.info(f"Cerberus:{stationId}")
+    except Exception as e:
+        logger.error(f"Failed to read Ini file: {e}")
+        exit(1)
 
     def splashUpdate(msg: str):
         if splash:
@@ -96,7 +100,7 @@ def runShell(argv):
 
     try:
         if dbName == "FileDatabase":
-            db = FileDatabase(dbInfo.database)
+            db = FileDB(stationId, dbInfo.database)
         elif dbName == "MySqlDatabase":
             db = MySqlDB(stationId, dbInfo)
         elif dbName == "PostgreSqlDatabase":
