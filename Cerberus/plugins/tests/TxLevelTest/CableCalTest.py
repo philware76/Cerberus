@@ -101,7 +101,6 @@ class CableCalTest(PowerMeasurementMixin, BaseTest):
         self.checkCalCoeffs(freqRange, calData, polyFit)
 
         self.result = CableCalTestResult(ResultStatus.PASSED)
-        self.result.log = self.getLog()
 
     def _waitForSettledFirstReading(self, freq, pwr):
         self.sigGen.setOutputPower(pwr)
