@@ -1,4 +1,5 @@
 import logging
+import warnings
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,16 @@ from iniconfig import IniConfig
 from Cerberus.database.fileDB import FileDB
 from Cerberus.manager import Manager
 from Cerberus.pluginService import PluginService
+
+
+def pytest_configure(config):
+    """Configure pytest-specific settings."""
+    # Suppress pytest collection warnings for classes that are not test classes
+    warnings.filterwarnings(
+        "ignore",
+        category=pytest.PytestCollectionWarning,
+        message=".*cannot collect test class.*because it has a __init__ constructor.*"
+    )
 
 
 def pytest_addoption(parser):

@@ -185,6 +185,26 @@ class MySqlDB(CerberusDB):
                 """
                                                      )
 
+            # Test results table for storing test execution results
+            self._execute_catch_table_already_exists(cur,
+                                                     """
+                CREATE TABLE IF NOT EXISTS test_results (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    station_id VARCHAR(100) NOT NULL,
+                    test_name VARCHAR(255) NOT NULL,
+                    status VARCHAR(50) NOT NULL,
+                    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    log_text LONGTEXT NULL,
+                    compressed_log LONGBLOB NULL,
+                    test_result_json JSON NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    KEY idx_test_name_timestamp (test_name, timestamp DESC),
+                    KEY idx_station_test (station_id, test_name),
+                    KEY idx_timestamp (timestamp DESC)
+                )
+                """
+                                                     )
+
             self.conn.commit()
         finally:
             cur.close()
@@ -381,6 +401,7 @@ class MySqlDB(CerberusDB):
             'group_settings',
             'group_content',
             'group_identity',
+            'test_results',
             'equipment',
             'station',
             'testplans',
@@ -431,6 +452,179 @@ class MySqlDB(CerberusDB):
         try:
             cur.execute("SELECT id, group_hash, group_json FROM group_content")
             return cur.fetchall()  # type: ignore[return-value]
+        finally:
+            cur.close()
+
+    # ===== TEST RESULTS IMPLEMENTATION =====
+
+    def _save_test_result_impl(self, test_name: str, status: str, timestamp,
+                               log_text: str | None, compressed_log: bytes | None,
+                               test_result_json: str) -> int:
+        """MySQL-specific implementation for saving test results."""
+        cur = self.conn.cursor()
+        try:
+            cur.execute(
+                """
+                INSERT INTO test_results (station_id, test_name, status, timestamp, log_text, compressed_log, test_result_json)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (self.station_id, test_name, status, timestamp, log_text, compressed_log, test_result_json)
+            )
+            result_id = cur.lastrowid
+            self.conn.commit()
+            return cast(int, result_id)
+        except mysql.connector.Error as err:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            logger.error(f"Failed to save test result for {test_name}: {err}")
+            raise
+        finally:
+            cur.close()
+
+    def _load_test_results_impl(self, test_name: str, limit: int, offset: int) -> list[dict]:
+        """MySQL-specific implementation for loading test results."""
+        cur = self.conn.cursor(dictionary=True)
+        try:
+            cur.execute(
+                """
+                SELECT id, station_id, test_name, status, timestamp, log_text, compressed_log, test_result_json, created_at
+                FROM test_results
+                WHERE station_id = %s AND test_name = %s
+                ORDER BY timestamp DESC, id DESC
+                LIMIT %s OFFSET %s
+                """,
+                (self.station_id, test_name, limit, offset)
+            )
+            results = cur.fetchall()
+
+            # Process results to handle compressed logs
+            processed_results = []
+            for result in results:
+                processed = cast(dict[str, Any], result)
+
+                # Decompress log if needed
+                if processed.get("compressed_log") and not processed.get("log_text"):
+                    try:
+                        compressed_data = cast(bytes, processed["compressed_log"])
+                        processed["log_text"] = self._decompress_log(compressed_data)
+                    except Exception as e:
+                        logger.warning(f"Failed to decompress log for result {processed.get('id')}: {e}")
+                        processed["log_text"] = "[Log decompression failed]"
+
+                # Remove compressed_log from response to save space
+                processed.pop("compressed_log", None)
+
+                processed_results.append(processed)
+
+            return processed_results
+        finally:
+            cur.close()
+
+    def _get_test_result_by_id_impl(self, test_name: str, result_id: int) -> dict | None:
+        """MySQL-specific implementation for getting test result by ID."""
+        cur = self.conn.cursor(dictionary=True)
+        try:
+            cur.execute(
+                """
+                SELECT id, station_id, test_name, status, timestamp, log_text, compressed_log, test_result_json, created_at
+                FROM test_results
+                WHERE station_id = %s AND test_name = %s AND id = %s
+                """,
+                (self.station_id, test_name, result_id)
+            )
+            result = cur.fetchone()
+
+            if not result:
+                return None
+
+            processed = cast(dict[str, Any], result)
+
+            # Decompress log if needed
+            if processed.get("compressed_log") and not processed.get("log_text"):
+                try:
+                    compressed_data = cast(bytes, processed["compressed_log"])
+                    processed["log_text"] = self._decompress_log(compressed_data)
+                except Exception as e:
+                    logger.warning(f"Failed to decompress log for result {result_id}: {e}")
+                    processed["log_text"] = "[Log decompression failed]"
+
+            # Remove compressed_log from response to save space
+            processed.pop("compressed_log", None)
+
+            return processed
+        finally:
+            cur.close()
+
+    def _delete_test_result_impl(self, test_name: str, result_id: int) -> bool:
+        """MySQL-specific implementation for deleting a test result."""
+        cur = self.conn.cursor()
+        try:
+            cur.execute(
+                """
+                DELETE FROM test_results
+                WHERE station_id = %s AND test_name = %s AND id = %s
+                """,
+                (self.station_id, test_name, result_id)
+            )
+            deleted = cur.rowcount > 0
+            self.conn.commit()
+            return deleted
+        except mysql.connector.Error as err:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            logger.error(f"Failed to delete test result {result_id} for {test_name}: {err}")
+            raise
+        finally:
+            cur.close()
+
+    def _cleanup_old_test_results_impl(self, test_name: str, keep_count: int) -> int:
+        """MySQL-specific implementation for cleaning up old test results."""
+        # Use regular cursor for simple ID selection
+        cur = self.conn.cursor()
+        try:
+            # First, get the IDs to delete (all except the most recent keep_count)
+            cur.execute(
+                """
+                SELECT id FROM test_results
+                WHERE station_id = %s AND test_name = %s
+                ORDER BY timestamp DESC, id DESC
+                LIMIT %s, 18446744073709551615
+                """,
+                (self.station_id, test_name, keep_count)
+            )
+            rows = cur.fetchall()
+            # Extract IDs from tuples
+            ids_to_delete: list[int] = []
+            for row in rows:
+                id_value = row[0]  # type: ignore[misc]
+                ids_to_delete.append(cast(int, id_value))
+
+            if not ids_to_delete:
+                return 0
+
+            # Delete the old results
+            placeholders = ','.join(['%s'] * len(ids_to_delete))
+            cur.execute(
+                f"""
+                DELETE FROM test_results
+                WHERE id IN ({placeholders})
+                """,
+                ids_to_delete
+            )
+            deleted_count = cur.rowcount
+            self.conn.commit()
+            return deleted_count
+        except mysql.connector.Error as err:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            logger.error(f"Failed to cleanup old test results for {test_name}: {err}")
+            raise
         finally:
             cur.close()
 
