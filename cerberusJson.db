@@ -15,7 +15,8 @@
     "CERB_STATION_001:equipment:BB60C:Communication": 30,
     "CERB_STATION_001:test:Simple Test #1:RF Parameters": 33,
     "CERB_STATION_001:test:Cable Calibration:Calibration": 36,
-    "CERB_STATION_001:test:Tx Level:RF Parameters": 39
+    "CERB_STATION_001:test:Tx Level:RF Parameters": 39,
+    "CERB_STATION_001:test:Tx Level:Test Specs": 74
   },
   "group_content": {
     "1": {
@@ -49,73 +50,82 @@
     "38": {
       "group_hash": "4e0e0d26bc23a370c9366b6a989dd42dc13f3cfa651b8267fededadd57eeede0",
       "group_json": "{\"Cable Attn\":10.0,\"Coeffs\":\"{\\\"coeffs\\\": [-1.609141417150715, -0.6757908354285234, 0.058674614875468135, -0.0031915753722614125, -0.021765415467106336, 0.016691035032112896, -0.013077298931293337, 0.004910903969558918, -0.008379936478786022], \\\"domain\\\": [600.0, 3500.0], \\\"window\\\": [-1.0, 1.0]}\",\"Enable cable calibration\":true,\"Tx Attn\":25}"
+    },
+    "73": {
+      "group_hash": "b113785f421ce5f733c1c7967209d29bf5a788cdbd4dec331ad3ef77d067e0d1",
+      "group_json": "{\"Detected-Measured\":3.0}"
     }
   },
   "group_settings": {
-    "41": {
+    "57": {
       "group_identity_id": 2,
       "content_id": 1
     },
-    "42": {
+    "58": {
       "group_identity_id": 5,
       "content_id": 4
     },
-    "43": {
+    "59": {
       "group_identity_id": 8,
       "content_id": 7
     },
-    "44": {
+    "60": {
       "group_identity_id": 10,
       "content_id": 7
     },
-    "45": {
+    "61": {
       "group_identity_id": 13,
       "content_id": 12
     },
-    "46": {
+    "62": {
       "group_identity_id": 15,
       "content_id": 7
     },
-    "47": {
+    "63": {
       "group_identity_id": 17,
       "content_id": 7
     },
-    "48": {
+    "64": {
       "group_identity_id": 19,
       "content_id": 7
     },
-    "49": {
+    "65": {
       "group_identity_id": 22,
       "content_id": 21
     },
-    "50": {
+    "66": {
       "group_identity_id": 24,
       "content_id": 7
     },
-    "51": {
+    "67": {
       "group_identity_id": 26,
       "content_id": 7
     },
-    "52": {
+    "68": {
       "group_identity_id": 28,
       "content_id": 7
     },
-    "53": {
+    "69": {
       "group_identity_id": 30,
       "content_id": 7
     },
-    "54": {
+    "70": {
       "group_identity_id": 33,
       "content_id": 32
     },
-    "55": {
+    "71": {
       "group_identity_id": 36,
       "content_id": 35
     },
-    "56": {
+    "72": {
       "group_identity_id": 39,
       "content_id": 38
+    },
+    "75": {
+      "group_identity_id": 74,
+      "content_id": 73
     }
   },
-  "next_id": 57
+  "next_id": 76,
+  "test_results": {}
 }

@@ -19,6 +19,7 @@ from Cerberus.database.mySqlDB import MySqlDB
 from Cerberus.database.postgreSqlDB import PostgreSqlDB
 from Cerberus.logConfig import getLogger, setupLogging
 from Cerberus.manager import Manager
+from Cerberus.pluginService import PluginService
 
 logger = getLogger("Shell")
 
@@ -128,7 +129,10 @@ def runShell(argv):
         exit(1)
 
     try:
-        manager = Manager(stationId, db, status_callback=splashUpdate)
+        pluginService = PluginService(splashUpdate)
+        pluginService.enumerate()
+
+        manager = Manager(stationId, db, pluginService)
     except Exception as e:
         logger.error(f"Failed to correctly load the plugins: {e}")
         exit(1)

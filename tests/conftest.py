@@ -6,6 +6,7 @@ from iniconfig import IniConfig
 
 from Cerberus.database.fileDB import FileDB
 from Cerberus.manager import Manager
+from Cerberus.pluginService import PluginService
 
 
 def pytest_addoption(parser):
@@ -33,8 +34,16 @@ def configure_logging():
     logging.basicConfig(level=logging.DEBUG)
 
 
-@pytest.fixture(scope="module")
-def manager():
+@pytest.fixture(scope="session")
+def pluginService():
+    """Create and enumerate a PluginService for testing."""
+    service = PluginService()
+    service.enumerate()
+    return service
+
+
+@pytest.fixture(scope="session")
+def manager(pluginService):
     config_path = Path(__file__).resolve().parent.parent / 'cerberus.ini'
     if not config_path.exists():
         config_path = Path(__file__).resolve().parent.parent.parent / 'cerberus.ini'
@@ -48,4 +57,4 @@ def manager():
             pass
 
     fileDB = FileDB(station_id, "testDatabase.json")
-    return Manager(station_id, fileDB)
+    return Manager(station_id, fileDB, pluginService)
