@@ -15,7 +15,7 @@ T = TypeVar("T", bound=BaseEquipment)
 class BaseTest(BasePlugin):
     def __init__(self, name, description: Optional[str] = None, checkProduct: Optional[bool] = True):
         super().__init__(name, description)
-        self.result: BaseTestResult | None = None
+        self.result: BaseTestResult = BaseTestResult(name)
         self.requiredEquipment: List[Type[BaseEquipment]] = []
         self._equipment: dict[type[BaseEquipment], BaseEquipment] = {}
         self.product: BaseProduct | None
@@ -25,18 +25,18 @@ class BaseTest(BasePlugin):
 
     def setLogging(self):
         # set up per-test logger with in-memory buffer
-        self._log_stream = io.StringIO()
-        self.logger = logging.getLogger(f"{self.name} Test")
-        self.logger.setLevel(logging.DEBUG)
+        self.resultLogStream = io.StringIO()
+        self.resultLogger = logging.getLogger(f"{self.name} Test")
+        self.resultLogger.setLevel(logging.DEBUG)
 
-        self.logger.propagate = False
+        self.resultLogger.propagate = False
 
-        self._log_handler = logging.StreamHandler(self._log_stream)
+        self._log_handler = logging.StreamHandler(self.resultLogStream)
         self._log_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s"))
-        self.logger.addHandler(self._log_handler)
+        self.resultLogger.addHandler(self._log_handler)
 
     def getLog(self):
-        return self._log_stream.getvalue()
+        return self.resultLogStream.getvalue()
 
     def setProduct(self, product: BaseProduct | None) -> None:
         """Inject the product-under-test (already initialised/configured)."""
@@ -56,17 +56,11 @@ class BaseTest(BasePlugin):
 
         return True
 
-    def configure(self, config=None) -> bool:
-        logging.debug("Configure")
-        if config is not None:
-            self.config = config
-
-        self.configured = True
-        return True
-
-    def finalise(self) -> bool:
+    def finalise(self):
         logging.debug("Finalise")
-        self.finalised = True
+        if self.result is not None:
+            self.result.log = self.getLog()
+
         return True
 
     def _addRequirements(self, typeNames: List[Type[BaseEquipment]]) -> None:

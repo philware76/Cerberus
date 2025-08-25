@@ -2,7 +2,7 @@ import json
 import logging
 import time
 from dataclasses import asdict
-from typing import cast
+from typing import Any, cast
 
 from numpy.polynomial import Chebyshev
 
@@ -15,9 +15,6 @@ from Cerberus.plugins.equipment.cables.RXCalCableEquipment import RXCalCable
 from Cerberus.plugins.equipment.cables.TXCalCableEquipment import TXCalCable
 from Cerberus.plugins.equipment.powerMeters.basePowerMeters import \
     BasePowerMeter
-from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen
-from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
-    BaseSpecAnalyser
 from Cerberus.plugins.products.bist import TacticalBISTCmds
 from Cerberus.plugins.products.nesieFirmware import nesie_rx_filter_bands
 from Cerberus.plugins.products.tactical.tactical import BaseTactical
@@ -38,7 +35,15 @@ class TxLevelTestResult(BaseTestResult):
         super().__init__("TxLevelTest", status)
 
 
-class TxLevelTestParameters(BaseParameters):
+class TestSpecParams(BaseParameters):
+    def __init__(self, ):
+        super().__init__("Test Specs")
+
+        self.addParameter(NumericParameter("Detected-Measured", 3.0, units="dB", minValue=0, maxValue=20,
+                                           description="The maximum difference between the detected power and measured power can be."))
+
+
+class RfTestParams(BaseParameters):
     def __init__(self, ):
         super().__init__("RF Parameters")
 
@@ -77,29 +82,33 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
     def __init__(self) -> None:
         super().__init__("Tx Level")
         self._addRequirements([BasePowerMeter, TXCalCable, RXCalCable])
-        self.addParameterGroup(TxLevelTestParameters())
+        self.addParameterGroup(RfTestParams())
+        self.addParameterGroup(TestSpecParams())
 
         self.bist: TacticalBISTCmds | None = None
         self.freqOffset: int = TxLevelTest.AD9361_DC_NOTCH_FREQ_OFFSET
         self.pwrCalAdjust: Chebyshev
         self.filt = None  # set in configProductForFreq
 
+        self.rfParams = self.getGroupParameters("RF Parameters")
+        self.testSpec = self.getGroupParameters("Test Specs")
+
     def run(self) -> None:
         super().run()
         if self.product is None:
             raise EquipmentError(f"{self.name} test requires a product type to be set before test")
 
-        gp = self.getGroupParameters("RF Parameters")
-        self.TxAttn = float(gp["Tx Attn"])
-        self.cableAttn = float(gp["Cable Attn"])
+        self.TxAttn = float(self.rfParams["Tx Attn"])
+        self.cableAttn = float(self.rfParams["Cable Attn"])
 
-        self.usePwrcalAdjust = bool(gp["Enable cable calibration"])
+        self.usePwrcalAdjust = bool(self.rfParams["Enable cable calibration"])
 
         if self.usePwrcalAdjust:
             try:
-                coeffs_raw = str(gp["Coeffs"])
+                coeffs_raw = str(self.rfParams["Coeffs"])
                 self.coeffs = json.loads(coeffs_raw)
                 self.pwrCalAdjust = Chebyshev(self.coeffs['coeffs'], domain=self.coeffs['domain'], window=self.coeffs['window'])
+
             except json.JSONDecodeError:
                 raise ValueError("Failed to decode the Cable Cal Coeffs json string in the test parameters")
 
@@ -114,19 +123,18 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
         for hwId, bandName in self.product.getBands():
             if hwId != 0xFF:
                 logging.debug(f"Testing Slot: {slotNum}, Band:{bandName}")
-                self.testBand(slotNum, hwId)
+                result = self.testBand(slotNum, hwId)
+                print(result)
             else:
                 logging.debug(f"Skipping slot: {slotNum} - Empty")
 
             slotNum += 1
 
-        self.result = TxLevelTestResult(ResultStatus.PASSED)
-
-    def finalise(self) -> bool:
+    def finalise(self):
         self.finaliseProduct()
         return super().finalise()
 
-    def testBand(self, slotNum: int, hwId: int) -> None:
+    def testBand(self, slotNum: int, hwId: int) -> dict[str, Any]:
         assert self.powerMeter is not None and self.bist is not None
 
         freqMHz, path = self.configProductForFreq(slotNum, hwId)
@@ -142,12 +150,27 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
         diff = detectedPwr - measuredPwr
         band_name = getattr(getattr(self.filt, 'band', None), 'name', 'Unknown')
 
-        print(
-            f"Slot: {slotNum}, Band: {band_name}, Path: {path}, Freq: {freqMHz} MHz, "
-            f"Measured: {round(measuredPwr, 2)} (cal: {round(pwrCalAdjustment, 2)}), detected: {round(detectedPwr, 2)}, diff: {round(diff, 2)}"
-        )
+        # check if the difference between detected and measured is within the spec
+        passed = abs(diff) < float(self.testSpec["Detected-Measured"])
+        if not passed:
+            self.result.status = ResultStatus.FAILED
 
-        time.sleep(1)
+        # Create measurement result dictionary
+        result = {
+            "slot": slotNum,
+            "band": band_name,
+            "path": path,
+            "frequency_mhz": freqMHz,
+            "measured_power": round(measuredPwr, 2),
+            "calibration_adjustment": round(pwrCalAdjustment, 2),
+            "detected_power": round(detectedPwr, 2),
+            "difference": round(diff, 2),
+            "passed": passed
+        }
+
+        self.result.addTestResult("BandResults", result)
+
+        return result
 
     def configProductForFreq(self, slotNum: int, hwId: int) -> tuple[int, str]:
         assert self.bist is not None

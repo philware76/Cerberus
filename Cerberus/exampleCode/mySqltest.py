@@ -3,8 +3,7 @@ import json
 import mysql.connector
 
 from Cerberus.plugins.baseParameters import BaseParameters
-from Cerberus.plugins.tests.TxLevelTest.TxLevelTest import \
-    TxLevelTestParameters
+from Cerberus.plugins.tests.TxLevelTest.TxLevelTest import RfTestParams
 
 
 class ParameterDB:
@@ -52,11 +51,12 @@ class ParameterDB:
         else:
             raise ValueError("No parameters found for that test/group.")
 
+
 def main():
     db = ParameterDB()
 
     # Example BaseParameters
-    params = TxLevelTestParameters()
+    params = RfTestParams()
 
     # Save to DB
     db.save_parameters("TxLevelTest", "RF Sweep", params)
@@ -65,6 +65,7 @@ def main():
     loaded = db.load_latest_parameters("TxLevelTest", "RF Sweep")
     for name, param in loaded.parameters.items():
         print(f"{name}: {param.value} {param.unit or ''}")
+
 
 if __name__ == "__main__":
     main()
