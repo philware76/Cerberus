@@ -9,12 +9,13 @@ logger = getLogger("Manager")
 
 
 class Manager():
-    def __init__(self, stationId: str, db: BaseDB, status_callback=None):
+    def __init__(self, stationId: str, db: BaseDB, pluginService: PluginService):
         logger.info("Starting TestManager...")
         self.product: BaseProduct | None = None
         self.stationId = stationId
         self.db = db
-        self.pluginService = PluginService(status_callback=status_callback)
+        self.pluginService = pluginService
+
         # Load persisted parameter values for all plugin categories
         self._loadPersistedParameters()
 

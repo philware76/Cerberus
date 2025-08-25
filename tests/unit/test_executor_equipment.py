@@ -28,8 +28,8 @@ class _DummyTestMissingEquip(BaseTest):
 
 # --- Tests -------------------------------------------------------------------------------------------------------
 
-def test_executor_returns_false_when_missing_equipment():
-    ps = PluginService()
+def test_executor_returns_false_when_missing_equipment(pluginService: PluginService):
+    ps = pluginService
     ex = Executor(ps)
     test = _DummyTestMissingEquip()
     product = BaseProduct("Product1")
@@ -38,8 +38,8 @@ def test_executor_returns_false_when_missing_equipment():
     assert ok is False
 
 
-def test_executor_returns_false_when_equipment_initialise_fails(monkeypatch):
-    ps = PluginService()
+def test_executor_returns_false_when_equipment_initialise_fails(monkeypatch, pluginService: PluginService):
+    ps = pluginService
     ex = Executor(ps)
     product = BaseProduct("Product1")
 

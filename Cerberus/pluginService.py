@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Type, TypeVar, cast
+from typing import Callable, List, Optional, Self, Type, TypeVar, cast
 
 import pluggy
 
@@ -39,7 +39,8 @@ class PluginService:
         self.missingPlugins: list[str] = []
         self._status_cb = status_callback
 
-        # Expose as Mapping for covariance; internal structure remains mutable dict from discovery.
+    def enumerate(self) -> Self:
+        """Discover the plugins and store them in our dictionaries"""
         self.equipPlugins: Mapping[str, BaseEquipment] = cast(dict[str, BaseEquipment], self._discover_plugins("Equipment", "equipment"))
         self.productPlugins: Mapping[str, BaseProduct] = cast(dict[str, BaseProduct], self._discover_plugins("Product", "products"))
         self.testPlugins: Mapping[str, BaseTest] = cast(dict[str, BaseTest], self._discover_plugins("Test", "tests"))
@@ -47,9 +48,12 @@ class PluginService:
         if self._status_cb is not None:
             self._status_cb(f"Finished plugin discovery - Equipment: {len(self.equipPlugins)}, Products: {len(self.productPlugins)}, Tests: {len(self.testPlugins)}")
 
-        self._checIDkMapping()
+        self._checkProductMapping()
 
-    def _checIDkMapping(self):
+        return self
+
+    def _checkProductMapping(self):
+        """Double check we haven't forgotten any product mapping!"""
         for _, prodName in PROD_ID_MAPPING.items():
             if not self.findProduct(prodName):
                 logger.warning(f"Failed to find Product '{prodName}' in ProdIDMapping dictionary.")
