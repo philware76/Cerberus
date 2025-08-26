@@ -42,6 +42,9 @@ class TestSpecParams(BaseParameters):
         self.addParameter(NumericParameter("Detected-Measured", 3.0, units="dB", minValue=0, maxValue=20,
                                            description="The maximum difference between the detected power and measured power can be."))
 
+        self.addParameter(OptionParameter("Full band sweep", False, description="Performs the Tx Level Test over the full band"))
+        self.addParameter(NumericParameter("MHz step", 100, units="MHz", minValue=10, maxValue=500, description="When performing a band sweep, use this value as the step"))
+
 
 class RfTestParams(BaseParameters):
     def __init__(self, ):
@@ -88,7 +91,7 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
         self.bist: TacticalBISTCmds | None = None
         self.freqOffset: int = TxLevelTest.AD9361_DC_NOTCH_FREQ_OFFSET
         self.pwrCalAdjust: Chebyshev
-        self.filt = None  # set in configProductForFreq
+        self.filt
 
         self.rfParams = self.getGroupParameters("RF Parameters")
         self.testSpec = self.getGroupParameters("Test Specs")
@@ -123,8 +126,9 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
         for hwId, bandName in self.product.getBands():
             if hwId != 0xFF:
                 logging.debug(f"Testing Slot: {slotNum}, Band:{bandName}")
-                result = self.testBand(slotNum, hwId)
-                print(result)
+                results = self.testBand(slotNum, hwId)
+                for result in results:
+                    print(result)
             else:
                 logging.debug(f"Skipping slot: {slotNum} - Empty")
 
@@ -134,69 +138,135 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
         self.finaliseProduct()
         return super().finalise()
 
-    def testBand(self, slotNum: int, hwId: int) -> dict[str, Any]:
+    def testBand(self, slotNum: int, hwId: int) -> list[dict[str, Any]]:
+        """Test a band at multiple frequencies and return list of results."""
         assert self.powerMeter is not None and self.bist is not None
 
-        freqMHz, path = self.configProductForFreq(slotNum, hwId)
+        # Configure the nesie's hardward for this slot / hardware band ID
+        path = self.setProductForBandHwId(slotNum, hwId)
+
+        # Get the frequency list to run the test over
+        if bool(self.testSpec["Full band sweep"]):
+            step = self.testSpec["MHz step"]
+            freq_path_list = self.getBandFrequencyRange(step)
+        else:
+            freq_path_list = self.getBandCenterFrequency()
+
+        results = []
+
+        for freqMHz in freq_path_list:
+            self.configEquipment(freqMHz)
+
+            # Read the measurement from the power meter
+            pwrCalAdjustment = float(self.pwrCalAdjust(freqMHz + self.freqOffset))
+            rawPwr = self.take_power_measurement(freqMHz + self.freqOffset)
+            measuredPwr = round(rawPwr - pwrCalAdjustment + self.cableAttn, 2)
+
+            # Read the internal detected power
+            detectedPwr = self.bist.get_pa_power(freqMHz)
+            diff = detectedPwr - measuredPwr
+            band_name = getattr(getattr(self.filt, 'band', None), 'name', 'Unknown')
+
+            # check if the difference between detected and measured is within the spec
+            passed = abs(diff) < float(self.testSpec["Detected-Measured"])
+            if not passed:
+                self.result.status = ResultStatus.FAILED
+
+            # Create measurement result dictionary
+            result = {
+                "slot": slotNum,
+                "band": band_name,
+                "path": path,
+                "frequency_mhz": freqMHz,
+                "measured_power": round(measuredPwr, 2),
+                "calibration_adjustment": round(pwrCalAdjustment, 2),
+                "detected_power": round(detectedPwr, 2),
+                "difference": round(diff, 2),
+                "passed": passed
+            }
+
+            # save the result
+            self.result.addTestResult("BandResults", result)
+            results.append(result)
+
+        return results
+
+    def configEquipment(self, freqMHz):
+        assert self.powerMeter is not None and self.bist is not None
+
+        # Configure frequency-specific settings
+        self.bist.set_tx_freq(freqMHz)
+        self.bist.set_pa_on(freqMHz)
+
         self.powerMeter.setFrequency(freqMHz + self.freqOffset)
         self.bist.set_attn(self.TxAttn)
         time.sleep(0.5)
 
-        pwrCalAdjustment = float(self.pwrCalAdjust(freqMHz + self.freqOffset))
-        rawPwr = self.take_power_measurement(freqMHz + self.freqOffset)
-
-        measuredPwr = round(rawPwr - pwrCalAdjustment + self.cableAttn, 2)
-        detectedPwr = self.bist.get_pa_power(freqMHz)
-        diff = detectedPwr - measuredPwr
-        band_name = getattr(getattr(self.filt, 'band', None), 'name', 'Unknown')
-
-        # check if the difference between detected and measured is within the spec
-        passed = abs(diff) < float(self.testSpec["Detected-Measured"])
-        if not passed:
-            self.result.status = ResultStatus.FAILED
-
-        # Create measurement result dictionary
-        result = {
-            "slot": slotNum,
-            "band": band_name,
-            "path": path,
-            "frequency_mhz": freqMHz,
-            "measured_power": round(measuredPwr, 2),
-            "calibration_adjustment": round(pwrCalAdjustment, 2),
-            "detected_power": round(detectedPwr, 2),
-            "difference": round(diff, 2),
-            "passed": passed
-        }
-
-        self.result.addTestResult("BandResults", result)
-
-        return result
-
-    def configProductForFreq(self, slotNum: int, hwId: int) -> tuple[int, str]:
-        assert self.bist is not None
+    def setProductForBandHwId(self, slotNum, hwId):
+        """Configure product for frequencies and return list of (frequency, path) tuples to test."""
         self.filt = nesie_rx_filter_bands.RX_FILTER_BANDS_BY_ID[hwId]
         filt_dict = asdict(self.filt)
+
         logging.debug("RxFilterBand: hw_id=%s band=%s", self.filt.hardware_id, self.filt.band.name)
         for k, v in filt_dict.items():
             logging.debug("  %s = %r", k, v)
 
-        setForwardReverse = self.filt.extra_data & nesie_rx_filter_bands.EXTRA_DATA_SWAP_FOR_AND_REV_MASK == nesie_rx_filter_bands.EXTRA_DATA_SWAP_FOR_AND_REV_MASK
+        setForwardReverse = self.filt.extra_data & nesie_rx_filter_bands.EXTRA_DATA_SWAP_FOR_AND_REV_MASK == nesie_rx_filter_bands.EXTRA_DATA_SWAP_FOR_AND_REV_MASK or \
+            self.filt.direction_mask == nesie_rx_filter_bands.UPLINK_DIR_MASK
+
+        assert self.bist is not None
+        self.bist.set_tx_fwd_rev("SET" if setForwardReverse else "CLEAR")
+        path = self.bist.set_duplexer(slotNum, "TX")
+
+        return path
+
+    def getBandCenterFrequency(self) -> list[int]:
+        # Determine which band to use based on direction mask
         if self.filt.direction_mask == nesie_rx_filter_bands.BOTH_DIR_MASK:
-            freq = int(self.filt.downlink.low_mhz + (self.filt.downlink.high_mhz - self.filt.downlink.low_mhz) / 2.0)
-
+            band = self.filt.downlink
         elif self.filt.direction_mask == nesie_rx_filter_bands.UPLINK_DIR_MASK:
-            freq = int(self.filt.uplink.low_mhz + (self.filt.uplink.high_mhz - self.filt.uplink.low_mhz) / 2.0)
-            setForwardReverse = True
-
+            band = self.filt.uplink
         else:
             raise TestError("Invalid filter band direction setting")
 
-        self.bist.set_tx_fwd_rev("SET" if setForwardReverse else "CLEAR")
-        path = self.bist.set_duplexer(slotNum, "TX")
-        self.bist.set_tx_freq(freq)
-        self.bist.set_pa_on(freq)
+        # Calculate center frequency of the selected band and return in a list
+        freq = int(band.low_mhz + (band.high_mhz - band.low_mhz) / 2.0)
+        return [freq]
 
-        return freq, path
+    def getBandFrequencyRange(self, step_mhz: int) -> list[int]:
+        """
+        Generate a list of frequencies from low_mhz to high_mhz at specified step intervals.
+
+        Args:
+            step_mhz: The frequency step size in MHz
+
+        Returns:
+            List of frequencies in MHz from low to high at step_mhz intervals, 
+            always including the high frequency
+        """
+        # Determine which band to use based on direction mask
+        if self.filt.direction_mask == nesie_rx_filter_bands.BOTH_DIR_MASK:
+            band = self.filt.downlink
+        elif self.filt.direction_mask == nesie_rx_filter_bands.UPLINK_DIR_MASK:
+            band = self.filt.uplink
+        else:
+            raise TestError("Invalid filter band direction setting")
+
+        # Generate frequencies for the selected band
+        test_frequencies = []
+        low_freq = int(band.low_mhz)
+        high_freq = int(band.high_mhz)
+
+        freq = low_freq
+        while freq <= high_freq:
+            test_frequencies.append(freq)
+            freq += step_mhz
+
+        # Ensure high frequency is included if not already present
+        if test_frequencies[-1] != high_freq:
+            test_frequencies.append(high_freq)
+
+        return test_frequencies
 
     def initProduct(self) -> None:
         self.product = self.getProduct()

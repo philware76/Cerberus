@@ -6,3 +6,5 @@ cov.json
 .vscode
 htmlcov
 keys
+pytest.db
+testDatabase.json
