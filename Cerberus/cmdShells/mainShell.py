@@ -16,6 +16,7 @@ from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo, dwell
 from Cerberus.database.fileDB import FileDB
 from Cerberus.database.inMemoryDB import InMemoryDB
+from Cerberus.database.msSqlDB import MsSqlDB
 from Cerberus.database.mySqlDB import MySqlDB
 from Cerberus.database.postgreSqlDB import PostgreSqlDB
 from Cerberus.logConfig import getLogger, setupLogging
@@ -85,6 +86,14 @@ def loadIni(inifile: str = "cerberus.ini", db_override: str | None = None) -> Tu
         database=ini[dbName]["database"]
     )
 
+    # Add SSL/certificate options for SQL Server if present
+    if "encrypt" in ini[dbName]:
+        dbInfo.encrypt = ini[dbName]["encrypt"].lower() in ("true", "yes", "1")
+    if "trust_server_certificate" in ini[dbName]:
+        dbInfo.trust_server_certificate = ini[dbName]["trust_server_certificate"].lower() in ("true", "yes", "1")
+    if "certificate_path" in ini[dbName]:
+        dbInfo.certificate_path = ini[dbName]["certificate_path"]
+
     return stationId, dbName, dbInfo
 
 
@@ -120,6 +129,8 @@ def runShell(argv):
             db = FileDB(station_id, dbInfo.database)
         elif dbName == "MySqlDatabase":
             db = MySqlDB(station_id, dbInfo)
+        elif dbName == "MsSqlDatabase":
+            db = MsSqlDB(station_id, dbInfo)
         elif dbName == "PostgreSqlDatabase":
             db = PostgreSqlDB(station_id, dbInfo)
         else:

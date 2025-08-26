@@ -13,6 +13,10 @@ class DBInfo:
     username: str = "root"
     password: str = ""
     database: str = "cerberus"
+    # SSL/Certificate options for SQL Server
+    encrypt: bool = True
+    trust_server_certificate: bool = False
+    certificate_path: Optional[str] = None
 
 
 class Spinner:
