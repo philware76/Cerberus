@@ -225,14 +225,19 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
 
         return path
 
-    def getBandCenterFrequency(self) -> list[int]:
-        # Determine which band to use based on direction mask
+    def _getBandFrequencyRange(self):
+        """Helper method to determine which band to use based on direction mask."""
+        assert self.filt is not None
         if self.filt.direction_mask == nesie_rx_filter_bands.BOTH_DIR_MASK:
-            band = self.filt.downlink
+            return self.filt.downlink
         elif self.filt.direction_mask == nesie_rx_filter_bands.UPLINK_DIR_MASK:
-            band = self.filt.uplink
+            return self.filt.uplink
         else:
             raise TestError("Invalid filter band direction setting")
+
+    def getBandCenterFrequency(self) -> list[int]:
+        # Determine which band to use based on direction mask
+        band = self._getBandFrequencyRange()
 
         # Calculate center frequency of the selected band and return in a list
         freq = int(band.low_mhz + (band.high_mhz - band.low_mhz) / 2.0)
@@ -241,6 +246,8 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
     def getBandFrequencyRange(self, step_mhz: int) -> list[int]:
         """
         Generate a list of frequencies from low_mhz to high_mhz at specified step intervals.
+        Ensures at least 10 measurements (start + 8 intermediate + stop) by overriding 
+        step size if necessary.
 
         Args:
             step_mhz: The frequency step size in MHz
@@ -250,26 +257,60 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
             always including the high frequency
         """
         # Determine which band to use based on direction mask
-        if self.filt.direction_mask == nesie_rx_filter_bands.BOTH_DIR_MASK:
-            band = self.filt.downlink
-        elif self.filt.direction_mask == nesie_rx_filter_bands.UPLINK_DIR_MASK:
-            band = self.filt.uplink
+        band = self._getBandFrequencyRange()
+
+        low_freq = int(band.low_mhz)
+        high_freq = int(band.high_mhz)
+        band_width = high_freq - low_freq
+
+        # Calculate how many measurements the current step_mhz would actually produce
+        # by simulating the algorithm
+        temp_frequencies = []
+        freq = low_freq
+        while freq <= high_freq:
+            temp_frequencies.append(freq)
+            freq += step_mhz
+
+        # Always include high frequency if not already present
+        if temp_frequencies[-1] != high_freq:
+            temp_frequencies.append(high_freq)
+
+        steps_with_current = len(temp_frequencies)
+
+        # If we would get less than 10 measurements, override the step size
+        min_measurements = 10
+        if steps_with_current < min_measurements:
+            # Calculate new step size to get exactly 9 intermediate steps (plus start and stop = 10 total)
+            effective_step = band_width / 9.0  # 9 intervals for 10 measurements
+            logging.debug(f"Band width {band_width} MHz too small for {step_mhz} MHz step "
+                          f"(would only get {steps_with_current} measurements). "
+                          f"Overriding to {effective_step:.1f} MHz step to ensure {min_measurements} measurements.")
+            actual_step = effective_step
         else:
-            raise TestError("Invalid filter band direction setting")
+            actual_step = step_mhz
 
         # Generate frequencies for the selected band
         test_frequencies = []
-        low_freq = int(band.low_mhz)
-        high_freq = int(band.high_mhz)
 
-        freq = low_freq
-        while freq <= high_freq:
-            test_frequencies.append(freq)
-            freq += step_mhz
+        if actual_step != step_mhz:
+            # Use evenly spaced frequencies to ensure exactly 10 measurements
+            for i in range(min_measurements):
+                freq = int(low_freq + (band_width * i / 9.0))
+                test_frequencies.append(freq)
+        else:
+            # Use the original algorithm with the requested step size
+            freq = low_freq
+            while freq <= high_freq:
+                test_frequencies.append(freq)
+                freq += step_mhz
 
-        # Ensure high frequency is included if not already present
-        if test_frequencies[-1] != high_freq:
-            test_frequencies.append(high_freq)
+            # Ensure high frequency is included if not already present
+            if test_frequencies[-1] != high_freq:
+                test_frequencies.append(high_freq)
+
+        band_name = getattr(getattr(self.filt, 'band', None), 'name', 'Unknown')
+        logging.debug(f"Band {band_name}: {low_freq}-{high_freq} MHz, "
+                      f"Generated {len(test_frequencies)} frequencies: {test_frequencies}")
 
         return test_frequencies
 
