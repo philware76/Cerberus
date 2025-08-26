@@ -2,7 +2,7 @@ import logging
 from typing import List, Tuple
 
 from Cerberus.common import calcCRC
-from Cerberus.database.storeageInterface import StorageInterface
+from Cerberus.database.baseDB import BaseDB
 from Cerberus.plan import Plan
 from Cerberus.plugins.tests.baseTest import BaseTest
 from Cerberus.pluginService import PluginService
@@ -15,7 +15,7 @@ class PlanService:
     as well as adding and removing tests from plans.
     """
 
-    def __init__(self, pluginService: PluginService, db: StorageInterface):
+    def __init__(self, pluginService: PluginService, db: BaseDB):
         self._plan: Plan | None
         self._planCRC = -1
         self._planId = -1

@@ -267,7 +267,7 @@ Generic plugin list/load/open identical to Equipment shell.
 - `listPlans` – show plan list in GUI widget (Qt)
 
 ### DatabaseShell (`Database>`)
-- `wipeDB` – drop core tables (requires explicit `YES` confirmation; destructive!)
+- `wipe_DB` – drop core tables (requires explicit `YES` confirmation; destructive!)
 
 ### BasePluginShell (applies within Equipment/Product/Test shells)
 - `txtParams` – human readable parameter groups
@@ -467,7 +467,7 @@ Useful after parent firmware reload or configuration change.
 - Unknown parameters in `setGroupParams` are rejected (prevents silent typos).
 - Parent delegation commands guard against unsupported equipment and missing required parents.
 - `discover` handles empty results, unknown columns, filtering producing zero matches, and preserves a clean state.
-- Destructive DB actions require explicit confirmation (`wipeDB`).
+- Destructive DB actions require explicit confirmation (`wipe_DB`).
 
 ---
 ## Extending the Shell Subsystem
@@ -505,7 +505,7 @@ If a method needs richer argument semantics than `RunCommandShell` provides, imp
 ## Security & Safety Notes
 - Raw equipment commands (`write/query`) are passed through; misuse can put hardware into invalid states. Use cautiously.
 - SSH operations (`stopNesie`, `killNesie`) assume key file exists and host is trusted.
-- `wipeDB` is irreversible—ensure you're targeting the correct environment.
+- `wipe_DB` is irreversible—ensure you're targeting the correct environment.
 
 ---
 ## Troubleshooting

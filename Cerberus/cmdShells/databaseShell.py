@@ -16,4 +16,4 @@ class DatabaseShell(BaseShell):
             print("Aborted.")
             return
 
-        self.manager.db.wipeDB()
+        self.manager.db.wipe_DB()

@@ -46,7 +46,7 @@ class CerberusDB(BaseDB, ABC):
         self._close_impl()
 
     @staticmethod
-    def _canonical_json(d: dict) -> str:
+    def canonical_json(d: dict) -> str:
         """Return a deterministic JSON string for hashing (sorted keys, no spaces)."""
         return json.dumps(d, sort_keys=True, separators=(",", ":"))
 
@@ -56,19 +56,19 @@ class CerberusDB(BaseDB, ABC):
         Returns (hash_hex, canonical_json_string)
         """
         pdata = param.to_dict()
-        canonical = cls._canonical_json(pdata)
+        canonical = cls.canonical_json(pdata)
         h = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         return h, canonical
 
     @classmethod
     def compute_group_hash(cls, values_map: dict) -> tuple[str, str]:
         """Compute SHA256 hash and canonical JSON for a mapping of parameter_name -> value."""
-        canonical = cls._canonical_json(values_map)
+        canonical = cls.canonical_json(values_map)
         h = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         return h, canonical
 
     @staticmethod
-    def _ensure_json_serializable(values: dict) -> dict:
+    def ensure_json_serializable(values: dict) -> dict:
         """Return a copy of values where any non-JSON-serializable values are converted to strings."""
         safe: dict = {}
         for k, v in values.items():
@@ -92,7 +92,7 @@ class CerberusDB(BaseDB, ABC):
     def save_plugin(self, plugin_type: str, plugin: BasePlugin):
         for group_name, group in plugin._groupParams.items():
             values = {pname: p.value for pname, p in group.items()}
-            safe_values = self._ensure_json_serializable(values)
+            safe_values = self.ensure_json_serializable(values)
             self._save_group_imp(plugin_type, plugin.name, group_name, safe_values)
 
     def save_many(self, plugin_type: str, plugins: Iterable[BasePlugin]):
@@ -124,7 +124,7 @@ class CerberusDB(BaseDB, ABC):
         tables = self._get_cerberus_tables()
         self._drop_tables_safely(tables)
 
-    def wipeDB(self) -> None:
+    def wipe_DB(self) -> None:
         """Very dangerous: drop Cerberus-related tables from the connected database.
 
         This will irreversibly remove persisted data. Callers should require explicit
