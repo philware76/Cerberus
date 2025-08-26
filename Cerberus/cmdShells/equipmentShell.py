@@ -124,6 +124,232 @@ class EquipShell(PluginsShell):
         """Format equipment type name using camel2Human for better readability."""
         return camel2Human(type_name)
 
+    def do_online(self, arg):
+        """online : Check which VISA equipment and dependent equipment is online and responding."""
+        from Cerberus.plugins.equipment.mixins.parentDelegation import \
+            SingleParentDelegationMixin
+        from Cerberus.plugins.equipment.visaDevice import VISADevice
+        from Cerberus.pluginService import PluginService
+        from Cerberus.requiredEquipment import RequiredEquipment
+
+        ps = PluginService.instance()
+        if ps is None:
+            print("PluginService instance not available.")
+            return False
+
+        # Separate equipment into categories
+        visa_equipment = []
+        dependent_equipment = []
+        other_equipment = []
+
+        for name, equipment in ps.equipPlugins.items():
+            if isinstance(equipment, VISADevice):
+                visa_equipment.append((name, equipment))
+            elif isinstance(equipment, SingleParentDelegationMixin) and hasattr(equipment, 'REQUIRED_PARENT'):
+                dependent_equipment.append((name, equipment))
+            else:
+                other_equipment.append(name)
+
+        if not visa_equipment and not dependent_equipment:
+            print("No VISA or dependent equipment found in the system.")
+            return False
+
+        # Check online status for VISA devices
+        online_visa = []
+        offline_visa = []
+        error_visa = []
+
+        # Check online status for dependent devices
+        online_dependent = []
+        offline_dependent = []
+        error_dependent = []
+
+        # Keep track of online VISA devices for dependency checking
+        online_visa_by_name = {}
+
+        # First, check VISA devices
+        if visa_equipment:
+            print(f"\nChecking {len(visa_equipment)} VISA devices...")
+            print("=" * 60)
+
+            for name, equipment in visa_equipment:
+                try:
+                    print(f"Checking {name}...", end=" ", flush=True)
+
+                    # Initialize the equipment first
+                    try:
+                        if not equipment.initialise():
+                            print("OFFLINE (Failed to initialize)")
+                            base_type = self._get_base_equipment_type(equipment)
+                            offline_visa.append((name, base_type))
+                            continue
+                    except Exception as init_ex:
+                        print(f"OFFLINE (Init error: {init_ex})")
+                        base_type = self._get_base_equipment_type(equipment)
+                        offline_visa.append((name, base_type))
+                        continue
+
+                    # If initialization succeeded, set a short timeout for health check
+                    original_timeout = None
+                    try:
+                        if hasattr(equipment, 'instrument') and equipment.instrument is not None:
+                            original_timeout = equipment.instrument.timeout
+                            equipment.instrument.timeout = 2000  # 2 second timeout for health check
+                    except Exception:
+                        pass
+
+                    # Use the existing health check function
+                    is_healthy = RequiredEquipment._VISAHealthCheck(equipment)
+
+                    if is_healthy:
+                        print("ONLINE")
+                        # Get the identity for display
+                        try:
+                            identity = equipment.getIdentity()
+                            identity_str = str(equipment.identity) if equipment.identity else "Unknown Identity"
+                            base_type = self._get_base_equipment_type(equipment)
+                            online_visa.append((name, identity_str, base_type))
+                            online_visa_by_name[name] = equipment  # Store for dependent equipment
+                        except Exception:
+                            online_visa.append((name, "Identity Error", self._get_base_equipment_type(equipment)))
+                            online_visa_by_name[name] = equipment
+                    else:
+                        print("OFFLINE")
+                        base_type = self._get_base_equipment_type(equipment)
+                        offline_visa.append((name, base_type))
+
+                    # Don't finalize yet - dependent equipment may need the connection
+
+                except Exception as ex:
+                    print(f"ERROR: {ex}")
+                    error_visa.append((name, str(ex)))
+
+        # Now check dependent equipment
+        if dependent_equipment:
+            print(f"\nChecking {len(dependent_equipment)} dependent devices...")
+            print("=" * 60)
+
+            for name, equipment in dependent_equipment:
+                try:
+                    print(f"Checking {name}...", end=" ", flush=True)
+
+                    # Check if required parent is online
+                    required_parent = getattr(equipment, 'REQUIRED_PARENT', None)
+                    if not required_parent or required_parent not in online_visa_by_name:
+                        print(f"OFFLINE (Parent '{required_parent}' not available)")
+                        base_type = self._get_base_equipment_type(equipment)
+                        offline_dependent.append((name, base_type, f"Parent '{required_parent}' offline"))
+                        continue
+
+                    # Initialize with parent
+                    parent_equipment = online_visa_by_name[required_parent]
+                    try:
+                        if not equipment.initialise({'parent': parent_equipment}):
+                            print("OFFLINE (Failed to initialize)")
+                            base_type = self._get_base_equipment_type(equipment)
+                            offline_dependent.append((name, base_type, "Init failed"))
+                            continue
+                    except Exception as init_ex:
+                        print(f"OFFLINE (Init error: {init_ex})")
+                        base_type = self._get_base_equipment_type(equipment)
+                        offline_dependent.append((name, base_type, f"Init error: {init_ex}"))
+                        continue
+
+                    # Try to detect the actual device (for NRP devices)
+                    identity_info = "Connected via parent"
+                    try:
+                        if hasattr(equipment, '_p') and equipment._p() is not None:
+                            # Try NRP-specific detection
+                            parent = equipment._p()
+                            model = parent.query("SENS1:TYPE?").strip().strip('"')
+                            serial = parent.query("SENS1:SNUM?").strip().strip('"')
+                            identity_info = f"{model} [SN#{serial}] via {required_parent}"
+                    except Exception:
+                        # Fall back to basic info
+                        identity_info = f"Connected via {required_parent}"
+
+                    print("ONLINE")
+                    base_type = self._get_base_equipment_type(equipment)
+                    online_dependent.append((name, identity_info, base_type))
+
+                    # Finalize dependent equipment
+                    try:
+                        equipment.finalise()
+                    except Exception:
+                        pass
+
+                except Exception as ex:
+                    print(f"ERROR: {ex}")
+                    error_dependent.append((name, str(ex)))
+
+        # Now finalize all VISA equipment
+        for name, equipment in online_visa_by_name.items():
+            try:
+                equipment.finalise()
+            except Exception:
+                pass
+
+        # Display results summary
+        total_online = len(online_visa) + len(online_dependent)
+        total_offline = len(offline_visa) + len(offline_dependent)
+        total_errors = len(error_visa) + len(error_dependent)
+        print("=" * 60)
+        print(f"\nSummary: {total_online} online, {total_offline} offline, {total_errors} errors")
+
+        # Display online VISA equipment
+        if online_visa:
+            print(f"\nOnline VISA Equipment ({len(online_visa)}):")
+            print("=" * 90)
+            print(f"{'Equipment Name':<20} {'Equipment Type':<18} {'Identity':<50}")
+            print("-" * 90)
+
+            for name, identity, base_type in online_visa:
+                print(f"{name:<20} {base_type:<18} {identity:<50}")
+            print("-" * 90)
+
+        # Display online dependent equipment
+        if online_dependent:
+            print(f"\nOnline Dependent Equipment ({len(online_dependent)}):")
+            print("=" * 95)
+            print(f"{'Equipment Name':<20} {'Equipment Type':<18} {'Connection Info':<55}")
+            print("-" * 95)
+
+            for name, identity, base_type in online_dependent:
+                print(f"{name:<20} {base_type:<18} {identity:<55}")
+            print("-" * 95)
+
+        # Display offline equipment
+        offline_all = [(name, base_type, "VISA device") for name, base_type in offline_visa] + \
+            [(name, base_type, reason) for name, base_type, reason in offline_dependent]
+
+        if offline_all:
+            print(f"\nOffline Equipment ({len(offline_all)}):")
+            print("=" * 70)
+            print(f"{'Equipment Name':<20} {'Equipment Type':<18} {'Reason':<30}")
+            print("-" * 70)
+
+            for name, base_type, reason in offline_all:
+                print(f"{name:<20} {base_type:<18} {reason:<30}")
+            print("-" * 70)
+
+        # Display equipment with errors
+        error_all = [(name, error, "VISA") for name, error in error_visa] + \
+            [(name, error, "Dependent") for name, error in error_dependent]
+
+        if error_all:
+            print(f"\nEquipment with Errors ({len(error_all)}):")
+            print("=" * 70)
+            for name, error, eq_type in error_all:
+                print(f"  {name} ({eq_type}): {error}")
+            print("=" * 70)
+
+        # Show other equipment count
+        if other_equipment:
+            print(f"\nNote: {len(other_equipment)} other equipment items were skipped")
+            print("(Use 'listCommParams' to see all equipment)")
+
+        return False
+
 
 class EquipmentShell(BaseCommsShell):
     def __init__(self, equip: BaseCommsEquipment, manager: Manager):

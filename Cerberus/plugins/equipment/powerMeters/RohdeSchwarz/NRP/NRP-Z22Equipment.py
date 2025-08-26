@@ -15,7 +15,6 @@ def createEquipmentPlugin():
 class NRP_Z22(BaseNRPPowerMeter):
     def __init__(self):
         super().__init__("NRP-Z22")
-        self.ACCEPTED_MODELS = ["NRP-Z22", "Z22", "NRPZ22"]
         self.excluded = False
 
     def setFrequency(self, frequencyMHz: float) -> bool:

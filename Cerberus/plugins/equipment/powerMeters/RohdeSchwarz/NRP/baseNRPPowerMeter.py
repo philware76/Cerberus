@@ -50,30 +50,19 @@ class BaseNRPPowerMeter(SingleParentDelegationMixin, BasePowerMeter):
         if not BasePowerMeter.initialise(self):  # type: ignore[misc]
             return False
 
-        # Sanity-check: query connected sensor model and ensure plugin alignment
+        # Validate that the connected sensor matches this plugin
         try:
             ident = self.getIdentity()
-            detected_model = (ident.model or "").strip().upper()
+            detected_model = (ident.model or "").strip()
+            expected_model = self.name
+            
+            if detected_model != expected_model:
+                logging.warning("%s: detected sensor model '%s' does not match plugin name '%s'", 
+                              self.name, detected_model, expected_model)
+                return False
+                
         except Exception:
             logging.exception("%s: failed to query NRP sensor identity", self.name)
-            return False
-
-        # If this concrete plugin expects a specific model, ensure it matches.
-        expected_set = set()
-        try:
-            models = getattr(self, 'ACCEPTED_MODELS', None)
-            if models:
-                expected_set = {str(m).strip().upper() for m in models}
-            else:
-                m = getattr(self, 'EXPECTED_MODEL', None)
-                if m:
-                    expected_set = {str(m).strip().upper()}
-        except Exception:
-            expected_set = set()
-
-        if expected_set and detected_model and detected_model not in expected_set:
-            # Mismatch: let selection machinery try the other candidate.
-            logging.warning("%s: detected sensor model %s not in accepted set %s", self.name, detected_model, sorted(expected_set))
             return False
 
         return True
@@ -89,8 +78,8 @@ class BaseNRPPowerMeter(SingleParentDelegationMixin, BasePowerMeter):
 
     def getIdentity(self) -> Identity:
         parent = self._p()  # SCPI parent from mixin
-        model = parent.query("SENS1:TYPE?")
-        serial = parent.query("SENS1:SNUM?")
+        model = parent.query("SENS1:TYPE?").strip().strip('"')
+        serial = parent.query("SENS1:SNUM?").strip().strip('"')
 
         identity = Identity()
         identity.manufacturer = "R&S"

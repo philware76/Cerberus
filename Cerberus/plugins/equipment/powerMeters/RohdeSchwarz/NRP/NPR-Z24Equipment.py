@@ -15,7 +15,6 @@ class NRP_Z24(BaseNRPPowerMeter):
     def __init__(self):
         super().__init__("NRP-Z24")
         self.excluded = False
-        self.ACCEPTED_MODELS = ["NRP-Z24", "Z24", "NRPZ24"]
 
     def setFrequency(self, frequencyMHz: float) -> bool:
         """Set measurement frequency for sensor on channel 1."""
