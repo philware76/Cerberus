@@ -2,6 +2,7 @@ from typing import cast  # added for identity check typing
 
 from Cerberus.cmdShells.baseCommsShell import BaseCommsShell
 from Cerberus.cmdShells.pluginsShell import PluginsShell
+from Cerberus.common import camel2Human
 from Cerberus.manager import Manager
 from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.commsInterface import CommsInterface
@@ -14,6 +15,114 @@ class EquipShell(PluginsShell):
     def __init__(self, manager: Manager):
         pluginService = manager.pluginService
         super().__init__(manager, pluginService.equipPlugins, "Equipment")
+
+    def do_listCommParams(self, arg):
+        """listCommParams : List all equipment with their communication parameters (IP, Port, etc.)."""
+        from Cerberus.pluginService import PluginService
+        ps = PluginService.instance()
+        if ps is None:
+            print("PluginService instance not available.")
+            return False
+
+        # Separate equipment into two categories
+        comm_equipment = []
+        no_comm_equipment = []
+        error_equipment = []
+
+        # Get all equipment from the plugin service
+        for name, equipment in ps.equipPlugins.items():
+            try:
+                # Try to get the Communication parameters group
+                comm_params = equipment.getGroupParameters("Communication")
+
+                # Extract the communication parameters
+                ip_param = comm_params.get("IP Address")
+                port_param = comm_params.get("Port")
+                timeout_param = comm_params.get("Timeout")
+
+                ip_address = ip_param.value if ip_param else "N/A"
+                port = port_param.value if port_param else "N/A"
+                timeout = timeout_param.value if timeout_param else "N/A"
+
+                # Determine the base equipment type
+                base_type = self._get_base_equipment_type(equipment)
+
+                comm_equipment.append((name, ip_address, port, timeout, base_type))
+
+            except ValueError:
+                # Equipment doesn't have Communication parameters group
+                no_comm_equipment.append(name)
+            except Exception as ex:
+                error_equipment.append((name, str(ex)))
+
+        # Sort communication equipment by Equipment Type
+        comm_equipment.sort(key=lambda item: item[4])  # Sort by base_type (index 4)
+
+        # Print equipment with communication parameters
+        if comm_equipment:
+            print("\nEquipment with Communication Parameters:")
+            print("=" * 85)
+            print(f"{'Equipment Name':<20} {'IP Address':<15} {'Port':<8} {'Timeout':<10} {'Equipment Type':<18}")
+            print("-" * 85)
+
+            for name, ip_address, port, timeout, base_type in comm_equipment:
+                print(f"{name:<20} {ip_address:<15} {str(port):<8} {str(timeout):<10} {base_type:<18}")
+
+            print("-" * 85)
+
+        # Print equipment without communication parameters
+        if no_comm_equipment:
+            print(f"\nEquipment without Communication Parameters ({len(no_comm_equipment)}):")
+            print("=" * 40)
+            for name in no_comm_equipment:
+                print(f"  {name}")
+            print("=" * 40)
+
+        # Print equipment with errors (if any)
+        if error_equipment:
+            print(f"\nEquipment with Errors ({len(error_equipment)}):")
+            print("=" * 50)
+            for name, error in error_equipment:
+                print(f"  {name}: {error}")
+            print("=" * 50)
+
+        return False
+
+    def _get_base_equipment_type(self, equipment):
+        """Determine the base equipment type from the class hierarchy."""
+        # Import the base classes to check against
+        from Cerberus.plugins.equipment.baseEquipment import (
+            BaseCommsEquipment, BaseEquipment)
+        from Cerberus.plugins.equipment.cables.baseCalCable import BaseCalCable
+        from Cerberus.plugins.equipment.chambers.baseChamber import BaseChamber
+        from Cerberus.plugins.equipment.powerMeters.basePowerMeters import \
+            BasePowerMeter
+        from Cerberus.plugins.equipment.signalGenerators.baseSigGen import \
+            BaseSigGen
+        from Cerberus.plugins.equipment.spectrumAnalysers.baseSpecAnalyser import \
+            BaseSpecAnalyser
+
+        # Check for specific base types (most specific first)
+        if isinstance(equipment, BaseSpecAnalyser):
+            return self._format_equipment_type("SpecAnalyser")
+        elif isinstance(equipment, BaseSigGen):
+            return self._format_equipment_type("SigGen")
+        elif isinstance(equipment, BasePowerMeter):
+            return self._format_equipment_type("PowerMeter")
+        elif isinstance(equipment, BaseChamber):
+            return self._format_equipment_type("Chamber")
+        elif isinstance(equipment, BaseCalCable):
+            return self._format_equipment_type("CalCable")
+        elif isinstance(equipment, BaseCommsEquipment):
+            return self._format_equipment_type("CommsEquipment")
+        elif isinstance(equipment, BaseEquipment):
+            return self._format_equipment_type("Equipment")
+        else:
+            return "Unknown"
+
+    def _format_equipment_type(self, type_name):
+        """Format equipment type name using camel2Human for better readability."""
+        return camel2Human(type_name)
 
 
 class EquipmentShell(BaseCommsShell):
@@ -66,6 +175,7 @@ class EquipmentShell(BaseCommsShell):
         """Save the settings to the database"""
         db = self.manager.db
         db.save_equipment([self.plugin])
+
     # ---------------- Parent delegation utilities ---------------------------------
 
     def do_getParent(self, arg):  # child perspective
