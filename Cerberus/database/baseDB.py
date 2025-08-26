@@ -17,7 +17,8 @@ class BaseDB(ABC):
       - CerberusDB: Abstract base with common logic for SQL backends
       - MySqlDB: MySQL implementation  
       - PostgreSqlDB: PostgreSQL implementation
-      - Future: FileDB, InMemoryDB for testing
+      - FileDB: JSON file-based implementation
+      - InMemoryDB: In-memory implementation for testing and temporary storage
     """
 
     def __init__(self, station_id: str):
@@ -182,14 +183,5 @@ class BaseDB(ABC):
 
         This will irreversibly remove all persisted data. Callers should require 
         explicit confirmation before invoking.
-        """
-        ...
-
-    @abstractmethod
-    def wipe_DB(self) -> None:
-        """Legacy alias for wipe_db(). 
-
-        Very dangerous: drop all Cerberus-related tables from the database.
-        This will irreversibly remove all persisted data.
         """
         ...

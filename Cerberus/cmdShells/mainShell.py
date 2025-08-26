@@ -15,6 +15,7 @@ from Cerberus.cmdShells.productShell import ProductsShell
 from Cerberus.cmdShells.testShell import TestsShell
 from Cerberus.common import DBInfo, dwell
 from Cerberus.database.fileDB import FileDB
+from Cerberus.database.inMemoryDB import InMemoryDB
 from Cerberus.database.mySqlDB import MySqlDB
 from Cerberus.database.postgreSqlDB import PostgreSqlDB
 from Cerberus.logConfig import getLogger, setupLogging
@@ -99,8 +100,8 @@ def runShell(argv):
 
     try:
         setupLogging(logging.DEBUG)
-        stationId, dbName, dbInfo = loadIni(args.inifile, args.db)
-        logger.info(f"Cerberus:{stationId}")
+        station_id, dbName, dbInfo = loadIni(args.inifile, args.db)
+        logger.info(f"Cerberus:{station_id}")
     except Exception as e:
         logger.error(f"Failed to read Ini file: {e}")
         exit(1)
@@ -113,12 +114,14 @@ def runShell(argv):
     splashUpdate("Opening database...")
 
     try:
-        if dbName == "FileDatabase":
-            db = FileDB(stationId, dbInfo.database)
+        if dbName == "InMemoryDatabase":
+            db = InMemoryDB(station_id)
+        elif dbName == "FileDatabase":
+            db = FileDB(station_id, dbInfo.database)
         elif dbName == "MySqlDatabase":
-            db = MySqlDB(stationId, dbInfo)
+            db = MySqlDB(station_id, dbInfo)
         elif dbName == "PostgreSqlDatabase":
-            db = PostgreSqlDB(stationId, dbInfo)
+            db = PostgreSqlDB(station_id, dbInfo)
         else:
             raise ValueError(f"Unknown database type {dbName}")
 
@@ -132,7 +135,7 @@ def runShell(argv):
         pluginService = PluginService(splashUpdate)
         pluginService.enumerate()
 
-        manager = Manager(stationId, db, pluginService)
+        manager = Manager(station_id, db, pluginService)
     except Exception as e:
         logger.error(f"Failed to correctly load the plugins: {e}")
         exit(1)
