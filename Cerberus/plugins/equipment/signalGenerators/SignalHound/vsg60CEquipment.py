@@ -3,7 +3,6 @@ from typing import Any
 
 from Cerberus.common import dwell
 from Cerberus.exceptions import EquipmentError
-from Cerberus.plugins import common
 from Cerberus.plugins.basePlugin import hookimpl, singleton
 from Cerberus.plugins.equipment.baseEquipment import BaseCommsEquipment
 from Cerberus.plugins.equipment.signalGenerators.baseSigGen import BaseSigGen

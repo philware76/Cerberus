@@ -4,10 +4,9 @@ import pytest
 
 from Cerberus.common import DBInfo
 from Cerberus.database.fileDB import FileDB
-from Cerberus.database.mySqlDB import MySqlDB
-from Cerberus.plugins.equipment.signalGenerators.VSG60C.vsg60CEquipment import \
+from Cerberus.plugins.equipment.signalGenerators.SignalHound.vsg60CEquipment import \
     VSG60C
-from Cerberus.plugins.equipment.spectrumAnalysers.BB60C.bb60CEquipment import \
+from Cerberus.plugins.equipment.spectrumAnalysers.SignalHound.bb60CEquipment import \
     BB60C
 
 # NOTE: This test expects a reachable MySQL instance matching cerberus.ini (or override via env vars)
