@@ -42,8 +42,13 @@ class TestSpecParams(BaseParameters):
         self.addParameter(NumericParameter("Detected-Measured", 3.0, units="dB", minValue=0, maxValue=20,
                                            description="The maximum difference between the detected power and measured power can be."))
 
-        self.addParameter(OptionParameter("Full band sweep", False, description="Performs the Tx Level Test over the full band"))
-        self.addParameter(NumericParameter("MHz step", 100, units="MHz", minValue=10, maxValue=500, description="When performing a band sweep, use this value as the step"))
+        # Create parameters
+        fullBandSweepOption = OptionParameter("Full band sweep", False, description="Performs the Tx Level Test over the full band")
+        stepValue = NumericParameter("MHz step", 100, units="MHz", minValue=10, maxValue=500, description="When performing a band sweep, use this value as the step")
+
+        self.addParameter(fullBandSweepOption)
+        self.addParameter(stepValue)
+        stepValue.setWidgetDependency("enabled", fullBandSweepOption)
 
 
 class RfTestParams(BaseParameters):
@@ -91,7 +96,7 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
         self.bist: TacticalBISTCmds | None = None
         self.freqOffset: int = TxLevelTest.AD9361_DC_NOTCH_FREQ_OFFSET
         self.pwrCalAdjust: Chebyshev
-        self.filt
+        self.filt = None
 
         self.rfParams = self.getGroupParameters("RF Parameters")
         self.testSpec = self.getGroupParameters("Test Specs")
@@ -147,7 +152,7 @@ class TxLevelTest(PowerMeasurementMixin, BaseTest):
 
         # Get the frequency list to run the test over
         if bool(self.testSpec["Full band sweep"]):
-            step = self.testSpec["MHz step"]
+            step = int(self.testSpec["MHz step"])
             freq_path_list = self.getBandFrequencyRange(step)
         else:
             freq_path_list = self.getBandCenterFrequency()

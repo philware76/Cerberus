@@ -54,78 +54,82 @@
     "73": {
       "group_hash": "b113785f421ce5f733c1c7967209d29bf5a788cdbd4dec331ad3ef77d067e0d1",
       "group_json": "{\"Detected-Measured\":3.0}"
+    },
+    "92": {
+      "group_hash": "7ffe7cbf24d9378c0e9e18884a5c29f873560fcd9fc1a627dc286638341c4284",
+      "group_json": "{\"Detected-Measured\":3.0,\"Full band sweep\":false,\"MHz step\":100}"
     }
   },
   "group_settings": {
-    "57": {
+    "76": {
       "group_identity_id": 2,
       "content_id": 1
     },
-    "58": {
+    "77": {
       "group_identity_id": 5,
       "content_id": 4
     },
-    "59": {
+    "78": {
       "group_identity_id": 8,
       "content_id": 7
     },
-    "60": {
+    "79": {
       "group_identity_id": 10,
       "content_id": 7
     },
-    "61": {
+    "80": {
       "group_identity_id": 13,
       "content_id": 12
     },
-    "62": {
+    "81": {
       "group_identity_id": 15,
       "content_id": 7
     },
-    "63": {
+    "82": {
       "group_identity_id": 17,
       "content_id": 7
     },
-    "64": {
+    "83": {
       "group_identity_id": 19,
       "content_id": 7
     },
-    "65": {
+    "84": {
       "group_identity_id": 22,
       "content_id": 21
     },
-    "66": {
+    "85": {
       "group_identity_id": 24,
       "content_id": 7
     },
-    "67": {
+    "86": {
       "group_identity_id": 26,
       "content_id": 7
     },
-    "68": {
+    "87": {
       "group_identity_id": 28,
       "content_id": 7
     },
-    "69": {
+    "88": {
       "group_identity_id": 30,
       "content_id": 7
     },
-    "70": {
+    "89": {
       "group_identity_id": 33,
       "content_id": 32
     },
-    "71": {
+    "90": {
       "group_identity_id": 36,
       "content_id": 35
     },
-    "72": {
+    "91": {
       "group_identity_id": 39,
       "content_id": 38
     },
-    "75": {
+    "93": {
       "group_identity_id": 74,
-      "content_id": 73
+      "content_id": 92
     }
   },
-  "next_id": 76,
+  "next_id": 94,
   "test_results": {}
 }
