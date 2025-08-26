@@ -1,5 +1,5 @@
 from threading import Lock
-from typing import Dict, Optional, cast
+from typing import Any, Callable, Dict, Optional, cast
 
 from PySide6.QtCore import QEventLoop, Qt
 from PySide6.QtWidgets import (QApplication, QDialog, QPushButton, QVBoxLayout,
@@ -50,13 +50,19 @@ def displayWidget(widget: QWidget):
     loop.exec()
 
 
-def displayParametersUI(pluginName: str, groups: Dict[str, BaseParameters], *, close_on_apply: bool = True):
+def displayParametersUI(pluginName: str, groups: Dict[str, BaseParameters], *, close_on_apply: bool = True, dependencies: Optional[Dict[str, Dict[str, Dict[str, Callable[[Any], bool]]]]] = None):
     """Show a modal Parameters dialog without terminating the global QApplication.
 
     Uses QDialog.exec() (its own local loop). The dialog appears in the Windows
     taskbar grouped under the application's main icon. Windows will not create a
     separate new taskbar icon for the same process unless a distinct AppUserModelID
     or separate process is used.
+
+    Args:
+        pluginName: Name of the plugin for the window title
+        groups: Dictionary of parameter groups to display
+        close_on_apply: Whether to close the dialog when Apply is clicked
+        dependencies: Optional parameter dependencies (see widgetGen.py for format)
     """
     _ensure_qapp()
 
@@ -67,7 +73,7 @@ def displayParametersUI(pluginName: str, groups: Dict[str, BaseParameters], *, c
     dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowType.Window)
 
     layout = QVBoxLayout(dialog)
-    ui, widget_map = create_all_parameters_ui(groups)
+    ui, widget_map = create_all_parameters_ui(groups, dependencies)
     layout.addWidget(ui)
 
     apply_btn = QPushButton("Apply")

@@ -26,6 +26,27 @@ class BaseParameter(ABC):
         self.genRepr.addParam("name", self.name)
         self.genRepr.addParam("value", self.value)
 
+        # Widget dependency system
+        self._widget_dependencies: dict[str, "BaseParameter"] = {}
+
+    def setWidgetDependency(self, widget_property: str, controlling_parameter: "BaseParameter") -> None:
+        """
+        Set a widget dependency where this parameter's widget property depends on another parameter's value.
+
+        Args:
+            widget_property: The widget property to control (e.g., "enabled", "visible")
+            controlling_parameter: The parameter whose value controls this property
+        """
+        self._widget_dependencies[widget_property] = controlling_parameter
+
+    def getWidgetDependencies(self) -> dict[str, "BaseParameter"]:
+        """Get all widget dependencies for this parameter."""
+        return self._widget_dependencies.copy()
+
+    def hasWidgetDependencies(self) -> bool:
+        """Check if this parameter has any widget dependencies."""
+        return len(self._widget_dependencies) > 0
+
     @abstractmethod
     def to_dict(self) -> dict:
         """"Returns a dictionary of the parameters"""

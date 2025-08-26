@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, cast
+from typing import Any, Callable, Dict, Optional, cast
 
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QFrame,
@@ -177,9 +177,19 @@ def create_parameter_widget(param: BaseParameter) -> QWidget:
     return widget
 
 
-def create_parameters_groupbox(title: str, parameters: dict[str, BaseParameter]):
+def create_parameters_groupbox(title: str, parameters: dict[str, BaseParameter], dependencies: Optional[Dict[str, Dict[str, Callable[[Any], bool]]]] = None):
+    """
+    Create a collapsible group box for parameters with optional dependency management.
+
+    Args:
+        title: Group box title
+        parameters: Dictionary of parameters to create widgets for
+        dependencies: Optional dictionary defining parameter dependencies (legacy support).
+                     The new preferred method is to use parameter.setWidgetDependency().
+    """
     groupbox = CollapsibleGroupBox(title)
     widget_map = {}
+    dependency_connections = []
 
     for param in parameters.values():
         row = QWidget()
@@ -205,16 +215,124 @@ def create_parameters_groupbox(title: str, parameters: dict[str, BaseParameter])
 
         widget_map[param.name] = value_widget
 
+    # Set up parameter-based dependencies (NEW preferred method)
+    for param in parameters.values():
+        if param.hasWidgetDependencies():
+            dependent_widget = widget_map[param.name]
+
+            for widget_property, controlling_param in param.getWidgetDependencies().items():
+                # Find the controlling widget by parameter name
+                controlling_widget = None
+                for other_param in parameters.values():
+                    if other_param is controlling_param:
+                        controlling_widget = widget_map[other_param.name]
+                        break
+
+                if controlling_widget is not None:
+                    # Create dependency handler based on widget property
+                    def create_parameter_dependency_handler(dep_widget, prop_name, ctrl_param):
+                        def handle_change(*args):
+                            if isinstance(controlling_widget, QCheckBox):
+                                param_value = controlling_widget.isChecked()
+                            elif isinstance(controlling_widget, QComboBox):
+                                param_value = controlling_widget.currentData()
+                            elif isinstance(controlling_widget, (QSpinBox, QDoubleSpinBox)):
+                                param_value = controlling_widget.value()
+                            elif isinstance(controlling_widget, QLineEdit):
+                                param_value = controlling_widget.text()
+                            else:
+                                param_value = True
+
+                            # Update the controlling parameter's value to match widget
+                            ctrl_param.value = param_value
+
+                            # Apply the widget property based on parameter value
+                            if prop_name == "enabled":
+                                dep_widget.setEnabled(bool(param_value))
+                            elif prop_name == "visible":
+                                dep_widget.setVisible(bool(param_value))
+                            # Add more widget properties as needed
+
+                        return handle_change
+
+                    handler = create_parameter_dependency_handler(dependent_widget, widget_property, controlling_param)
+                    dependency_connections.append((controlling_widget, handler))
+
+                    # Connect the appropriate signal based on widget type
+                    if isinstance(controlling_widget, QCheckBox):
+                        controlling_widget.toggled.connect(handler)
+                    elif isinstance(controlling_widget, QComboBox):
+                        controlling_widget.currentIndexChanged.connect(handler)
+                    elif isinstance(controlling_widget, (QSpinBox, QDoubleSpinBox)):
+                        controlling_widget.valueChanged.connect(handler)
+                    elif isinstance(controlling_widget, QLineEdit):
+                        controlling_widget.textChanged.connect(handler)
+
+                    # Set initial state
+                    handler()
+
+    # Set up legacy dependencies (for backward compatibility)
+    if dependencies:
+        for dependent_param, controllers in dependencies.items():
+            if dependent_param in widget_map:
+                dependent_widget = widget_map[dependent_param]
+
+                for controlling_param, validation_func in controllers.items():
+                    if controlling_param in widget_map:
+                        controlling_widget = widget_map[controlling_param]
+
+                        # Create and store the connection function
+                        def create_dependency_handler(dep_widget, val_func):
+                            def handle_change(*args):
+                                if isinstance(controlling_widget, QCheckBox):
+                                    enable = val_func(controlling_widget.isChecked())
+                                elif isinstance(controlling_widget, QComboBox):
+                                    enable = val_func(controlling_widget.currentData())
+                                elif isinstance(controlling_widget, (QSpinBox, QDoubleSpinBox)):
+                                    enable = val_func(controlling_widget.value())
+                                elif isinstance(controlling_widget, QLineEdit):
+                                    enable = val_func(controlling_widget.text())
+                                else:
+                                    enable = True
+
+                                dep_widget.setEnabled(enable)
+                            return handle_change
+
+                        handler = create_dependency_handler(dependent_widget, validation_func)
+                        dependency_connections.append((controlling_widget, handler))
+
+                        # Connect the appropriate signal based on widget type
+                        if isinstance(controlling_widget, QCheckBox):
+                            controlling_widget.toggled.connect(handler)
+                        elif isinstance(controlling_widget, QComboBox):
+                            controlling_widget.currentIndexChanged.connect(handler)
+                        elif isinstance(controlling_widget, (QSpinBox, QDoubleSpinBox)):
+                            controlling_widget.valueChanged.connect(handler)
+                        elif isinstance(controlling_widget, QLineEdit):
+                            controlling_widget.textChanged.connect(handler)
+
+                        # Set initial state
+                        handler()
+
     return groupbox, widget_map
 
 
-def create_all_parameters_ui(groups: Dict[str, BaseParameters]) -> tuple[QWidget, dict[str, dict[str, QWidget]]]:
+def create_all_parameters_ui(groups: Dict[str, BaseParameters], dependencies: Optional[Dict[str, Dict[str, Dict[str, Callable[[Any], bool]]]]] = None) -> tuple[QWidget, dict[str, dict[str, QWidget]]]:
+    """
+    Create UI for all parameter groups with optional dependencies.
+
+    Args:
+        groups: Dictionary of parameter groups
+        dependencies: Optional nested dictionary defining dependencies.
+                     Format: {group_name: {dependent_param: {controlling_param: validation_function}}}
+    """
     container = QWidget()
     main_layout = QVBoxLayout()
     all_widget_map = {}
 
     for group_name, base_params in groups.items():
-        groupbox, widget_map = create_parameters_groupbox(group_name, base_params)
+        group_dependencies = dependencies.get(group_name) if dependencies else None
+        groupbox, widget_map = create_parameters_groupbox(group_name, base_params, group_dependencies)
         all_widget_map[group_name] = widget_map
         main_layout.addWidget(groupbox)
 
@@ -241,3 +359,32 @@ def apply_parameters(groups: Dict[str, BaseParameters], widget_map: dict[str, di
                 param.value = widget.isChecked()
             elif isinstance(widget, QComboBox):
                 param.value = cast(QComboBox, widget).currentData()
+
+
+def create_checkbox_dependency(checkbox_value: bool = True) -> Callable[[Any], bool]:
+    """
+    Convenience function to create a dependency that enables a widget when a checkbox is checked.
+
+    Args:
+        checkbox_value: The checkbox value that should enable the dependent widget (default: True)
+
+    Returns:
+        A validation function for use in dependencies
+    """
+    return lambda value: bool(value) == checkbox_value
+
+
+def create_txlevel_test_dependencies() -> Dict[str, Dict[str, Dict[str, Callable[[Any], bool]]]]:
+    """
+    Create the specific dependencies for TxLevelTest parameters.
+
+    Returns:
+        Dependencies dictionary for use with create_all_parameters_ui
+    """
+    return {
+        "Test Specs": {
+            "MHz step": {
+                "Full band sweep": create_checkbox_dependency(True)
+            }
+        }
+    }

@@ -179,3 +179,77 @@ def test_eq_mismatched_value():
     assert p1 != p2
     p2 = NumericParameter(name="V", value=2.5, units="V")
     assert p1 != p2
+
+
+def test_widget_dependency_methods():
+    """Test the widget dependency methods on BaseParameter."""
+    # Create parameters
+    control_param = OptionParameter("Control", False)
+    dependent_param = NumericParameter("Dependent", 10)
+
+    # Test initial state
+    assert not dependent_param.hasWidgetDependencies()
+    assert len(dependent_param.getWidgetDependencies()) == 0
+
+    # Set dependency
+    dependent_param.setWidgetDependency("enabled", control_param)
+
+    # Test dependency is set
+    assert dependent_param.hasWidgetDependencies()
+    deps = dependent_param.getWidgetDependencies()
+    assert "enabled" in deps
+    assert deps["enabled"] is control_param
+
+
+def test_widget_dependency_multiple():
+    """Test setting multiple widget dependencies on a single parameter."""
+    control1 = OptionParameter("Control1", False)
+    control2 = OptionParameter("Control2", True)
+    dependent = NumericParameter("Dependent", 5)
+
+    # Set multiple dependencies
+    dependent.setWidgetDependency("enabled", control1)
+    dependent.setWidgetDependency("visible", control2)
+
+    # Verify both dependencies
+    assert dependent.hasWidgetDependencies()
+    deps = dependent.getWidgetDependencies()
+    assert len(deps) == 2
+    assert deps["enabled"] is control1
+    assert deps["visible"] is control2
+
+
+def test_addParameter_returns_self():
+    """Test that addParameter returns self for method chaining."""
+    params = BaseParameters("Test")
+    param = NumericParameter("Test Param", 42)
+
+    # Test that addParameter returns self (the BaseParameters instance)
+    returned_params = params.addParameter(param)
+    assert returned_params is params
+    assert params["Test Param"] is param
+
+    # Test that we can chain addParameter calls
+    param2 = NumericParameter("Test Param 2", 24)
+    result = params.addParameter(param2).addParameter(NumericParameter("Test Param 3", 36))
+    assert result is params
+    assert len(params) == 3
+    assert "Test Param 2" in params
+    assert "Test Param 3" in params
+
+
+def test_widget_dependency_immutable_copy():
+    """Test that getWidgetDependencies returns a copy, not the original dict."""
+    control = OptionParameter("Control", False)
+    dependent = NumericParameter("Dependent", 10)
+
+    dependent.setWidgetDependency("enabled", control)
+
+    # Get dependencies and modify the returned dict
+    deps = dependent.getWidgetDependencies()
+    original_length = len(deps)
+    deps["test"] = control  # This should not affect the original
+
+    # Verify original is unchanged
+    assert len(dependent.getWidgetDependencies()) == original_length
+    assert "test" not in dependent.getWidgetDependencies()
